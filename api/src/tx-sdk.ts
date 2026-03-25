@@ -277,7 +277,7 @@ export interface IssueSmartTokenParams {
 export async function issueSmartToken(
   client: TxClient,
   params: IssueSmartTokenParams
-): Promise<{ txHash: string; denom: string; explorerUrl: string; success: boolean }> {
+): Promise<{ txHash: string; denom: string; explorerUrl: string; success: boolean; error?: string }> {
   const issuer = client.address;
   const precision = params.precision ?? 6;
   const rawAmount = String(
