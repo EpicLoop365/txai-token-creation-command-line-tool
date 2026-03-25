@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TXAI Token Studio - Create Blockchain Tokens with Plain English</title>
+<meta name="description" content="Create blockchain tokens with plain English. Powered by Claude AI + TX Agent SDK on the Coreum blockchain.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+/* ===== RESET & BASE ===== */
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#08090c;--bg2:#0d0f14;--bg3:#13161d;--bg4:#1a1d27;
+  --purple:#7c6dfa;--purple-dim:#5a4ed4;--purple-glow:rgba(124,109,250,.25);
+  --green:#06d6a0;--green-dim:#05b588;--green-glow:rgba(6,214,160,.2);
+  --text:#e4e4e7;--text-dim:#9ca3af;--text-muted:#6b7280;
+  --border:#1e2130;--border-light:#2a2d3e;
+  --radius:12px;--radius-sm:8px;--radius-lg:16px;
+  --mono:'Space Mono',monospace;--sans:'DM Sans',sans-serif;
+}
+html{scroll-behavior:smooth;font-size:16px}
+body{
+  font-family:var(--sans);color:var(--text);background:var(--bg);
+  line-height:1.6;overflow-x:hidden;-webkit-font-smoothing:antialiased;
+}
+a{color:var(--purple);text-decoration:none;transition:color .2s}
+a:hover{color:var(--green)}
+img{max-width:100%}
+
+/* ===== LAYOUT ===== */
+.container{max-width:1120px;margin:0 auto;padding:0 24px}
+section{padding:100px 0}
+@media(max-width:768px){section{padding:64px 0}}
+
+/* ===== PARTICLES CANVAS ===== */
+#particles{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.45}
+
+/* ===== NAV ===== */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  background:rgba(8,9,12,.82);backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--border);
+}
+nav .inner{
+  display:flex;align-items:center;justify-content:space-between;
+  max-width:1120px;margin:0 auto;padding:14px 24px;
+}
+nav .logo{font-family:var(--mono);font-weight:700;font-size:1.05rem;color:var(--text);display:flex;align-items:center;gap:8px}
+nav .logo span{color:var(--purple)}
+nav .links{display:flex;gap:28px;align-items:center}
+nav .links a{font-size:.875rem;color:var(--text-dim);font-weight:500}
+nav .links a:hover{color:var(--purple)}
+nav .gh-btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:7px 16px;border-radius:var(--radius-sm);
+  border:1px solid var(--border-light);font-size:.825rem;font-weight:600;color:var(--text);
+  transition:all .25s;
+}
+nav .gh-btn:hover{border-color:var(--purple);color:var(--purple);background:var(--purple-glow)}
+nav .gh-btn svg{width:16px;height:16px}
+@media(max-width:640px){nav .links a:not(.gh-btn){display:none}}
+
+/* ===== HERO ===== */
+.hero{
+  min-height:100vh;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;text-align:center;
+  position:relative;z-index:1;padding-top:80px;
+}
+.hero-badge{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:6px 16px;border-radius:999px;margin-bottom:28px;
+  border:1px solid var(--border-light);background:var(--bg2);
+  font-size:.8rem;font-weight:500;color:var(--text-dim);
+  animation:fadeInDown .7s ease;
+}
+.hero-badge .dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse-dot 2s infinite}
+@keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:.4}}
+.hero h1{
+  font-family:var(--mono);font-size:clamp(2.4rem,6vw,4.2rem);font-weight:700;
+  line-height:1.1;margin-bottom:20px;
+  background:linear-gradient(135deg,var(--text) 0%,var(--purple) 50%,var(--green) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;animation:fadeInUp .7s ease;
+}
+.hero p{
+  font-size:clamp(1rem,2vw,1.25rem);color:var(--text-dim);max-width:600px;
+  margin:0 auto 40px;animation:fadeInUp .7s .15s ease both;
+}
+.hero-cta{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;animation:fadeInUp .7s .3s ease both}
+.btn{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:12px 28px;border-radius:var(--radius-sm);font-weight:600;font-size:.95rem;
+  border:none;cursor:pointer;transition:all .3s;font-family:var(--sans);
+}
+.btn-primary{background:var(--purple);color:#fff;box-shadow:0 0 24px var(--purple-glow)}
+.btn-primary:hover{background:var(--purple-dim);box-shadow:0 0 40px var(--purple-glow);transform:translateY(-2px)}
+.btn-outline{background:transparent;color:var(--text);border:1px solid var(--border-light)}
+.btn-outline:hover{border-color:var(--purple);color:var(--purple);background:rgba(124,109,250,.06)}
+
+/* Hero terminal */
+.hero-terminal{
+  margin-top:56px;width:100%;max-width:700px;
+  background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);
+  overflow:hidden;text-align:left;animation:fadeInUp .7s .45s ease both;
+  box-shadow:0 24px 80px rgba(0,0,0,.45);
+}
+.term-bar{display:flex;align-items:center;gap:7px;padding:12px 16px;background:var(--bg3);border-bottom:1px solid var(--border)}
+.term-dot{width:11px;height:11px;border-radius:50%}
+.term-dot.r{background:#ff5f57}.term-dot.y{background:#ffbd2e}.term-dot.g{background:#28c840}
+.term-bar span{margin-left:auto;font-family:var(--mono);font-size:.7rem;color:var(--text-muted)}
+.term-body{padding:20px;font-family:var(--mono);font-size:.82rem;line-height:1.8;min-height:140px}
+.term-body .line{opacity:0;animation:typeLine .4s ease forwards}
+.term-body .prompt{color:var(--green)}
+.term-body .cmd{color:var(--text)}
+.term-body .out{color:var(--text-dim)}
+.term-body .hl{color:var(--purple)}
+.term-body .cursor{display:inline-block;width:8px;height:16px;background:var(--green);animation:blink 1s step-end infinite;vertical-align:middle;margin-left:2px}
+@keyframes blink{50%{opacity:0}}
+@keyframes typeLine{to{opacity:1}}
+
+/* ===== DEMO SECTION ===== */
+#demo{position:relative;z-index:1}
+.section-label{
+  font-family:var(--mono);font-size:.8rem;color:var(--purple);
+  text-transform:uppercase;letter-spacing:2px;margin-bottom:12px;
+}
+.section-title{font-family:var(--mono);font-size:clamp(1.6rem,4vw,2.4rem);font-weight:700;margin-bottom:12px}
+.section-sub{color:var(--text-dim);font-size:1.05rem;max-width:560px;margin-bottom:40px}
+
+/* Input area */
+.demo-input-wrap{
+  background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);
+  padding:24px;margin-bottom:20px;transition:border-color .3s;
+}
+.demo-input-wrap:focus-within{border-color:var(--purple)}
+.demo-input-row{display:flex;gap:12px}
+.demo-input{
+  flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);
+  padding:14px 18px;font-size:1rem;font-family:var(--sans);color:var(--text);
+  outline:none;transition:border-color .3s;
+}
+.demo-input::placeholder{color:var(--text-muted)}
+.demo-input:focus{border-color:var(--purple)}
+.demo-create-btn{
+  padding:14px 28px;border-radius:var(--radius-sm);border:none;
+  background:var(--purple);color:#fff;font-weight:700;font-size:.95rem;
+  cursor:pointer;font-family:var(--sans);transition:all .3s;white-space:nowrap;
+}
+.demo-create-btn:hover{background:var(--purple-dim);box-shadow:0 0 30px var(--purple-glow);transform:translateY(-1px)}
+.demo-create-btn:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
+
+/* Presets */
+.presets{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
+.preset-btn{
+  padding:8px 18px;border-radius:999px;border:1px solid var(--border-light);
+  background:transparent;color:var(--text-dim);font-size:.82rem;font-weight:500;
+  cursor:pointer;font-family:var(--sans);transition:all .25s;
+}
+.preset-btn:hover{border-color:var(--purple);color:var(--purple);background:rgba(124,109,250,.08)}
+
+/* Processing */
+.demo-processing{
+  background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);
+  padding:28px;margin-bottom:20px;display:none;
+}
+.demo-processing.show{display:block;animation:fadeInUp .4s ease}
+.processing-header{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+.processing-spinner{
+  width:20px;height:20px;border:2px solid var(--border-light);
+  border-top-color:var(--purple);border-radius:50%;animation:spin .8s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.processing-title{font-family:var(--mono);font-size:.9rem;color:var(--purple);font-weight:700}
+.processing-stream{
+  font-family:var(--mono);font-size:.78rem;color:var(--text-dim);
+  line-height:1.9;white-space:pre-wrap;min-height:80px;
+}
+
+/* Token Card */
+.token-card{
+  background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);
+  overflow:hidden;display:none;
+}
+.token-card.show{display:block;animation:slideUp .6s ease}
+@keyframes slideUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+
+.tc-header{
+  padding:28px 28px 20px;
+  background:linear-gradient(135deg,rgba(124,109,250,.1),rgba(6,214,160,.05));
+  border-bottom:1px solid var(--border);position:relative;overflow:hidden;
+}
+.tc-header::before{
+  content:'';position:absolute;top:-60px;right:-60px;width:200px;height:200px;
+  border-radius:50%;background:radial-gradient(circle,var(--purple-glow),transparent 70%);
+}
+.tc-badge{
+  display:inline-flex;align-items:center;gap:10px;padding:8px 18px;
+  border-radius:var(--radius-sm);background:var(--bg);border:1px solid var(--border-light);
+  margin-bottom:14px;position:relative;
+}
+.tc-badge-icon{
+  width:36px;height:36px;border-radius:50%;
+  background:linear-gradient(135deg,var(--purple),var(--green));
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-weight:700;font-size:.85rem;color:#fff;
+}
+.tc-badge-name{font-family:var(--mono);font-weight:700;font-size:1.15rem}
+.tc-badge-sym{font-family:var(--mono);font-size:.8rem;color:var(--text-muted);text-transform:uppercase}
+.tc-deployed{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:5px 14px;border-radius:999px;background:rgba(6,214,160,.12);
+  color:var(--green);font-size:.78rem;font-weight:600;font-family:var(--mono);
+  margin-left:16px;
+}
+.tc-deployed .dot-live{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse-dot 1.5s infinite}
+
+.tc-body{padding:28px}
+
+/* Stats grid */
+.tc-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:16px;margin-bottom:28px}
+.tc-stat{
+  background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);
+  padding:16px;text-align:center;transition:border-color .3s;
+}
+.tc-stat:hover{border-color:var(--purple)}
+.tc-stat-val{font-family:var(--mono);font-size:1.2rem;font-weight:700;color:var(--text);margin-bottom:4px}
+.tc-stat-label{font-size:.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px}
+
+/* Features pills */
+.tc-features{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:28px}
+.tc-feat{
+  padding:6px 14px;border-radius:999px;font-size:.78rem;font-weight:600;
+  font-family:var(--mono);border:1px solid;
+}
+.tc-feat.on{color:var(--green);border-color:rgba(6,214,160,.3);background:rgba(6,214,160,.08)}
+.tc-feat.off{color:var(--text-muted);border-color:var(--border);background:transparent;opacity:.5}
+
+/* Allocation bar */
+.tc-alloc{margin-bottom:28px}
+.tc-alloc-title{font-family:var(--mono);font-size:.82rem;color:var(--text-dim);margin-bottom:12px}
+.alloc-bar{display:flex;height:28px;border-radius:var(--radius-sm);overflow:hidden;gap:2px}
+.alloc-seg{display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:.65rem;font-weight:700;color:#fff;transition:flex .6s ease}
+.alloc-seg.creator{background:var(--purple)}
+.alloc-seg.community{background:var(--green)}
+.alloc-seg.treasury{background:#f59e0b}
+.alloc-seg.liquidity{background:#3b82f6}
+.alloc-legend{display:flex;gap:20px;margin-top:10px;flex-wrap:wrap}
+.alloc-legend-item{display:flex;align-items:center;gap:6px;font-size:.78rem;color:var(--text-dim)}
+.alloc-legend-dot{width:10px;height:10px;border-radius:3px}
+
+/* CLI command */
+.tc-cli{
+  background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);
+  padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:12px;
+}
+.tc-cli code{font-family:var(--mono);font-size:.8rem;color:var(--green);word-break:break-all}
+.tc-copy{
+  padding:6px 14px;border-radius:6px;border:1px solid var(--border-light);
+  background:transparent;color:var(--text-dim);font-size:.75rem;font-family:var(--mono);
+  cursor:pointer;transition:all .25s;white-space:nowrap;
+}
+.tc-copy:hover{border-color:var(--green);color:var(--green)}
+
+/* JSON block */
+.tc-json-wrap{
+  background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);
+  overflow:hidden;
+}
+.tc-json-bar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 16px;background:var(--bg3);border-bottom:1px solid var(--border);
+}
+.tc-json-bar span{font-family:var(--mono);font-size:.75rem;color:var(--text-muted)}
+.tc-json{padding:18px;font-family:var(--mono);font-size:.75rem;line-height:1.8;overflow-x:auto;white-space:pre}
+.tc-json .jk{color:var(--purple)}.tc-json .js{color:var(--green)}.tc-json .jn{color:#f59e0b}.tc-json .jb{color:#3b82f6}
+
+/* Explorer link */
+.tc-explorer{
+  margin-top:20px;padding:16px 20px;
+  background:rgba(6,214,160,.06);border:1px solid rgba(6,214,160,.2);
+  border-radius:var(--radius-sm);display:flex;align-items:center;gap:12px;
+}
+.tc-explorer-icon{font-size:1.2rem}
+.tc-explorer-text{font-size:.85rem;color:var(--text-dim)}
+.tc-explorer-text a{color:var(--green);font-family:var(--mono);font-size:.8rem}
+
+/* ===== HOW IT WORKS ===== */
+#how{position:relative;z-index:1}
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:28px;margin-top:48px}
+.step{
+  background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);
+  padding:32px;text-align:center;transition:all .35s;position:relative;
+}
+.step:hover{border-color:var(--purple);transform:translateY(-4px);box-shadow:0 12px 40px rgba(0,0,0,.3)}
+.step-num{
+  font-family:var(--mono);font-size:.7rem;color:var(--purple);
+  position:absolute;top:16px;left:20px;opacity:.6;
+}
+.step-icon{
+  width:64px;height:64px;border-radius:16px;margin:0 auto 20px;
+  background:linear-gradient(135deg,rgba(124,109,250,.15),rgba(6,214,160,.1));
+  border:1px solid var(--border-light);
+  display:flex;align-items:center;justify-content:center;font-size:1.6rem;
+}
+.step h3{font-family:var(--mono);font-size:1.1rem;margin-bottom:8px}
+.step p{font-size:.9rem;color:var(--text-dim);line-height:1.6}
+.step-connector{
+  display:none;position:absolute;right:-28px;top:50%;width:28px;height:2px;
+  background:linear-gradient(90deg,var(--purple),transparent);
+}
+@media(min-width:900px){.step-connector{display:block}}
+
+/* ===== FEATURES GRID ===== */
+#features{position:relative;z-index:1}
+.features-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px;margin-top:48px}
+.feat-card{
+  background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);
+  padding:24px;transition:all .35s;cursor:default;
+}
+.feat-card:hover{
+  border-color:var(--purple);
+  box-shadow:0 0 30px var(--purple-glow);transform:translateY(-3px);
+}
+.feat-icon{
+  width:44px;height:44px;border-radius:10px;margin-bottom:14px;
+  display:flex;align-items:center;justify-content:center;font-size:1.2rem;
+  background:rgba(124,109,250,.1);border:1px solid rgba(124,109,250,.2);
+}
+.feat-card:nth-child(even) .feat-icon{background:rgba(6,214,160,.1);border-color:rgba(6,214,160,.2)}
+.feat-card h3{font-family:var(--mono);font-size:.95rem;margin-bottom:6px}
+.feat-card p{font-size:.85rem;color:var(--text-dim);line-height:1.55}
+
+/* ===== CLI QUICK START ===== */
+#quickstart{position:relative;z-index:1}
+.qs-terminal{
+  background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);
+  overflow:hidden;margin-top:40px;box-shadow:0 20px 60px rgba(0,0,0,.35);
+}
+.qs-body{padding:24px;font-family:var(--mono);font-size:.82rem;line-height:2}
+.qs-body .comment{color:var(--text-muted)}
+.qs-body .prompt-g{color:var(--green)}
+.qs-body .str{color:var(--purple)}
+.qs-body .cmd-text{color:var(--text)}
+
+/* ===== ARCHITECTURE ===== */
+#architecture{position:relative;z-index:1}
+.arch-flow{
+  display:flex;align-items:center;justify-content:center;gap:0;
+  margin-top:48px;flex-wrap:wrap;
+}
+.arch-node{
+  background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);
+  padding:20px 24px;text-align:center;min-width:150px;transition:all .35s;
+}
+.arch-node:hover{border-color:var(--purple);transform:translateY(-3px)}
+.arch-node-icon{font-size:1.5rem;margin-bottom:8px}
+.arch-node-title{font-family:var(--mono);font-size:.85rem;font-weight:700;margin-bottom:4px}
+.arch-node-sub{font-size:.75rem;color:var(--text-muted)}
+.arch-arrow{
+  font-family:var(--mono);font-size:1.2rem;color:var(--purple);padding:0 12px;
+  display:flex;align-items:center;
+}
+@media(max-width:768px){
+  .arch-flow{flex-direction:column;gap:8px}
+  .arch-arrow{transform:rotate(90deg);padding:4px}
+}
+
+/* ===== FOOTER ===== */
+footer{
+  border-top:1px solid var(--border);padding:48px 0 36px;position:relative;z-index:1;
+}
+.footer-inner{
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:20px;
+}
+.footer-left{font-size:.85rem;color:var(--text-muted)}
+.footer-left span{color:var(--purple);font-weight:600}
+.footer-links{display:flex;gap:24px;flex-wrap:wrap}
+.footer-links a{font-size:.85rem;color:var(--text-dim);transition:color .2s}
+.footer-links a:hover{color:var(--purple)}
+.footer-badge{
+  display:inline-flex;align-items:center;gap:8px;padding:6px 16px;
+  border-radius:var(--radius-sm);border:1px solid var(--border);
+  font-size:.78rem;color:var(--text-dim);margin-top:24px;
+}
+
+/* ===== ANIMATIONS ===== */
+@keyframes fadeInUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeInDown{from{opacity:0;transform:translateY(-16px)}to{opacity:1;transform:translateY(0)}}
+.reveal{opacity:0;transform:translateY(30px);transition:opacity .6s ease,transform .6s ease}
+.reveal.visible{opacity:1;transform:translateY(0)}
+
+/* ===== SCROLLBAR ===== */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border-light);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--purple-dim)}
+
+/* ===== RESPONSIVE ===== */
+@media(max-width:640px){
+  .demo-input-row{flex-direction:column}
+  .tc-stats{grid-template-columns:repeat(2,1fr)}
+  .tc-cli{flex-direction:column;align-items:flex-start}
+  .footer-inner{flex-direction:column;text-align:center}
+}
+</style>
+</head>
+<body>
+
+<!-- Particles -->
+<canvas id="particles"></canvas>
+
+<!-- Nav -->
+<nav>
+  <div class="inner">
+    <div class="logo"><span>&gt;_</span> TXAI</div>
+    <div class="links">
+      <a href="#demo">Demo</a>
+      <a href="#how">How It Works</a>
+      <a href="#features">Features</a>
+      <a href="#quickstart">Quick Start</a>
+      <a href="https://github.com/EpicLoop365/txai-token-creation-command-line-tool" target="_blank" class="gh-btn">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+        GitHub
+      </a>
+    </div>
+  </div>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-badge"><span class="dot"></span> Open Source CLI Tool</div>
+  <h1>TXAI Token Studio</h1>
+  <p>Create blockchain tokens with plain English. Powered by Claude AI + TX Agent SDK.</p>
+  <div class="hero-cta">
+    <a href="#demo" class="btn btn-primary">Try the Demo</a>
+    <a href="#quickstart" class="btn btn-outline">Quick Start</a>
+  </div>
+  <div class="hero-terminal">
+    <div class="term-bar">
+      <span class="term-dot r"></span><span class="term-dot y"></span><span class="term-dot g"></span>
+      <span>txai-cli</span>
+    </div>
+    <div class="term-body" id="heroTerm"></div>
+  </div>
+</section>
+
+<!-- Interactive Demo -->
+<section id="demo">
+  <div class="container">
+    <div class="reveal">
+      <div class="section-label">Interactive Demo</div>
+      <div class="section-title">Create a Token</div>
+      <div class="section-sub">Describe your token in plain English and watch the AI parse it into a deployable configuration.</div>
+    </div>
+
+    <div class="demo-input-wrap reveal">
+      <div class="demo-input-row">
+        <input type="text" class="demo-input" id="demoInput" placeholder='Describe your token... e.g., "a gaming token called GEMS with 5M supply"'>
+        <button class="demo-create-btn" id="demoBtn" onclick="runDemo()">Create Token</button>
+      </div>
+      <div class="presets">
+        <button class="preset-btn" onclick="usePreset('gaming')">Gaming Token</button>
+        <button class="preset-btn" onclick="usePreset('loyalty')">Loyalty Points</button>
+        <button class="preset-btn" onclick="usePreset('governance')">Governance Token</button>
+      </div>
+    </div>
+
+    <div class="demo-processing" id="demoProcessing">
+      <div class="processing-header">
+        <div class="processing-spinner"></div>
+        <div class="processing-title">Claude AI Processing</div>
+      </div>
+      <div class="processing-stream" id="demoStream"></div>
+    </div>
+
+    <div class="token-card" id="tokenCard">
+      <div class="tc-header">
+        <div class="tc-badge" id="tcBadge">
+          <div class="tc-badge-icon" id="tcIcon"></div>
+          <div>
+            <div class="tc-badge-name" id="tcName"></div>
+            <div class="tc-badge-sym" id="tcSym"></div>
+          </div>
+        </div>
+        <span class="tc-deployed"><span class="dot-live"></span> Deployed on Coreum</span>
+      </div>
+      <div class="tc-body">
+        <div class="tc-stats" id="tcStats"></div>
+        <div class="tc-features" id="tcFeatures"></div>
+        <div class="tc-alloc">
+          <div class="tc-alloc-title">Token Allocation</div>
+          <div class="alloc-bar" id="allocBar"></div>
+          <div class="alloc-legend" id="allocLegend"></div>
+        </div>
+        <div class="tc-cli">
+          <code id="tcCmd"></code>
+          <button class="tc-copy" onclick="copyCmd()">Copy</button>
+        </div>
+        <div class="tc-json-wrap">
+          <div class="tc-json-bar"><span>config.json</span><button class="tc-copy" onclick="copyJson()">Copy JSON</button></div>
+          <div class="tc-json" id="tcJson"></div>
+        </div>
+        <div class="tc-explorer">
+          <div class="tc-explorer-icon">&#9889;</div>
+          <div class="tc-explorer-text">
+            Token deployed successfully!<br>
+            <a href="#" onclick="return false">View on Coreum Explorer &#8599;</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- How It Works -->
+<section id="how">
+  <div class="container">
+    <div class="reveal" style="text-align:center">
+      <div class="section-label">How It Works</div>
+      <div class="section-title">Three Simple Steps</div>
+    </div>
+    <div class="steps">
+      <div class="step reveal">
+        <div class="step-num">01</div>
+        <div class="step-icon">&#9997;&#65039;</div>
+        <h3>Describe</h3>
+        <p>Write what you want in plain English. No technical knowledge required.</p>
+        <div class="step-connector"></div>
+      </div>
+      <div class="step reveal">
+        <div class="step-num">02</div>
+        <div class="step-icon">&#129302;</div>
+        <h3>AI Parses</h3>
+        <p>Claude extracts token parameters, features, and allocations using tool_use.</p>
+        <div class="step-connector"></div>
+      </div>
+      <div class="step reveal">
+        <div class="step-num">03</div>
+        <div class="step-icon">&#128640;</div>
+        <h3>Deploy</h3>
+        <p>Token is issued on the TX/Coreum blockchain as a native asset in seconds.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Features Grid -->
+<section id="features">
+  <div class="container">
+    <div class="reveal" style="text-align:center">
+      <div class="section-label">Smart Token Features</div>
+      <div class="section-title">Native Blockchain Capabilities</div>
+      <div class="section-sub" style="margin:12px auto 0">No smart contracts needed. All features are built into the chain.</div>
+    </div>
+    <div class="features-grid">
+      <div class="feat-card reveal"><div class="feat-icon">&#9878;&#65039;</div><h3>Mintable</h3><p>Expand token supply as your project grows. Controlled by the issuer.</p></div>
+      <div class="feat-card reveal"><div class="feat-icon">&#128293;</div><h3>Burnable</h3><p>Permanently reduce supply by burning tokens. Built-in deflation.</p></div>
+      <div class="feat-card reveal"><div class="feat-icon">&#10052;&#65039;</div><h3>Freezable</h3><p>Freeze individual addresses for compliance and security requirements.</p></div>
+      <div class="feat-card reveal"><div class="feat-icon">&#9989;</div><h3>Whitelistable</h3><p>Restrict transfers to pre-approved addresses only.</p></div>
+      <div class="feat-card reveal"><div class="feat-icon">&#128274;</div><h3>Clawback</h3><p>Reclaim tokens from any holder. Essential for regulated assets.</p></div>
+      <div class="feat-card reveal"><div class="feat-icon">&#127760;</div><h3>IBC Enabled</h3><p>Cross-chain transfers via Cosmos IBC. Interoperable by default.</p></div>
+      <div class="feat-card reveal"><div class="feat-icon">&#9888;&#65039;</div><h3>Global Freeze</h3><p>Emergency pause on all transfers. Circuit breaker for your token.</p></div>
+      <div class="feat-card reveal"><div class="feat-icon">&#127963;&#65039;</div><h3>Governance</h3><p>DAO-ready token governance. On-chain voting and proposals.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- CLI Quick Start -->
+<section id="quickstart">
+  <div class="container">
+    <div class="reveal" style="text-align:center">
+      <div class="section-label">Quick Start</div>
+      <div class="section-title">Up and Running in 60 Seconds</div>
+    </div>
+    <div class="qs-terminal reveal">
+      <div class="term-bar">
+        <span class="term-dot r"></span><span class="term-dot y"></span><span class="term-dot g"></span>
+        <span>terminal</span>
+      </div>
+      <div class="qs-body">
+<span class="comment"># Install the CLI</span>
+<br><span class="prompt-g">$</span> <span class="cmd-text">npm install -g @tx-agent/cli</span>
+<br><br><span class="comment"># Set your API key</span>
+<br><span class="prompt-g">$</span> <span class="cmd-text">export ANTHROPIC_API_KEY=</span><span class="str">your_key</span>
+<br><br><span class="comment"># Create a token with natural language</span>
+<br><span class="prompt-g">$</span> <span class="cmd-text">txai create </span><span class="str">"a gaming token called GEMS with 5M supply, mintable and burnable"</span>
+<br><br><span class="comment"># Or use npx without installing</span>
+<br><span class="prompt-g">$</span> <span class="cmd-text">npx txai-create </span><span class="str">"a loyalty points token called POINTS with 1B supply"</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Architecture -->
+<section id="architecture">
+  <div class="container">
+    <div class="reveal" style="text-align:center">
+      <div class="section-label">Architecture</div>
+      <div class="section-title">From Words to Tokens</div>
+    </div>
+    <div class="arch-flow reveal">
+      <div class="arch-node"><div class="arch-node-icon">&#128172;</div><div class="arch-node-title">Natural Language</div><div class="arch-node-sub">Your description</div></div>
+      <div class="arch-arrow">&#8594;</div>
+      <div class="arch-node"><div class="arch-node-icon">&#129302;</div><div class="arch-node-title">Claude AI</div><div class="arch-node-sub">tool_use parsing</div></div>
+      <div class="arch-arrow">&#8594;</div>
+      <div class="arch-node"><div class="arch-node-icon">&#128736;&#65039;</div><div class="arch-node-title">TX Agent SDK</div><div class="arch-node-sub">Token config</div></div>
+      <div class="arch-arrow">&#8594;</div>
+      <div class="arch-node"><div class="arch-node-icon">&#9939;&#65039;</div><div class="arch-node-title">Coreum</div><div class="arch-node-sub">Blockchain</div></div>
+      <div class="arch-arrow">&#8594;</div>
+      <div class="arch-node" style="border-color:var(--green)"><div class="arch-node-icon">&#127942;</div><div class="arch-node-title">Token Live</div><div class="arch-node-sub">Deployed!</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-left">Built with <span>Claude AI</span> + TX Agent SDK</div>
+      <div class="footer-links">
+        <a href="https://github.com/EpicLoop365/txai-token-creation-command-line-tool" target="_blank">GitHub</a>
+        <a href="https://docs.coreum.dev" target="_blank">Coreum Docs</a>
+        <a href="https://www.anthropic.com" target="_blank">Anthropic</a>
+      </div>
+    </div>
+    <div style="text-align:center;margin-top:28px">
+      <div class="footer-badge">&#9889; Powered by Anthropic</div>
+    </div>
+  </div>
+</footer>
+
+<script>
+/* ===== PARTICLES ===== */
+(function(){
+  const c=document.getElementById('particles'),x=c.getContext('2d');
+  let w,h,dots=[];
+  function resize(){w=c.width=window.innerWidth;h=c.height=window.innerHeight;init()}
+  function init(){
+    dots=[];
+    const n=Math.floor((w*h)/12000);
+    for(let i=0;i<n;i++) dots.push({x:Math.random()*w,y:Math.random()*h,r:Math.random()*1.5+.5,dx:(Math.random()-.5)*.3,dy:(Math.random()-.5)*.3,o:Math.random()*.5+.2});
+  }
+  function draw(){
+    x.clearRect(0,0,w,h);
+    for(const d of dots){
+      d.x+=d.dx;d.y+=d.dy;
+      if(d.x<0||d.x>w)d.dx*=-1;if(d.y<0||d.y>h)d.dy*=-1;
+      x.beginPath();x.arc(d.x,d.y,d.r,0,Math.PI*2);
+      x.fillStyle='rgba(124,109,250,'+d.o+')';x.fill();
+    }
+    // Connect nearby dots
+    for(let i=0;i<dots.length;i++){
+      for(let j=i+1;j<dots.length;j++){
+        const dx=dots[i].x-dots[j].x,dy=dots[i].y-dots[j].y,dist=Math.sqrt(dx*dx+dy*dy);
+        if(dist<120){
+          x.beginPath();x.moveTo(dots[i].x,dots[i].y);x.lineTo(dots[j].x,dots[j].y);
+          x.strokeStyle='rgba(124,109,250,'+(1-dist/120)*.12+')';x.stroke();
+        }
+      }
+    }
+    requestAnimationFrame(draw);
+  }
+  window.addEventListener('resize',resize);resize();draw();
+})();
+
+/* ===== HERO TERMINAL ANIMATION ===== */
+(function(){
+  const lines=[
+    {type:'prompt',text:'$ txai create "a gaming token called GEMS with 50M supply, mintable and burnable"'},
+    {type:'out',text:''},
+    {type:'hl',text:'[Claude AI] Parsing natural language...'},
+    {type:'out',text:'  Name: GEMS'},
+    {type:'out',text:'  Supply: 50,000,000'},
+    {type:'out',text:'  Features: minting, burning'},
+    {type:'out',text:''},
+    {type:'hl',text:'[TX Agent] Deploying to Coreum...'},
+    {type:'out',text:'  Transaction: 0xA3F7...B21E'},
+    {type:'out',text:''},
+    {type:'green',text:'Token GEMS deployed successfully!'},
+  ];
+  const term=document.getElementById('heroTerm');
+  let i=0;
+  function addLine(){
+    if(i>=lines.length){
+      const cur=document.createElement('span');cur.className='cursor';term.appendChild(cur);
+      // Restart after a pause
+      setTimeout(()=>{term.innerHTML='';i=0;addLine()},4000);
+      return;
+    }
+    const l=lines[i];const el=document.createElement('div');el.className='line';
+    el.style.animationDelay='.05s';
+    if(l.type==='prompt'){el.innerHTML='<span class="prompt">$ </span><span class="cmd">'+l.text.slice(2)+'</span>';
+    }else if(l.type==='hl'){el.innerHTML='<span class="hl">'+l.text+'</span>';
+    }else if(l.type==='green'){el.innerHTML='<span class="prompt">'+l.text+'</span>';
+    }else{el.innerHTML='<span class="out">'+l.text+'</span>';}
+    term.appendChild(el);i++;
+    setTimeout(addLine, l.text===''?150:l.type==='prompt'?800:250);
+  }
+  setTimeout(addLine,800);
+})();
+
+/* ===== SCROLL REVEAL ===== */
+const observer=new IntersectionObserver((entries)=>{
+  entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('visible');observer.unobserve(e.target)}});
+},{threshold:.15});
+document.querySelectorAll('.reveal').forEach(el=>observer.observe(el));
+
+/* ===== PRESETS ===== */
+const PRESETS={
+  gaming:{
+    input:'a gaming token called GEMS with 50M supply, mintable and burnable with IBC',
+    name:'GEMS',symbol:'gems',supply:50000000,decimals:6,
+    features:{minting:true,burning:true,ibcEnabled:true,freezing:false,whitelisting:false,clawback:false,globalFreeze:false,governance:false}
+  },
+  loyalty:{
+    input:'a loyalty points token called POINTS with 1B supply, mintable with whitelisting',
+    name:'POINTS',symbol:'points',supply:1000000000,decimals:6,
+    features:{minting:true,burning:true,ibcEnabled:false,freezing:false,whitelisting:true,clawback:false,globalFreeze:false,governance:false}
+  },
+  governance:{
+    input:'a governance token called VOTE with 10M supply, burnable with governance',
+    name:'VOTE',symbol:'vote',supply:10000000,decimals:6,
+    features:{minting:false,burning:true,ibcEnabled:false,freezing:false,whitelisting:false,clawback:false,globalFreeze:false,governance:true}
+  }
+};
+
+function usePreset(key){
+  document.getElementById('demoInput').value=PRESETS[key].input;
+  runDemo(PRESETS[key]);
+}
+
+/* ===== CLIENT-SIDE PARSING ===== */
+function parseInput(text){
+  text=text.toLowerCase();
+  // Name
+  let name='TOKEN';
+  const nameMatch=text.match(/called\s+([a-z0-9]+)/i);
+  if(nameMatch)name=nameMatch[1].toUpperCase();
+  else{const w=text.match(/\b([A-Z]{2,8})\b/);if(w)name=w[1];}
+
+  // Supply
+  let supply=1000000;
+  const supMatch=text.match(/([\d,.]+)\s*(k|m|b|t)?(?:\s*supply)?/i);
+  if(supMatch){
+    let n=parseFloat(supMatch[1].replace(/,/g,''));
+    const suffix=(supMatch[2]||'').toLowerCase();
+    if(suffix==='k')n*=1e3;else if(suffix==='m')n*=1e6;else if(suffix==='b')n*=1e9;else if(suffix==='t')n*=1e12;
+    supply=Math.floor(n);
+  }
+
+  // Features
+  const features={
+    minting:/mint/i.test(text),
+    burning:/burn/i.test(text),
+    ibcEnabled:/ibc/i.test(text),
+    freezing:/freez(?:e|able|ing)\b/i.test(text)&&!/global/i.test(text),
+    whitelisting:/whitelist/i.test(text),
+    clawback:/clawback/i.test(text),
+    globalFreeze:/global.?freeze/i.test(text),
+    governance:/governance|dao|voting/i.test(text)
+  };
+  return{name,symbol:name.toLowerCase(),supply,decimals:6,features};
+}
+
+/* ===== DEMO RUNNER ===== */
+let demoRunning=false;
+async function runDemo(preset){
+  if(demoRunning)return;
+  const input=document.getElementById('demoInput').value.trim();
+  if(!input&&!preset)return;
+  demoRunning=true;
+  document.getElementById('demoBtn').disabled=true;
+
+  const cfg=preset||parseInput(input);
+  const desc=preset?preset.input:input;
+
+  // Reset
+  const proc=document.getElementById('demoProcessing');
+  const card=document.getElementById('tokenCard');
+  card.classList.remove('show');card.style.display='none';
+  proc.classList.add('show');
+  const stream=document.getElementById('demoStream');
+  stream.textContent='';
+
+  // Streaming text
+  const lines=[
+    'Analyzing natural language input...',
+    'Extracting token parameters...',
+    '  > Name: '+cfg.name,
+    '  > Symbol: $'+cfg.symbol.toUpperCase(),
+    '  > Supply: '+cfg.supply.toLocaleString(),
+    '  > Decimals: '+cfg.decimals,
+    'Detecting requested features...',
+    ...Object.entries(cfg.features).filter(([,v])=>v).map(([k])=>'  > '+k+': enabled'),
+    'Generating allocation strategy...',
+    '  > Creator: 20% | Community: 35% | Treasury: 25% | Liquidity: 20%',
+    'Building transaction payload...',
+    'Submitting to Coreum blockchain...',
+    'Waiting for confirmation...',
+    'Block confirmed! Token deployed.'
+  ];
+
+  for(const line of lines){
+    await streamLine(stream,line);
+    stream.textContent+='\n';
+    await sleep(80);
+  }
+  await sleep(300);
+  proc.classList.remove('show');
+
+  // Build card
+  buildTokenCard(cfg,desc);
+  card.style.display='block';
+  requestAnimationFrame(()=>card.classList.add('show'));
+
+  demoRunning=false;
+  document.getElementById('demoBtn').disabled=false;
+}
+
+function streamLine(el,text){
+  return new Promise(resolve=>{
+    let i=0;
+    const iv=setInterval(()=>{
+      el.textContent+=text[i];i++;
+      if(i>=text.length){clearInterval(iv);resolve()}
+    },18);
+  });
+}
+function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
+
+/* ===== BUILD TOKEN CARD ===== */
+function buildTokenCard(cfg,desc){
+  document.getElementById('tcIcon').textContent=cfg.name.slice(0,2);
+  document.getElementById('tcName').textContent=cfg.name;
+  document.getElementById('tcSym').textContent='$'+cfg.symbol.toUpperCase();
+
+  // Stats
+  const stats=document.getElementById('tcStats');
+  stats.innerHTML='';
+  const statData=[
+    {val:cfg.supply.toLocaleString(),label:'Total Supply'},
+    {val:cfg.decimals,label:'Decimals'},
+    {val:'Coreum',label:'Network'},
+    {val:Object.values(cfg.features).filter(Boolean).length,label:'Features'}
+  ];
+  statData.forEach((s,i)=>{
+    const d=document.createElement('div');d.className='tc-stat';
+    d.innerHTML='<div class="tc-stat-val" data-target="'+s.val+'">'+s.val+'</div><div class="tc-stat-label">'+s.label+'</div>';
+    stats.appendChild(d);
+  });
+
+  // Features
+  const feats=document.getElementById('tcFeatures');feats.innerHTML='';
+  const fLabels={minting:'Mintable',burning:'Burnable',ibcEnabled:'IBC Enabled',freezing:'Freezable',whitelisting:'Whitelistable',clawback:'Clawback',globalFreeze:'Global Freeze',governance:'Governance'};
+  Object.entries(cfg.features).forEach(([k,v])=>{
+    const s=document.createElement('span');
+    s.className='tc-feat '+(v?'on':'off');
+    s.textContent=(v?'':'')+(fLabels[k]||k);
+    feats.appendChild(s);
+  });
+
+  // Allocation bar
+  const alloc=[
+    {cls:'creator',label:'Creator',pct:20,color:'var(--purple)'},
+    {cls:'community',label:'Community',pct:35,color:'var(--green)'},
+    {cls:'treasury',label:'Treasury',pct:25,color:'#f59e0b'},
+    {cls:'liquidity',label:'Liquidity',pct:20,color:'#3b82f6'},
+  ];
+  const bar=document.getElementById('allocBar');bar.innerHTML='';
+  const legend=document.getElementById('allocLegend');legend.innerHTML='';
+  alloc.forEach(a=>{
+    const seg=document.createElement('div');seg.className='alloc-seg '+a.cls;
+    seg.style.flex='0 0 0%';seg.textContent=a.pct+'%';bar.appendChild(seg);
+    setTimeout(()=>{seg.style.flex='0 0 '+a.pct+'%'},50);
+    legend.innerHTML+='<div class="alloc-legend-item"><div class="alloc-legend-dot" style="background:'+a.color+'"></div>'+a.label+' '+a.pct+'%</div>';
+  });
+
+  // CLI command
+  const cmd='npx txai-create "'+desc+'"';
+  document.getElementById('tcCmd').textContent=cmd;
+
+  // JSON
+  const json={
+    token:{name:cfg.name,symbol:cfg.symbol,initialSupply:String(cfg.supply),decimals:cfg.decimals,network:'coreum-mainnet-1'},
+    features:cfg.features,
+    allocation:{creator:'20%',community:'35%',treasury:'25%',liquidity:'20%'},
+    cli:'txai create "'+desc+'"'
+  };
+  document.getElementById('tcJson').innerHTML=syntaxHL(JSON.stringify(json,null,2));
+  window._lastCmd=cmd;window._lastJson=JSON.stringify(json,null,2);
+}
+
+function syntaxHL(json){
+  return json
+    .replace(/("(?:\\.|[^"\\])*")\s*:/g,'<span class="jk">$1</span>:')
+    .replace(/:\s*("(?:\\.|[^"\\])*")/g,': <span class="js">$1</span>')
+    .replace(/:\s*(\d+)/g,': <span class="jn">$1</span>')
+    .replace(/:\s*(true|false)/g,': <span class="jb">$1</span>');
+}
+
+function copyCmd(){
+  navigator.clipboard.writeText(window._lastCmd||'');
+  event.target.textContent='Copied!';setTimeout(()=>event.target.textContent='Copy',1500);
+}
+function copyJson(){
+  navigator.clipboard.writeText(window._lastJson||'');
+  event.target.textContent='Copied!';setTimeout(()=>event.target.textContent='Copy JSON',1500);
+}
+
+/* Enter key */
+document.getElementById('demoInput').addEventListener('keydown',e=>{if(e.key==='Enter')runDemo()});
+</script>
+</body>
+</html>
