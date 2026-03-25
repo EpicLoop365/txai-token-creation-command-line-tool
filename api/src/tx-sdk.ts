@@ -17,6 +17,7 @@ import {
   isDeliverTxSuccess,
   defaultRegistryTypes,
 } from "@cosmjs/stargate";
+import { HttpBatchClient, Tendermint37Client } from "@cosmjs/tendermint-rpc";
 import { coreumRegistry } from "coreum-js-nightly";
 
 // ─── NETWORK CONFIG ──────────────────────────────────────────────────────────
@@ -156,12 +157,17 @@ export class TxClient {
   static async connectWithWallet(txWallet: TxWallet): Promise<TxClient> {
     const { network, networkName, wallet, address } = txWallet;
     const gasPrice = GasPrice.fromString(`0.0625${network.denom}`);
-    const signingClient = await SigningStargateClient.connectWithSigner(
-      network.rpcEndpoint,
+
+    // Use HTTP RPC instead of WebSocket — more reliable on cloud platforms like Railway
+    const httpClient = new HttpBatchClient(network.rpcEndpoint);
+    const tmClient = await Tendermint37Client.create(httpClient);
+
+    const signingClient = await SigningStargateClient.createWithSigner(
+      tmClient as any,
       wallet,
       { gasPrice, registry: getTxRegistry() }
     );
-    const queryClient = await StargateClient.connect(network.rpcEndpoint);
+    const queryClient = await StargateClient.create(tmClient as any);
     return new TxClient(signingClient, queryClient, address, network, networkName);
   }
 
