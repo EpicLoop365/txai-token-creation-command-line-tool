@@ -133,6 +133,35 @@ export interface TransactionResult {
   error?: string;
 }
 
+// ─── TX MUTEX (prevents sequence conflicts when sharing one wallet) ─────────
+
+class TxMutex {
+  private queue: Array<() => void> = [];
+  private locked = false;
+
+  async acquire(): Promise<void> {
+    if (!this.locked) {
+      this.locked = true;
+      return;
+    }
+    return new Promise<void>((resolve) => {
+      this.queue.push(resolve);
+    });
+  }
+
+  release(): void {
+    if (this.queue.length > 0) {
+      const next = this.queue.shift()!;
+      next();
+    } else {
+      this.locked = false;
+    }
+  }
+}
+
+// Global mutex — all TxClient instances sharing the same wallet go through this
+const globalTxMutex = new TxMutex();
+
 export class TxClient {
   private signingClient: SigningStargateClient;
   private queryClient: StargateClient;
@@ -194,40 +223,52 @@ export class TxClient {
     msg: { typeUrl: string; value: unknown },
     gasLimit = 150000
   ): Promise<TransactionResult> {
-    const fee = calculateFee(
-      gasLimit,
-      GasPrice.fromString(`0.0625${this.network.denom}`)
-    );
+    // Acquire the global mutex so only one transaction is in-flight at a time.
+    // This prevents sequence number conflicts when multiple users share one wallet.
+    await globalTxMutex.acquire();
 
-    const broadcast = () =>
-      this.signingClient.signAndBroadcast(
-        this.address,
-        [msg as Parameters<typeof this.signingClient.signAndBroadcast>[1][0]],
-        fee
+    try {
+      const fee = calculateFee(
+        gasLimit,
+        GasPrice.fromString(`0.0625${this.network.denom}`)
       );
 
-    // Retry up to 3 times on sequence mismatch (concurrent users share one wallet)
-    let lastErr: Error | undefined;
-    for (let attempt = 0; attempt < 3; attempt++) {
-      try {
-        if (attempt > 0) {
-          await new Promise((r) => setTimeout(r, 2000 * attempt));
+      const broadcast = () =>
+        this.signingClient.signAndBroadcast(
+          this.address,
+          [msg as Parameters<typeof this.signingClient.signAndBroadcast>[1][0]],
+          fee
+        );
+
+      // Retry up to 3 times on sequence mismatch
+      let lastErr: Error | undefined;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          if (attempt > 0) {
+            // Wait for the chain to process the previous tx, then reconnect
+            // to get a fresh sequence number from the chain
+            await new Promise((r) => setTimeout(r, 3000 * attempt));
+          }
+          const result: DeliverTxResponse = await broadcast();
+          return this.formatTxResult(result);
+        } catch (err) {
+          const message = (err as Error).message ?? String(err);
+          if (
+            message.includes("account sequence mismatch") ||
+            message.includes("incorrect account sequence")
+          ) {
+            lastErr = err as Error;
+            console.log(`[TxClient] Sequence mismatch on attempt ${attempt + 1}, retrying...`);
+            continue;
+          }
+          throw err;
         }
-        const result: DeliverTxResponse = await broadcast();
-        return this.formatTxResult(result);
-      } catch (err) {
-        const message = (err as Error).message ?? String(err);
-        if (
-          message.includes("account sequence mismatch") ||
-          message.includes("incorrect account sequence")
-        ) {
-          lastErr = err as Error;
-          continue;
-        }
-        throw err;
       }
+      throw lastErr!;
+    } finally {
+      // Always release the mutex so the next queued transaction can proceed
+      globalTxMutex.release();
     }
-    throw lastErr!
   }
 
   private formatTxResult(result: DeliverTxResponse): TransactionResult {
