@@ -4,11 +4,14 @@
  * Endpoints:
  *   GET  /health          — health check with wallet + network info
  *   POST /api/create-token — accepts { description }, streams SSE events
+ *   POST /api/chat         — conversational token advisor (no blockchain calls)
  */
 
 import express from "express";
 import cors from "cors";
+import Anthropic from "@anthropic-ai/sdk";
 import { createToken } from "./token-creator";
+import { getChatSystemPrompt } from "./tools";
 import {
   importWallet,
   NETWORKS,
@@ -193,6 +196,101 @@ app.post("/api/create-token-sync", async (req, res) => {
     }
   } catch (err) {
     res.json({ success: false, events, error: (err as Error).message });
+  }
+});
+
+// ─── CHAT (Token Advisor) ───────────────────────────────────────────────────
+
+const chatRateLimitMap = new Map<string, number>();
+const CHAT_RATE_LIMIT_MS = 5_000; // 1 message per 5 seconds per IP
+
+// Clean up old chat rate limit entries every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, ts] of chatRateLimitMap.entries()) {
+    if (now - ts > CHAT_RATE_LIMIT_MS * 2) chatRateLimitMap.delete(ip);
+  }
+}, 5 * 60_000);
+
+app.post("/api/chat", async (req, res) => {
+  const { messages } = req.body as { messages?: Array<{ role: string; content: string }> };
+
+  // Validate messages
+  if (!messages || !Array.isArray(messages) || messages.length === 0) {
+    res.status(400).json({ error: "Missing 'messages' array." });
+    return;
+  }
+  if (messages.length > 30) {
+    res.status(400).json({ error: "Conversation too long. Start a new chat." });
+    return;
+  }
+  for (const m of messages) {
+    if (!m.role || !m.content || typeof m.content !== "string") {
+      res.status(400).json({ error: "Each message must have role and content." });
+      return;
+    }
+    if (m.content.length > 2000) {
+      res.status(400).json({ error: "Message too long. Maximum 2000 characters." });
+      return;
+    }
+  }
+
+  if (!process.env.ANTHROPIC_API_KEY) {
+    res.status(500).json({ error: "Server misconfigured: ANTHROPIC_API_KEY not set." });
+    return;
+  }
+
+  // Rate limit
+  const clientIp =
+    (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || req.ip || "unknown";
+  const now = Date.now();
+  const lastChat = chatRateLimitMap.get(clientIp);
+  if (lastChat && now - lastChat < CHAT_RATE_LIMIT_MS) {
+    res.status(429).json({ error: "Slow down — wait a few seconds between messages." });
+    return;
+  }
+  chatRateLimitMap.set(clientIp, now);
+
+  try {
+    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+    const response = await anthropic.messages.create({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 1024,
+      system: getChatSystemPrompt(),
+      messages: messages.map((m) => ({
+        role: m.role as "user" | "assistant",
+        content: m.content,
+      })),
+    });
+
+    // Extract text from response
+    let reply = "";
+    for (const block of response.content) {
+      if (block.type === "text") reply += block.text;
+    }
+
+    // Check for suggested config between ===TOKEN_CONFIG=== markers
+    let suggestedConfig: Record<string, unknown> | null = null;
+    const configMatch = reply.match(/===TOKEN_CONFIG===\s*([\s\S]*?)\s*===TOKEN_CONFIG===/);
+    if (configMatch) {
+      try {
+        suggestedConfig = JSON.parse(configMatch[1].trim());
+      } catch { /* ignore parse errors */ }
+      // Remove the config block from the displayed reply
+      reply = reply.replace(/===TOKEN_CONFIG===\s*[\s\S]*?\s*===TOKEN_CONFIG===/, "").trim();
+    }
+
+    res.json({ reply, suggestedConfig });
+  } catch (err) {
+    const status = (err as { status?: number }).status;
+    if (status === 529 || status === 503) {
+      res.status(503).json({ error: "AI service is temporarily overloaded. Try again in a moment." });
+    } else if (status === 429) {
+      res.status(429).json({ error: "AI rate limit reached. Wait a moment and try again." });
+    } else {
+      res.status(500).json({ error: `Chat failed: ${(err as Error).message}` });
+    }
   }
 });
 
