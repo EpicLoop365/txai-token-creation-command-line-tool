@@ -20,6 +20,18 @@ import { DEMO_TOOLS, DemoToolExecutor, getSystemPrompt } from "./tools";
 const MODEL = "claude-sonnet-4-20250514";
 const MAX_ITERATIONS = 10;
 const MAX_RETRIES = 3;
+const API_CALL_TIMEOUT_MS = 60_000; // 60s max per Claude API call
+const TOTAL_TIMEOUT_MS = 120_000;   // 2 min max for entire token creation
+
+/** Race a promise against a timeout */
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error(`${label} timed out after ${ms / 1000}s`)), ms)
+    ),
+  ]);
+}
 
 /** Call Claude API with retry + exponential backoff for transient errors (429, 500, 503, 529) */
 async function callClaudeWithRetry(
@@ -29,7 +41,11 @@ async function callClaudeWithRetry(
 ): Promise<Anthropic.Message> {
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     try {
-      return await anthropic.messages.create(params);
+      return await withTimeout(
+        anthropic.messages.create(params),
+        API_CALL_TIMEOUT_MS,
+        "AI request"
+      );
     } catch (err) {
       const status = (err as { status?: number }).status;
       const isRetryable = status === 429 || status === 500 || status === 503 || status === 529;
@@ -58,6 +74,23 @@ async function callClaudeWithRetry(
 export type SendEventFn = (event: string, data: unknown) => void;
 
 export async function createToken(
+  description: string,
+  sendEvent: SendEventFn
+): Promise<void> {
+  // Wrap the entire creation flow in a hard timeout
+  const timeoutId = setTimeout(() => {
+    sendEvent("error", { message: "Token creation timed out after 2 minutes. Please try again." });
+    sendEvent("done", {});
+  }, TOTAL_TIMEOUT_MS);
+
+  try {
+    await _createTokenInner(description, sendEvent);
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+async function _createTokenInner(
   description: string,
   sendEvent: SendEventFn
 ): Promise<void> {

@@ -138,14 +138,36 @@ export interface TransactionResult {
 class TxMutex {
   private queue: Array<() => void> = [];
   private locked = false;
+  private lockTime = 0;
+  private readonly LOCK_TIMEOUT_MS = 90_000; // 90s max — auto-release if stuck
 
   async acquire(): Promise<void> {
+    // Auto-release stale locks (prevents permanent deadlock if a request crashes)
+    if (this.locked && Date.now() - this.lockTime > this.LOCK_TIMEOUT_MS) {
+      console.warn("[TxMutex] Force-releasing stale lock after timeout");
+      this.locked = false;
+    }
+
     if (!this.locked) {
       this.locked = true;
+      this.lockTime = Date.now();
       return;
     }
-    return new Promise<void>((resolve) => {
-      this.queue.push(resolve);
+
+    // Wait in queue, but with a timeout so we don't hang forever
+    return new Promise<void>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        // Remove ourselves from queue
+        const idx = this.queue.indexOf(resolve);
+        if (idx !== -1) this.queue.splice(idx, 1);
+        reject(new Error("Transaction queue timeout — the server is busy. Please try again."));
+      }, this.LOCK_TIMEOUT_MS);
+
+      this.queue.push(() => {
+        clearTimeout(timer);
+        this.lockTime = Date.now();
+        resolve();
+      });
     });
   }
 
