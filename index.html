@@ -1083,7 +1083,7 @@ async function runLiveDemo(inputText){
 function buildLiveTokenCard(data, desc){
   const denom = data.denom || 'unknown';
   const txHash = data.txHash || '';
-  const explorerUrl = data.explorerUrl || ('https://explorer.testnet-1.coreum.dev/coreum/transactions/' + txHash);
+  const explorerUrl = data.explorerUrl || ('https://explorer.testnet-1.tx.org/tx/transactions/' + txHash);
   const features = data.features || {};
 
   // Extract name from denom (e.g. "gems-testcore1abc..." -> "GEMS")

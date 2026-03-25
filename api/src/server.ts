@@ -94,7 +94,7 @@ app.get("/health", async (_req, res) => {
     try {
       const wallet = await importWallet(process.env.AGENT_MNEMONIC, networkName);
       healthInfo.walletAddress = wallet.address;
-      healthInfo.explorerUrl = `${network.explorerUrl}/accounts/${wallet.address}`;
+      healthInfo.explorerUrl = `${network.explorerUrl}/tx/accounts/${wallet.address}`;
     } catch (err) {
       healthInfo.walletError = (err as Error).message;
     }

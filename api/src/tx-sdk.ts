@@ -42,7 +42,7 @@ export const NETWORKS: Record<NetworkName, NetworkConfig> = {
     restEndpoint: "https://full-node.testnet-1.coreum.dev:1317",
     denom: "utestcore",
     addressPrefix: "testcore",
-    explorerUrl: "https://testnet.explorer.tx.org",
+    explorerUrl: "https://explorer.testnet-1.tx.org",
     hdPath: "m/44'/990'/0'/0/0",
     faucetUrl: "https://api.testnet-1.coreum.dev/api/faucet/v1/fund",
   },
@@ -231,7 +231,7 @@ export class TxClient {
       txHash: result.transactionHash,
       height: result.height,
       gasUsed: Number(result.gasUsed),
-      explorerUrl: `${this.network.explorerUrl}/tx/${result.transactionHash}`,
+      explorerUrl: `${this.network.explorerUrl}/tx/transactions/${result.transactionHash}`,
       error: success ? undefined : result.rawLog,
     };
   }
@@ -317,7 +317,7 @@ export async function issueSmartToken(
   return {
     txHash: result.txHash,
     denom,
-    explorerUrl: `${client.network.explorerUrl}/transactions/${result.txHash}`,
+    explorerUrl: `${client.network.explorerUrl}/tx/transactions/${result.txHash}`,
     success: result.success,
     error: result.error,
   };
