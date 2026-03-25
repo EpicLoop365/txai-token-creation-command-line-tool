@@ -108,6 +108,40 @@ app.get("/health", async (_req, res) => {
   res.json(healthInfo);
 });
 
+// ─── TEST CONNECTION ────────────────────────────────────────────────────────
+
+app.get("/test-connection", async (_req, res) => {
+  const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
+  const steps: string[] = [];
+
+  try {
+    steps.push("1. Importing wallet...");
+    const wallet = await importWallet(process.env.AGENT_MNEMONIC!, networkName);
+    steps.push(`2. Wallet imported: ${wallet.address}`);
+
+    steps.push("3. Connecting to blockchain...");
+    const { TxClient } = await import("./tx-sdk");
+
+    const connectionPromise = TxClient.connectWithWallet(wallet);
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("Connection timed out after 15s")), 15000)
+    );
+    const client = await Promise.race([connectionPromise, timeoutPromise]);
+    steps.push("4. Connected!");
+
+    const balance = await client.getCoreBalance(wallet.address);
+    steps.push(`5. Balance: ${balance} CORE`);
+
+    client.disconnect();
+    steps.push("6. Done!");
+
+    res.json({ success: true, steps });
+  } catch (err) {
+    steps.push(`ERROR: ${(err as Error).message}`);
+    res.json({ success: false, steps, error: (err as Error).message });
+  }
+});
+
 // ─── CREATE TOKEN (SSE) ──────────────────────────────────────────────────────
 
 app.post("/api/create-token", async (req, res) => {
@@ -157,8 +191,15 @@ app.post("/api/create-token", async (req, res) => {
     "X-Accel-Buffering": "no",
   });
 
+  // Flush headers immediately to establish SSE connection
+  res.flushHeaders();
+
   const sendEvent = (event: string, data: unknown) => {
     res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+    // Force flush through any proxy buffering
+    if (typeof (res as any).flush === "function") {
+      (res as any).flush();
+    }
   };
 
   // Handle client disconnect
