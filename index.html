@@ -667,26 +667,26 @@ footer{
     <div id="createModeWrap">
     <div class="mode-toggle-wrap reveal">
       <div class="mode-toggle" id="modeToggle" onclick="toggleMode()">
-        <div class="mode-toggle-slider sim" id="modeSlider"></div>
-        <div class="mode-toggle-option active" id="optSim">Simulated</div>
-        <div class="mode-toggle-option" id="optLive">Live</div>
+        <div class="mode-toggle-slider live" id="modeSlider"></div>
+        <div class="mode-toggle-option" id="optSim">Simulated</div>
+        <div class="mode-toggle-option active" id="optLive">Live</div>
       </div>
-      <div class="mode-badge-testnet" id="testnetBadge"><span class="dot-g"></span> Testnet</div>
+      <div class="mode-badge-testnet visible" id="testnetBadge"><span class="dot-g"></span> Testnet</div>
     </div>
 
     <div class="demo-error" id="demoError"></div>
 
-    <div class="demo-input-wrap reveal" id="demoInputWrap">
+    <div class="demo-input-wrap reveal live-glow" id="demoInputWrap">
       <div class="demo-input-row">
         <input type="text" class="demo-input" id="demoInput" placeholder='Describe your token... e.g., "a gaming token called GEMS with 5M supply"'>
-        <button class="demo-create-btn" id="demoBtn" onclick="runDemo()">Create Token</button>
+        <button class="demo-create-btn" id="demoBtn" onclick="runDemo()">Deploy Token (Testnet)</button>
       </div>
       <div class="presets">
         <button class="preset-btn" onclick="usePreset('gaming')">Gaming Token</button>
         <button class="preset-btn" onclick="usePreset('loyalty')">Loyalty Points</button>
         <button class="preset-btn" onclick="usePreset('governance')">Governance Token</button>
       </div>
-      <div class="demo-disclaimer" id="demoDisclaimer">Tokens are deployed on TX testnet. No real value.</div>
+      <div class="demo-disclaimer visible" id="demoDisclaimer">Tokens are deployed on TX testnet. No real value.</div>
     </div>
 
     <div class="demo-processing" id="demoProcessing">
@@ -879,7 +879,7 @@ footer{
 <script>
 /* ===== CONFIG ===== */
 const API_URL = 'https://txai-token-creation-production.up.railway.app'; // Railway backend
-let liveMode = false;
+let liveMode = true;
 let chatMode = false;
 let chatHistory = [];
 let chatBusy = false;
