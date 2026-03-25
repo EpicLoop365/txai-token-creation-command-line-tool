@@ -341,6 +341,8 @@ export interface IssueSmartTokenParams {
   initialAmount: string;
   precision?: number;
   features?: SmartTokenFeatures;
+  burnRate?: string;
+  sendCommissionRate?: string;
 }
 
 export async function issueSmartToken(
@@ -359,6 +361,14 @@ export async function issueSmartToken(
         .map(([key]) => FEATURE_MAP[key as keyof SmartTokenFeatures])
     : [];
 
+  // Convert percentage rates (e.g. "0.05" = 5%) to chain format (18-decimal string)
+  const toChainRate = (rate?: string): string => {
+    if (!rate || rate === "0") return "0.000000000000000000";
+    const num = parseFloat(rate);
+    if (isNaN(num) || num < 0 || num > 1) return "0.000000000000000000";
+    return num.toFixed(18);
+  };
+
   const msg = {
     typeUrl: "/coreum.asset.ft.v1.MsgIssue",
     value: {
@@ -371,6 +381,8 @@ export async function issueSmartToken(
       features,
       uri: "",
       uriHash: "",
+      burnRate: toChainRate(params.burnRate),
+      sendCommissionRate: toChainRate(params.sendCommissionRate),
     },
   };
 

@@ -85,6 +85,16 @@ const ISSUE_SMART_TOKEN_TOOL: ClaudeTool = {
           },
         },
       },
+      burnRate: {
+        type: "string",
+        description:
+          "Percentage of tokens burned on every transfer (e.g. '0.01' = 1%, '0.05' = 5%). Set to '0' or omit for no burn. Max '1' (100%). This creates a deflationary mechanism.",
+      },
+      sendCommissionRate: {
+        type: "string",
+        description:
+          "Percentage of tokens sent to the issuer on every transfer as a commission (e.g. '0.02' = 2%). Set to '0' or omit for no commission. Max '1' (100%).",
+      },
     },
     required: ["subunit", "name", "initialAmount"],
   },
@@ -208,6 +218,8 @@ export class DemoToolExecutor {
               initialAmount: args.initialAmount as string,
               precision: args.precision as number | undefined,
               features: args.features as SmartTokenFeatures | undefined,
+              burnRate: args.burnRate as string | undefined,
+              sendCommissionRate: args.sendCommissionRate as string | undefined,
             });
             return { success: result.success, data: result };
           } catch (issueErr) {
@@ -287,6 +299,8 @@ When creating a token:
    - initialAmount: default to "1000000" (1 million) if not specified. IMPORTANT: initialAmount must be at least "1" — the chain rejects 0 supply. If the user says "0 supply", explain that the minimum is 1 and suggest using minting feature so they can mint more later.
    - precision: default to 6 decimal places
    - features: enable minting by default so supply can grow; enable other features only if the user asks
+   - burnRate: set to "0" by default. If the user wants a deflationary token or mentions "burn on transfer", set a rate (e.g. "0.01" = 1% burned per transfer)
+   - sendCommissionRate: set to "0" by default. If the user wants the issuer to earn a commission on transfers, set a rate (e.g. "0.02" = 2% commission per transfer)
 3. Use the tx_issue_smart_token tool to create the token on-chain
 4. After issuing, use tx_get_token_info to verify it was created successfully
 5. Summarize what was created including the full denom and explorer link
