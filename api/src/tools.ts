@@ -175,12 +175,28 @@ export class DemoToolExecutor {
     try {
       switch (toolName) {
         case "tx_issue_smart_token": {
-          // Validate initialAmount — chain rejects 0 or negative
+          // Validate initialAmount — catch bad values before hitting the chain
           const rawAmount = Number(args.initialAmount);
-          if (!args.initialAmount || isNaN(rawAmount) || rawAmount <= 0) {
+          if (!args.initialAmount || isNaN(rawAmount)) {
             return {
               success: false,
-              error: `Invalid initialAmount "${args.initialAmount}". The initial supply must be at least 1. If the user wants a low supply, use "1" and enable the minting feature so more can be minted later.`,
+              error: `Invalid initialAmount "${args.initialAmount}". Must be a valid number.`,
+            };
+          }
+          if (rawAmount <= 0) {
+            return {
+              success: false,
+              error: `initialAmount must be greater than 0 (got "${args.initialAmount}"). The minimum supply is 1. Suggest using "1" with minting enabled so more can be minted later.`,
+            };
+          }
+          // Guard against JS precision loss and absurdly large supplies.
+          // After multiplying by 10^precision the raw integer must stay safe.
+          const precision = (args.precision as number) ?? 6;
+          const maxSafe = Number.MAX_SAFE_INTEGER / Math.pow(10, precision);
+          if (rawAmount > maxSafe) {
+            return {
+              success: false,
+              error: `initialAmount "${args.initialAmount}" is too large (max ~${Math.floor(maxSafe).toLocaleString()} with precision ${precision}). Use a smaller supply — tokens can always be minted later if minting is enabled.`,
             };
           }
 
