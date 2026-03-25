@@ -175,6 +175,15 @@ export class DemoToolExecutor {
     try {
       switch (toolName) {
         case "tx_issue_smart_token": {
+          // Validate initialAmount — chain rejects 0 or negative
+          const rawAmount = Number(args.initialAmount);
+          if (!args.initialAmount || isNaN(rawAmount) || rawAmount <= 0) {
+            return {
+              success: false,
+              error: `Invalid initialAmount "${args.initialAmount}". The initial supply must be at least 1. If the user wants a low supply, use "1" and enable the minting feature so more can be minted later.`,
+            };
+          }
+
           try {
             const result = await issueSmartToken(this.client, {
               subunit: args.subunit as string,
@@ -259,7 +268,7 @@ When creating a token:
    - If no clear name is given, ask the user or invent a creative name — never default to "TOKEN"
 2. Choose sensible defaults for anything not specified:
    - subunit: derive a short lowercase alphanumeric identifier from the name (3-50 chars, no spaces/special chars)
-   - initialAmount: default to "1000000" (1 million) if not specified
+   - initialAmount: default to "1000000" (1 million) if not specified. IMPORTANT: initialAmount must be at least "1" — the chain rejects 0 supply. If the user says "0 supply", explain that the minimum is 1 and suggest using minting feature so they can mint more later.
    - precision: default to 6 decimal places
    - features: enable minting by default so supply can grow; enable other features only if the user asks
 3. Use the tx_issue_smart_token tool to create the token on-chain
