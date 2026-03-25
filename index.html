@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TXAI Smart Token Studio - Create Smart Tokens with Plain English</title>
-<meta name="description" content="Create Smart Tokens with plain English. Powered by Claude AI + TX Agent SDK on the Coreum blockchain.">
+<meta name="description" content="Create Smart Tokens with plain English. Powered by Claude AI + TX Agent SDK on the TX blockchain.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -559,7 +559,7 @@ footer{
         <button class="preset-btn" onclick="usePreset('loyalty')">Loyalty Points</button>
         <button class="preset-btn" onclick="usePreset('governance')">Governance Token</button>
       </div>
-      <div class="demo-disclaimer" id="demoDisclaimer">Tokens are deployed on Coreum testnet. No real value.</div>
+      <div class="demo-disclaimer" id="demoDisclaimer">Tokens are deployed on TX testnet. No real value.</div>
     </div>
 
     <div class="demo-processing" id="demoProcessing">
@@ -579,7 +579,7 @@ footer{
             <div class="tc-badge-sym" id="tcSym"></div>
           </div>
         </div>
-        <span class="tc-deployed"><span class="dot-live"></span> Deployed on Coreum</span>
+        <span class="tc-deployed"><span class="dot-live"></span> Deployed on TX</span>
       </div>
       <div class="tc-body">
         <div class="tc-stats" id="tcStats"></div>
@@ -635,7 +635,7 @@ footer{
         <div class="step-num">03</div>
         <div class="step-icon">&#128640;</div>
         <h3>Deploy</h3>
-        <p>Token is issued on the TX/Coreum blockchain as a native asset in seconds.</p>
+        <p>Token is issued on the TX blockchain as a native asset in seconds.</p>
       </div>
     </div>
   </div>
@@ -702,7 +702,7 @@ footer{
       <div class="arch-arrow">&#8594;</div>
       <div class="arch-node"><div class="arch-node-icon">&#128736;&#65039;</div><div class="arch-node-title">TX Agent SDK</div><div class="arch-node-sub">Token config</div></div>
       <div class="arch-arrow">&#8594;</div>
-      <div class="arch-node"><div class="arch-node-icon">&#9939;&#65039;</div><div class="arch-node-title">Coreum</div><div class="arch-node-sub">Blockchain</div></div>
+      <div class="arch-node"><div class="arch-node-icon">&#9939;&#65039;</div><div class="arch-node-title">TX Chain</div><div class="arch-node-sub">Blockchain</div></div>
       <div class="arch-arrow">&#8594;</div>
       <div class="arch-node" style="border-color:var(--green)"><div class="arch-node-icon">&#127942;</div><div class="arch-node-title">Token Live</div><div class="arch-node-sub">Deployed!</div></div>
     </div>
@@ -716,7 +716,7 @@ footer{
       <div class="footer-left">Built with <span>Claude AI</span> + TX Agent SDK</div>
       <div class="footer-links">
         <a href="https://github.com/EpicLoop365/txai-token-creation-command-line-tool" target="_blank">GitHub</a>
-        <a href="https://docs.coreum.dev" target="_blank">Coreum Docs</a>
+        <a href="https://docs.coreum.dev" target="_blank">TX Docs</a>
         <a href="https://www.anthropic.com" target="_blank">Anthropic</a>
       </div>
     </div>
@@ -773,7 +773,7 @@ let liveMode = false;
     {type:'out',text:'  Supply: 50,000,000'},
     {type:'out',text:'  Features: minting, burning'},
     {type:'out',text:''},
-    {type:'hl',text:'[TX Agent] Deploying to Coreum...'},
+    {type:'hl',text:'[TX Agent] Deploying to TX Chain...'},
     {type:'out',text:'  Transaction: 0xA3F7...B21E'},
     {type:'out',text:''},
     {type:'green',text:'Token GEMS deployed successfully!'},
@@ -1157,7 +1157,7 @@ function buildLiveTokenCard(data, desc){
   const statData = [
     {val: typeof supply === 'number' ? supply.toLocaleString() : (isNaN(Number(supply)) ? supply : Number(supply).toLocaleString()), label:'Total Supply'},
     {val: data.decimals || 6, label:'Decimals'},
-    {val:'Coreum Testnet', label:'Network'},
+    {val:'TX Testnet', label:'Network'},
     {val: txHash ? txHash.slice(0,8) + '...' : 'N/A', label:'TX Hash'}
   ];
   statData.forEach(s=>{
@@ -1254,7 +1254,7 @@ async function runDemo(preset){
 
   // Reset deployed badge for simulated mode
   const deployedBadge = document.querySelector('.tc-deployed');
-  deployedBadge.innerHTML = '<span class="dot-live"></span> Deployed on Coreum';
+  deployedBadge.innerHTML = '<span class="dot-live"></span> Deployed on TX';
 
   // Reset explorer link for simulated mode
   const explorerDiv = document.querySelector('.tc-explorer');
@@ -1276,7 +1276,7 @@ async function runDemo(preset){
     'Generating allocation strategy...',
     '  > Creator: 20% | Community: 35% | Treasury: 25% | Liquidity: 20%',
     'Building transaction payload...',
-    'Submitting to Coreum blockchain...',
+    'Submitting to TX blockchain...',
     'Waiting for confirmation...',
     'Block confirmed! Token deployed.'
   ];
@@ -1319,7 +1319,7 @@ function buildTokenCard(cfg,desc){
   const statData=[
     {val:cfg.supply.toLocaleString(),label:'Total Supply'},
     {val:cfg.decimals,label:'Decimals'},
-    {val:'Coreum',label:'Network'},
+    {val:'TX Testnet',label:'Network'},
     {val:Object.values(cfg.features).filter(Boolean).length,label:'Features'}
   ];
   statData.forEach((s,i)=>{
