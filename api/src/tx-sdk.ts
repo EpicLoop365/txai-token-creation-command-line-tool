@@ -361,13 +361,22 @@ export async function issueSmartToken(
         .map(([key]) => FEATURE_MAP[key as keyof SmartTokenFeatures])
     : [];
 
-  // Convert percentage rates (e.g. "0.05" = 5%) to chain format (18-decimal string)
-  const toChainRate = (rate?: string): string => {
-    if (!rate || rate === "0") return "0.000000000000000000";
+  // Convert percentage rate (e.g. "0.05" = 5%) to chain format.
+  // Coreum expects burn_rate/send_commission_rate as integer strings
+  // representing the value * 10^18 (e.g. 5% = "50000000000000000").
+  // Returns undefined if rate is 0 or not set (field will be omitted).
+  const toChainRate = (rate?: string): string | undefined => {
+    if (!rate || rate === "0") return undefined;
     const num = parseFloat(rate);
-    if (isNaN(num) || num < 0 || num > 1) return "0.000000000000000000";
-    return num.toFixed(18);
+    if (isNaN(num) || num <= 0 || num > 1) return undefined;
+    // Multiply by 10^18 and convert to integer string
+    // Use string math to avoid floating point issues
+    const scaled = Math.round(num * 1e18);
+    return scaled.toString();
   };
+
+  const burnRateVal = toChainRate(params.burnRate);
+  const commissionVal = toChainRate(params.sendCommissionRate);
 
   const msg = {
     typeUrl: "/coreum.asset.ft.v1.MsgIssue",
@@ -381,8 +390,8 @@ export async function issueSmartToken(
       features,
       uri: "",
       uriHash: "",
-      burnRate: toChainRate(params.burnRate),
-      sendCommissionRate: toChainRate(params.sendCommissionRate),
+      ...(burnRateVal ? { burnRate: burnRateVal } : {}),
+      ...(commissionVal ? { sendCommissionRate: commissionVal } : {}),
     },
   };
 
