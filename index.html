@@ -1217,7 +1217,12 @@ function parseInput(rawText){
 
   // ── Extract supply ──
   let supply=1000000;
-  const supMatch=text.match(/([\d,.]+)\s*(k|m|b|t|thousand|million|billion|trillion)?(?:\s*(?:supply|tokens?|coins?))?/i);
+  // Try explicit "N supply" or "N tokens" first, then fall back to number with suffix
+  const supExplicit=text.match(/([\d,.]+)\s*(k|m|b|t|thousand|million|billion|trillion)?\s*(?:supply|tokens?|coins?)/i);
+  const supWithSuffix=text.match(/([\d,.]+)\s*(k|m|b|t|thousand|million|billion|trillion)\b/i);
+  // Skip numbers followed by % (e.g. "1% burn rate")
+  const supPlain=text.match(/([\d,.]+)(?!\s*%)/);
+  const supMatch=supExplicit||supWithSuffix||(supPlain && parseFloat(supPlain[1].replace(/,/g,''))>=10 ? supPlain : null);
   if(supMatch){
     let n=parseFloat(supMatch[1].replace(/,/g,''));
     const suffix=(supMatch[2]||'').toLowerCase();
@@ -1578,14 +1583,13 @@ async function runDemo(preset){
 
   // Reset deployed badge for simulated mode
   const deployedBadge = document.querySelector('.tc-deployed');
-  deployedBadge.innerHTML = '<span class="dot-live"></span> Deployed on TX';
+  deployedBadge.innerHTML = '<span class="dot-live"></span> Simulated';
 
-  // Reset explorer link for simulated mode
+  // Reset explorer link for simulated mode (no real tx, so no explorer link)
   const explorerDiv = document.querySelector('.tc-explorer');
   explorerDiv.className = 'tc-explorer';
   explorerDiv.innerHTML = '<div class="tc-explorer-icon">&#9889;</div>' +
-    '<div class="tc-explorer-text">Token deployed successfully!<br>' +
-    '<a href="#" onclick="return false">View on TX Explorer &#8599;</a></div>';
+    '<div class="tc-explorer-text">Token deployed successfully! <em style="color:var(--text-muted);font-size:.8rem">(Simulated)</em></div>';
 
   // Streaming text
   const lines=[
