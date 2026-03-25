@@ -186,9 +186,10 @@ app.post("/api/create-token-sync", async (req, res) => {
     if (successEvent) {
       res.json({ success: true, events, result: successEvent.data });
     } else if (errorEvent) {
-      res.json({ success: false, events, error: (errorEvent.data as { message: string }).message });
+      const errData = errorEvent.data as { message: string; txHash?: string; explorerUrl?: string };
+      res.json({ success: false, events, error: errData.message, txHash: errData.txHash, explorerUrl: errData.explorerUrl });
     } else {
-      res.json({ success: false, events, error: "Token creation completed without result" });
+      res.json({ success: false, events, error: "Token deployment did not complete — the AI agent finished without issuing a token. Try again or check wallet balance." });
     }
   } catch (err) {
     res.json({ success: false, events, error: (err as Error).message });

@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TXAI Token Studio - Create Blockchain Tokens with Plain English</title>
-<meta name="description" content="Create blockchain tokens with plain English. Powered by Claude AI + TX Agent SDK on the Coreum blockchain.">
+<title>TXAI Smart Token Studio - Create Smart Tokens with Plain English</title>
+<meta name="description" content="Create Smart Tokens with plain English. Powered by Claude AI + TX Agent SDK on the Coreum blockchain.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -514,8 +514,8 @@ footer{
 <!-- Hero -->
 <section class="hero">
   <div class="hero-badge"><span class="dot"></span> Open Source CLI Tool</div>
-  <h1>TXAI Token Studio</h1>
-  <p>Create blockchain tokens with plain English. Powered by Claude AI + TX Agent SDK.</p>
+  <h1>TXAI Smart Token Studio</h1>
+  <p>Create Smart Tokens with plain English. Powered by Claude AI + TX Agent SDK.</p>
   <div class="hero-cta">
     <a href="#demo" class="btn btn-primary">Try the Demo</a>
     <a href="#quickstart" class="btn btn-outline">Quick Start</a>
@@ -601,7 +601,7 @@ footer{
           <div class="tc-explorer-icon">&#9889;</div>
           <div class="tc-explorer-text">
             Token deployed successfully!<br>
-            <a href="#" onclick="return false">View on Coreum Explorer &#8599;</a>
+            <a href="#" onclick="return false">View on TX Explorer &#8599;</a>
           </div>
         </div>
       </div>
@@ -925,9 +925,13 @@ function parseSSEChunk(chunk){
 }
 
 /* ===== SHOW ERROR ===== */
-function showDemoError(msg){
+function showDemoError(msg, txUrl){
   const el = document.getElementById('demoError');
-  el.textContent = msg;
+  if(txUrl){
+    el.innerHTML = escapeHtml(msg) + '<br><a href="' + escapeHtml(txUrl) + '" target="_blank" rel="noopener" style="color:var(--purple);text-decoration:underline">View transaction on Explorer &#8599;</a>';
+  } else {
+    el.textContent = msg;
+  }
   el.classList.add('show');
 }
 function hideDemoError(){
@@ -977,6 +981,7 @@ async function runLiveDemo(inputText){
   }
 
   let successData = null;
+  let errorTxUrl = null;
 
   try {
     // Use sync endpoint — more reliable through Railway's proxy
@@ -1027,7 +1032,10 @@ async function runLiveDemo(inputText){
             addStreamLine('Token deployed successfully!', 'result');
             break;
           case 'error':
-            const errMsg = typeof evt.data === 'string' ? evt.data : evt.data.message || 'Unknown error';
+            const errData = typeof evt.data === 'string' ? {message: evt.data} : evt.data;
+            const errMsg = errData.message || 'Unknown error';
+            if(errData.explorerUrl) errorTxUrl = errData.explorerUrl;
+            else if(errData.txHash) errorTxUrl = 'https://explorer.testnet-1.tx.org/tx/transactions/' + errData.txHash;
             throw new Error('SERVER_ERROR:' + errMsg);
         }
       }
@@ -1038,6 +1046,8 @@ async function runLiveDemo(inputText){
       successData = result.result;
     }
     if(!result.success && result.error){
+      if(result.explorerUrl) errorTxUrl = result.explorerUrl;
+      else if(result.txHash) errorTxUrl = 'https://explorer.testnet-1.tx.org/tx/transactions/' + result.txHash;
       throw new Error('SERVER_ERROR:' + result.error);
     }
 
@@ -1050,7 +1060,7 @@ async function runLiveDemo(inputText){
     if(err.message === 'RATE_LIMIT'){
       showDemoError('Please wait 60 seconds between token creations.');
     } else if(err.message.startsWith('SERVER_ERROR:')){
-      showDemoError(err.message.slice(13));
+      showDemoError(err.message.slice(13), errorTxUrl);
     } else if(err.name === 'TypeError' || err.message.includes('fetch') || err.message.includes('network') || err.message.includes('Failed')){
       showDemoError('Live demo unavailable. Try simulated mode.');
     } else {
@@ -1083,7 +1093,8 @@ async function runLiveDemo(inputText){
 function buildLiveTokenCard(data, desc){
   const denom = data.denom || 'unknown';
   const txHash = data.txHash || '';
-  const explorerUrl = data.explorerUrl || ('https://explorer.testnet-1.tx.org/tx/transactions/' + txHash);
+  // Always build explorer URL from txHash to ensure correct format
+  const explorerUrl = txHash ? ('https://explorer.testnet-1.tx.org/tx/transactions/' + txHash) : (data.explorerUrl || '#');
   const features = data.features || {};
 
   // Extract name from denom (e.g. "gems-testcore1abc..." -> "GEMS")
@@ -1163,8 +1174,8 @@ function buildLiveTokenCard(data, desc){
   explorerDiv.className = 'tc-explorer tc-explorer-live';
   explorerDiv.innerHTML = '<div class="tc-explorer-icon">&#9889;</div>' +
     '<div class="tc-explorer-text">' +
-    'Token deployed on Coreum Testnet!<br>' +
-    '<a href="' + escapeHtml(explorerUrl) + '" target="_blank" rel="noopener">View on Coreum Explorer &#8599;</a>' +
+    'Token deployed on Testnet!<br>' +
+    '<a href="' + escapeHtml(explorerUrl) + '" target="_blank" rel="noopener">View on TX Explorer &#8599;</a>' +
     '</div>';
 }
 
@@ -1209,7 +1220,7 @@ async function runDemo(preset){
   explorerDiv.className = 'tc-explorer';
   explorerDiv.innerHTML = '<div class="tc-explorer-icon">&#9889;</div>' +
     '<div class="tc-explorer-text">Token deployed successfully!<br>' +
-    '<a href="#" onclick="return false">View on Coreum Explorer &#8599;</a></div>';
+    '<a href="#" onclick="return false">View on TX Explorer &#8599;</a></div>';
 
   // Streaming text
   const lines=[

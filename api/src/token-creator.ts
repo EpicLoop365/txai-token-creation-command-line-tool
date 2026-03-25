@@ -87,9 +87,9 @@ export async function createToken(
     message: `Wallet balance: ${balance} CORE`,
   });
 
-  if (balance < 0.1) {
+  if (balance < 11) {
     sendEvent("error", {
-      message: `Insufficient balance (${balance} CORE). The agent wallet needs at least 0.1 CORE to issue a token. Please fund the wallet at: ${walletData.address}`,
+      message: `Insufficient balance (${balance} CORE). Need at least 11 CORE (10 issue fee + gas). Wallet: ${walletData.address}`,
     });
     client.disconnect();
     return;
@@ -116,6 +116,9 @@ export async function createToken(
   let lastDenom: string | undefined;
   let lastTxHash: string | undefined;
   let lastExplorerUrl: string | undefined;
+  let lastSupply: string | undefined;
+  let lastFeatures: Record<string, boolean> | undefined;
+  let lastDecimals: number | undefined;
   let iteration = 0;
 
   try {
@@ -177,17 +180,35 @@ export async function createToken(
           success: result.success,
         });
 
-        // Track the denom if a token was issued (check data even if success=false, tx might have gone through)
-        if (toolBlock.name === "tx_issue_smart_token" && result.data) {
-          const issueData = result.data as {
+        // Track the denom/txHash/supply/features if a token was issued
+        if (toolBlock.name === "tx_issue_smart_token") {
+          const issueData = (result.data || {}) as {
             denom?: string;
             txHash?: string;
             explorerUrl?: string;
             success?: boolean;
+            error?: string;
           };
+          const toolArgs = toolBlock.input as Record<string, unknown>;
           if (issueData.denom) lastDenom = issueData.denom;
           if (issueData.txHash) lastTxHash = issueData.txHash;
           if (issueData.explorerUrl) lastExplorerUrl = issueData.explorerUrl;
+          if (toolArgs.initialAmount) lastSupply = String(toolArgs.initialAmount);
+          if (toolArgs.features) lastFeatures = toolArgs.features as Record<string, boolean>;
+          if (toolArgs.precision !== undefined) lastDecimals = Number(toolArgs.precision);
+
+          // If issuance failed, send error with tx link so user can inspect
+          if (!result.success) {
+            const errMsg = issueData.error || result.error || "Token issuance failed";
+            const txUrl = issueData.txHash
+              ? `${NETWORKS[networkName].explorerUrl}/tx/transactions/${issueData.txHash}`
+              : undefined;
+            sendEvent("error", {
+              message: errMsg,
+              txHash: issueData.txHash,
+              explorerUrl: txUrl,
+            });
+          }
         }
 
         toolResults.push({
@@ -209,6 +230,9 @@ export async function createToken(
         denom: lastDenom,
         txHash: lastTxHash,
         explorerUrl: lastExplorerUrl,
+        supply: lastSupply,
+        features: lastFeatures,
+        decimals: lastDecimals ?? 6,
         network: networkName,
         walletAddress: walletData.address,
       });
