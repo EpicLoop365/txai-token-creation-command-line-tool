@@ -254,6 +254,9 @@ Your job is to create Smart Tokens based on natural language descriptions from u
 
 When creating a token:
 1. Parse the user's description to determine token properties (name, symbol/subunit, supply, features)
+   - The token NAME is typically the first distinct word/phrase in the description (e.g. "FatFinger, 1000 supply, burnable" → name is "FatFinger")
+   - NEVER use generic words like "Token", "Coin", "Asset" as the name. The word "token" in phrases like "no new tokens", "gaming token", or "my token" is descriptive — not the name.
+   - If no clear name is given, ask the user or invent a creative name — never default to "TOKEN"
 2. Choose sensible defaults for anything not specified:
    - subunit: derive a short lowercase alphanumeric identifier from the name (3-50 chars, no spaces/special chars)
    - initialAmount: default to "1000000" (1 million) if not specified
