@@ -158,16 +158,16 @@ export class TxClient {
     const { network, networkName, wallet, address } = txWallet;
     const gasPrice = GasPrice.fromString(`0.0625${network.denom}`);
 
-    // Use HTTP RPC instead of WebSocket — more reliable on cloud platforms like Railway
+    // Force HTTP transport (not WebSocket) for cloud platforms like Railway
     const httpClient = new HttpBatchClient(network.rpcEndpoint);
     const tmClient = await Tendermint37Client.create(httpClient);
 
     const signingClient = await SigningStargateClient.createWithSigner(
-      tmClient as any,
+      tmClient,
       wallet,
       { gasPrice, registry: getTxRegistry() }
     );
-    const queryClient = await StargateClient.create(tmClient as any);
+    const queryClient = await StargateClient.create(tmClient);
     return new TxClient(signingClient, queryClient, address, network, networkName);
   }
 
