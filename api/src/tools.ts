@@ -175,15 +175,19 @@ export class DemoToolExecutor {
     try {
       switch (toolName) {
         case "tx_issue_smart_token": {
-          const result = await issueSmartToken(this.client, {
-            subunit: args.subunit as string,
-            name: args.name as string,
-            description: args.description as string | undefined,
-            initialAmount: args.initialAmount as string,
-            precision: args.precision as number | undefined,
-            features: args.features as SmartTokenFeatures | undefined,
-          });
-          return { success: result.success, data: result };
+          try {
+            const result = await issueSmartToken(this.client, {
+              subunit: args.subunit as string,
+              name: args.name as string,
+              description: args.description as string | undefined,
+              initialAmount: args.initialAmount as string,
+              precision: args.precision as number | undefined,
+              features: args.features as SmartTokenFeatures | undefined,
+            });
+            return { success: result.success, data: result };
+          } catch (issueErr) {
+            return { success: false, error: `Token issuance failed: ${(issueErr as Error).message}` };
+          }
         }
 
         case "tx_get_token_info": {

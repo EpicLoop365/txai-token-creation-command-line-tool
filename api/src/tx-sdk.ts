@@ -306,13 +306,20 @@ export async function issueSmartToken(
   };
 
   const denom = `${params.subunit.toLowerCase()}-${issuer}`;
+
+  console.log(`[issueSmartToken] Issuing token: ${denom}`);
+  console.log(`[issueSmartToken] Msg:`, JSON.stringify(msg, null, 2));
+
   const result = await client.signAndBroadcastMsg(msg, 500000);
+
+  console.log(`[issueSmartToken] Result: success=${result.success}, txHash=${result.txHash}, error=${result.error}`);
 
   return {
     txHash: result.txHash,
     denom,
-    explorerUrl: `${client.network.explorerUrl}/tokens/${denom}`,
+    explorerUrl: `${client.network.explorerUrl}/transactions/${result.txHash}`,
     success: result.success,
+    error: result.error,
   };
 }
 

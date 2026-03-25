@@ -177,20 +177,17 @@ export async function createToken(
           success: result.success,
         });
 
-        // Track the denom if a token was issued
-        if (
-          toolBlock.name === "tx_issue_smart_token" &&
-          result.success &&
-          result.data
-        ) {
+        // Track the denom if a token was issued (check data even if success=false, tx might have gone through)
+        if (toolBlock.name === "tx_issue_smart_token" && result.data) {
           const issueData = result.data as {
             denom?: string;
             txHash?: string;
             explorerUrl?: string;
+            success?: boolean;
           };
-          lastDenom = issueData.denom;
-          lastTxHash = issueData.txHash;
-          lastExplorerUrl = issueData.explorerUrl;
+          if (issueData.denom) lastDenom = issueData.denom;
+          if (issueData.txHash) lastTxHash = issueData.txHash;
+          if (issueData.explorerUrl) lastExplorerUrl = issueData.explorerUrl;
         }
 
         toolResults.push({
