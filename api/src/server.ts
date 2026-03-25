@@ -9,6 +9,7 @@
 import express from "express";
 import cors from "cors";
 import { createToken } from "./token-creator";
+import { launchTokenSwarm } from "./swarm-launcher";
 import {
   importWallet,
   NETWORKS,
@@ -285,6 +286,80 @@ app.post("/api/create-token", async (req, res) => {
   if (!clientDisconnected) {
     res.end();
   }
+});
+
+// ─── SWARM LAUNCH (SSE) ─────────────────────────────────────────────────────
+
+const swarmRateLimitMap = new Map<string, number>();
+const SWARM_RATE_LIMIT_MS = 120_000; // 2 minutes between swarm launches
+
+app.post("/api/swarm-launch", async (req, res) => {
+  const { description } = req.body as { description?: string };
+
+  if (!description || typeof description !== "string") {
+    res.status(400).json({ error: "Missing 'description' field." });
+    return;
+  }
+
+  if (description.length > 500) {
+    res.status(400).json({ error: "Description too long. Maximum 500 characters." });
+    return;
+  }
+
+  if (!process.env.ANTHROPIC_API_KEY) {
+    res.status(500).json({ error: "Server misconfigured: ANTHROPIC_API_KEY not set." });
+    return;
+  }
+
+  const clientIp =
+    (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() ||
+    req.ip ||
+    "unknown";
+
+  const now = Date.now();
+  const lastSwarm = swarmRateLimitMap.get(clientIp);
+  if (lastSwarm && now - lastSwarm < SWARM_RATE_LIMIT_MS) {
+    res.status(429).json({ error: "Rate limited. Please wait 2 minutes between swarm launches." });
+    return;
+  }
+  swarmRateLimitMap.set(clientIp, now);
+
+  // SSE setup
+  res.writeHead(200, {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache, no-transform",
+    "Connection": "keep-alive",
+    "X-Accel-Buffering": "no",
+    "Content-Encoding": "identity",
+  });
+  req.socket.setNoDelay(true);
+  res.flushHeaders();
+
+  const sendEvent = (event: string, data: unknown) => {
+    const eventStr = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+    res.write(eventStr);
+    if (typeof (res as any).flush === "function") {
+      (res as any).flush();
+    }
+  };
+
+  let clientDisconnected = false;
+  req.on("close", () => { clientDisconnected = true; });
+
+  const wrappedSendEvent = (event: string, data: unknown) => {
+    if (!clientDisconnected) sendEvent(event, data);
+  };
+
+  try {
+    await launchTokenSwarm(description, wrappedSendEvent);
+  } catch (err) {
+    if (!clientDisconnected) {
+      sendEvent("error", { message: `Swarm error: ${(err as Error).message}` });
+      sendEvent("done", {});
+    }
+  }
+
+  if (!clientDisconnected) res.end();
 });
 
 // ─── START ───────────────────────────────────────────────────────────────────

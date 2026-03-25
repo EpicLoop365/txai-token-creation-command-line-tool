@@ -479,6 +479,91 @@ footer{
   border-left:2px solid var(--border);max-height:80px;overflow-y:auto;
 }
 
+/* ===== SWARM VISUALIZATION ===== */
+.swarm-viz{
+  position:relative;width:100%;max-width:700px;margin:32px auto;
+  height:360px;display:none;
+}
+.swarm-viz.show{display:block;animation:fadeIn .4s ease}
+
+.agent-node{
+  position:absolute;width:140px;text-align:center;
+  background:var(--bg3);border:2px solid var(--border-light);
+  border-radius:var(--radius);padding:16px 12px;
+  transition:all .3s ease;z-index:2;
+}
+.agent-node.active{border-color:var(--green);box-shadow:0 0 20px rgba(6,214,160,.3)}
+.agent-node.active .agent-icon{animation:pulse 1.5s infinite}
+.agent-node.complete{border-color:var(--green)}
+.agent-node.error{border-color:#ef4444}
+
+.agent-icon{
+  width:48px;height:48px;border-radius:50%;margin:0 auto 8px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.3rem;font-weight:700;
+}
+.agent-name{font-weight:600;font-size:.85rem;margin-bottom:4px}
+.agent-status{font-family:var(--mono);font-size:.7rem;color:var(--text-muted)}
+.agent-step{font-family:var(--mono);font-size:.65rem;color:var(--purple);margin-top:2px}
+.agent-addr{font-family:var(--mono);font-size:.6rem;color:var(--text-muted);margin-top:2px;word-break:break-all}
+
+#agentCreator{top:0;left:50%;transform:translateX(-50%)}
+#agentCreator .agent-icon{background:rgba(6,214,160,.15);color:#00ff88}
+#agentLiquidity{bottom:0;left:10%}
+#agentLiquidity .agent-icon{background:rgba(0,180,216,.15);color:#00b4d8}
+#agentDistributor{bottom:0;right:10%}
+#agentDistributor .agent-icon{background:rgba(247,37,133,.15);color:#f72585}
+
+.swarm-center{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  background:var(--bg4);border:1px solid var(--border);border-radius:50%;
+  width:80px;height:80px;display:flex;align-items:center;justify-content:center;
+  font-size:.65rem;font-family:var(--mono);color:var(--text-dim);text-align:center;
+  z-index:1;padding:8px;
+}
+
+.swarm-svg{position:absolute;inset:0;z-index:0;pointer-events:none}
+.swarm-line{stroke:var(--border-light);stroke-width:1.5;fill:none;opacity:.6}
+.swarm-line.active{stroke:var(--green);opacity:1;stroke-dasharray:8 4;animation:dashFlow 1s linear infinite}
+
+@keyframes dashFlow{to{stroke-dashoffset:-12}}
+
+.swarm-msg-bubble{
+  position:absolute;background:var(--purple);color:#fff;
+  font-family:var(--mono);font-size:.6rem;padding:4px 8px;
+  border-radius:10px;white-space:nowrap;z-index:10;
+  animation:msgFloat 1.5s ease-in-out forwards;pointer-events:none;
+}
+@keyframes msgFloat{
+  0%{opacity:0;transform:scale(.8)}
+  20%{opacity:1;transform:scale(1)}
+  80%{opacity:1}
+  100%{opacity:0;transform:translateY(-10px)}
+}
+
+.swarm-log{
+  max-width:700px;margin:16px auto 0;background:var(--bg2);
+  border:1px solid var(--border);border-radius:var(--radius);
+  display:none;overflow:hidden;
+}
+.swarm-log.show{display:block;animation:fadeIn .3s ease}
+.swarm-log-header{
+  padding:10px 16px;border-bottom:1px solid var(--border);
+  font-family:var(--mono);font-size:.78rem;color:var(--text-dim);
+  display:flex;align-items:center;gap:8px;
+}
+.swarm-log-header::before{content:'';width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+.swarm-log-body{
+  padding:12px 16px;max-height:300px;overflow-y:auto;
+  font-family:var(--mono);font-size:.72rem;line-height:1.6;
+}
+.swarm-log-entry{margin-bottom:4px;display:flex;gap:8px;align-items:flex-start}
+.swarm-log-agent{font-weight:600;min-width:80px;flex-shrink:0}
+.swarm-log-msg{color:var(--text-dim);word-break:break-word}
+
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
 /* ===== RESPONSIVE ===== */
 @media(max-width:640px){
   .demo-input-row{flex-direction:column}
@@ -486,6 +571,10 @@ footer{
   .tc-cli{flex-direction:column;align-items:flex-start}
   .footer-inner{flex-direction:column;text-align:center}
   .mode-toggle-option{padding:7px 14px;font-size:.75rem}
+  .swarm-viz{height:320px}
+  .agent-node{width:110px;padding:10px 8px}
+  #agentLiquidity{left:0}
+  #agentDistributor{right:0}
 }
 </style>
 </head>
@@ -539,10 +628,13 @@ footer{
     </div>
 
     <div class="mode-toggle-wrap reveal">
-      <div class="mode-toggle" id="modeToggle" onclick="toggleMode()">
-        <div class="mode-toggle-slider sim" id="modeSlider"></div>
-        <div class="mode-toggle-option active" id="optSim">Simulated</div>
-        <div class="mode-toggle-option" id="optLive">Live</div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center">
+        <div class="mode-toggle" id="modeToggle" onclick="toggleMode()">
+          <div class="mode-toggle-slider sim" id="modeSlider"></div>
+          <div class="mode-toggle-option active" id="optSim">Simulated</div>
+          <div class="mode-toggle-option" id="optLive">Live</div>
+        </div>
+        <button id="swarmToggleBtn" onclick="toggleSwarmMode()" style="background:linear-gradient(135deg,#7c6dfa,#f72585);color:#fff;border:none;padding:8px 18px;border-radius:20px;font-family:var(--mono);font-size:.78rem;cursor:pointer;font-weight:600;transition:all .2s;opacity:.85">Swarm Mode</button>
       </div>
       <div class="mode-badge-testnet" id="testnetBadge"><span class="dot-g"></span> Testnet</div>
     </div>
@@ -568,6 +660,42 @@ footer{
         <div class="processing-title">Claude AI Processing</div>
       </div>
       <div class="processing-stream" id="demoStream"></div>
+    </div>
+
+    <!-- Swarm Visualization -->
+    <div class="swarm-viz" id="swarmViz">
+      <svg class="swarm-svg" id="swarmSvg" viewBox="0 0 700 360" preserveAspectRatio="xMidYMid meet">
+        <line class="swarm-line" id="lineCreatorLiq" x1="350" y1="90" x2="140" y2="270"/>
+        <line class="swarm-line" id="lineCreatorDist" x1="350" y1="90" x2="560" y2="270"/>
+        <line class="swarm-line" id="lineLiqDist" x1="140" y1="270" x2="560" y2="270"/>
+      </svg>
+      <div class="agent-node" id="agentCreator">
+        <div class="agent-icon">C</div>
+        <div class="agent-name">Creator</div>
+        <div class="agent-status" id="statusCreator">waiting</div>
+        <div class="agent-step" id="stepCreator"></div>
+        <div class="agent-addr" id="addrCreator"></div>
+      </div>
+      <div class="agent-node" id="agentLiquidity">
+        <div class="agent-icon">L</div>
+        <div class="agent-name">Liquidity</div>
+        <div class="agent-status" id="statusLiquidity">waiting</div>
+        <div class="agent-step" id="stepLiquidity"></div>
+        <div class="agent-addr" id="addrLiquidity"></div>
+      </div>
+      <div class="agent-node" id="agentDistributor">
+        <div class="agent-icon">D</div>
+        <div class="agent-name">Distributor</div>
+        <div class="agent-status" id="statusDistributor">waiting</div>
+        <div class="agent-step" id="stepDistributor"></div>
+        <div class="agent-addr" id="addrDistributor"></div>
+      </div>
+      <div class="swarm-center" id="swarmCenter">Shared<br>State</div>
+    </div>
+
+    <div class="swarm-log" id="swarmLog">
+      <div class="swarm-log-header">Agent Event Stream</div>
+      <div class="swarm-log-body" id="swarmLogBody"></div>
     </div>
 
     <div class="token-card" id="tokenCard">
@@ -1203,6 +1331,13 @@ async function runDemo(preset){
   document.getElementById('demoBtn').disabled=true;
   hideDemoError();
 
+  // If swarm mode, use the swarm path
+  if(swarmMode){
+    const desc = preset ? preset.input : input;
+    await runSwarmDemo(desc);
+    return;
+  }
+
   // If live mode, use the live demo path
   if(liveMode){
     const desc = preset ? preset.input : input;
@@ -1350,6 +1485,248 @@ function copyJson(){
   navigator.clipboard.writeText(window._lastJson||'');
   event.target.textContent='Copied!';setTimeout(()=>event.target.textContent='Copy JSON',1500);
 }
+
+/* ===== SWARM MODE ===== */
+let swarmMode = false;
+
+function toggleSwarmMode(){
+  swarmMode = !swarmMode;
+  const btn = document.getElementById('swarmToggleBtn');
+  const demoBtn = document.getElementById('demoBtn');
+  const badge = document.getElementById('testnetBadge');
+  const disclaimer = document.getElementById('demoDisclaimer');
+  const inputWrap = document.getElementById('demoInputWrap');
+
+  if(swarmMode){
+    // Ensure live mode is on
+    if(!liveMode) toggleMode();
+    btn.style.opacity = '1';
+    btn.style.boxShadow = '0 0 20px rgba(247,37,133,.4)';
+    demoBtn.textContent = 'Launch Swarm';
+    demoBtn.style.background = 'linear-gradient(135deg,#7c6dfa,#f72585)';
+    badge.classList.add('visible');
+    disclaimer.classList.add('visible');
+    disclaimer.textContent = '3 AI agents will coordinate on Coreum testnet. This takes ~60-90 seconds.';
+  } else {
+    btn.style.opacity = '.85';
+    btn.style.boxShadow = 'none';
+    demoBtn.textContent = liveMode ? 'Deploy Token (Testnet)' : 'Create Token';
+    demoBtn.style.background = '';
+    disclaimer.textContent = 'Tokens are deployed on Coreum testnet. No real value.';
+    // Hide swarm UI
+    document.getElementById('swarmViz').classList.remove('show');
+    document.getElementById('swarmLog').classList.remove('show');
+  }
+}
+
+const AGENT_COLORS = { Creator: '#00ff88', Liquidity: '#00b4d8', Distributor: '#f72585' };
+
+function swarmLog(agent, msg, type){
+  const body = document.getElementById('swarmLogBody');
+  const entry = document.createElement('div');
+  entry.className = 'swarm-log-entry';
+  const color = AGENT_COLORS[agent] || 'var(--text-dim)';
+  entry.innerHTML = '<span class="swarm-log-agent" style="color:' + color + '">' + escapeHtml(agent) + '</span>' +
+    '<span class="swarm-log-msg">' + escapeHtml(msg) + '</span>';
+  body.appendChild(entry);
+  body.scrollTop = body.scrollHeight;
+}
+
+function setAgentStatus(agent, status){
+  const el = document.getElementById('status' + agent);
+  if(el) el.textContent = status;
+  const node = document.getElementById('agent' + agent);
+  if(!node) return;
+  node.classList.remove('active','complete','error');
+  if(status === 'running' || status === 'thinking') node.classList.add('active');
+  else if(status === 'done') node.classList.add('complete');
+  else if(status === 'error') node.classList.add('error');
+}
+
+function setAgentStep(agent, step){
+  const el = document.getElementById('step' + agent);
+  if(el) el.textContent = step;
+}
+
+function animateLine(fromAgent, toAgent){
+  const lineMap = {
+    'Creator-Liquidity': 'lineCreatorLiq', 'Liquidity-Creator': 'lineCreatorLiq',
+    'Creator-Distributor': 'lineCreatorDist', 'Distributor-Creator': 'lineCreatorDist',
+    'Liquidity-Distributor': 'lineLiqDist', 'Distributor-Liquidity': 'lineLiqDist',
+  };
+  const lineId = lineMap[fromAgent + '-' + toAgent];
+  if(!lineId) return;
+  const line = document.getElementById(lineId);
+  line.classList.add('active');
+  setTimeout(() => line.classList.remove('active'), 2000);
+}
+
+async function runSwarmDemo(inputText){
+  const proc = document.getElementById('demoProcessing');
+  const card = document.getElementById('tokenCard');
+  const viz = document.getElementById('swarmViz');
+  const log = document.getElementById('swarmLog');
+  const logBody = document.getElementById('swarmLogBody');
+  const btn = document.getElementById('demoBtn');
+
+  // Reset
+  card.classList.remove('show'); card.style.display = 'none';
+  hideDemoError();
+  proc.classList.remove('show');
+  logBody.innerHTML = '';
+  viz.classList.add('show');
+  log.classList.add('show');
+
+  // Reset agent nodes
+  ['Creator','Liquidity','Distributor'].forEach(a => {
+    setAgentStatus(a, 'waiting');
+    setAgentStep(a, '');
+    document.getElementById('addr' + a).textContent = '';
+  });
+  document.getElementById('swarmCenter').innerHTML = 'Shared<br>State';
+
+  // Reset SVG lines
+  document.querySelectorAll('.swarm-line').forEach(l => l.classList.remove('active'));
+
+  btn.textContent = 'Swarm Running...';
+  btn.disabled = true;
+
+  let successData = null;
+
+  try {
+    swarmLog('Swarm', 'Launching 3-agent token swarm...', 'info');
+
+    const response = await fetch(API_URL + '/api/swarm-launch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ description: inputText })
+    });
+
+    if(!response.ok){
+      if(response.status === 429) throw new Error('RATE_LIMIT');
+      const errJson = await response.json().catch(() => ({}));
+      throw new Error('SERVER_ERROR:' + (errJson.error || 'HTTP ' + response.status));
+    }
+
+    // Stream SSE
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while(true){
+      const { done, value } = await reader.read();
+      if(done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const events = parseSSEChunk(buffer);
+      buffer = '';
+
+      for(const evt of events){
+        const d = evt.data;
+        switch(evt.event){
+          case 'swarm_start':
+            swarmLog('Swarm', 'Initializing agents: ' + (d.agents || []).join(', '));
+            break;
+
+          case 'status':
+            swarmLog('Swarm', d.message || d);
+            break;
+
+          case 'agent_init':
+            setAgentStatus(d.agent, 'ready');
+            document.getElementById('addr' + d.agent).textContent = (d.address || '').slice(0, 12) + '...';
+            swarmLog(d.agent, 'Wallet: ' + (d.address || '').slice(0, 20) + '...');
+            break;
+
+          case 'agent_task_start':
+            setAgentStatus(d.agent, 'running');
+            swarmLog(d.agent, 'Task: ' + (d.task || ''));
+            break;
+
+          case 'agent_thinking':
+            setAgentStep(d.agent, 'Step ' + d.step + '/' + d.maxSteps);
+            break;
+
+          case 'agent_text':
+            if(d.content && d.content.length < 200){
+              swarmLog(d.agent, d.content);
+            }
+            break;
+
+          case 'agent_tool_call':
+            swarmLog(d.agent, 'Calling ' + d.tool + '...');
+            setAgentStatus(d.agent, 'running');
+            break;
+
+          case 'agent_tool_result':
+            const icon = d.success ? '\u2705' : '\u274c';
+            swarmLog(d.agent, icon + ' ' + (d.tool || '') + (d.success ? ' succeeded' : ' failed'));
+            break;
+
+          case 'agent_message':
+            animateLine(d.from, d.to);
+            swarmLog(d.from, '\u2192 ' + d.to + ': ' + (typeof d.payload === 'string' ? d.payload.slice(0, 80) : '...'));
+            break;
+
+          case 'state_update':
+            document.getElementById('swarmCenter').innerHTML = '<b>' + escapeHtml(d.key || '') + '</b><br>' + escapeHtml(String(d.value || '').slice(0, 20));
+            swarmLog(d.setter || 'Swarm', 'State: ' + d.key + ' = ' + String(d.value || '').slice(0, 40));
+            break;
+
+          case 'agent_task_complete':
+            setAgentStatus(d.agent, 'done');
+            setAgentStep(d.agent, 'Complete');
+            break;
+
+          case 'success':
+            successData = d;
+            swarmLog('Swarm', '\ud83c\udf89 Token launched successfully!');
+            break;
+
+          case 'error':
+            const errMsg = d.message || 'Unknown error';
+            swarmLog('Swarm', '\u274c ' + errMsg);
+            if(!successData){
+              showDemoError(errMsg, d.explorerUrl);
+            }
+            break;
+
+          case 'done':
+            break;
+        }
+      }
+    }
+
+  } catch(err){
+    btn.textContent = 'Launch Swarm';
+    btn.disabled = false;
+    demoRunning = false;
+
+    if(err.message === 'RATE_LIMIT'){
+      showDemoError('Please wait 2 minutes between swarm launches.');
+    } else if(err.message.startsWith('SERVER_ERROR:')){
+      showDemoError(err.message.slice(13));
+    } else {
+      showDemoError('Connection error. Check your internet connection.');
+    }
+    return;
+  }
+
+  // Show result card if success
+  if(successData){
+    await sleep(500);
+    buildLiveTokenCard(successData, inputText);
+    card.style.display = 'block';
+    requestAnimationFrame(() => card.classList.add('show'));
+  }
+
+  btn.textContent = 'Launch Swarm';
+  btn.disabled = false;
+  demoRunning = false;
+}
+
+/* ===== UPDATED DEMO RUNNER ===== */
+const _origRunDemo = runDemo;
 
 /* Enter key */
 document.getElementById('demoInput').addEventListener('keydown',e=>{if(e.key==='Enter')runDemo()});
