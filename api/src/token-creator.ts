@@ -33,34 +33,52 @@ export async function createToken(
   sendEvent("status", { message: "Initializing wallet..." });
 
   let walletData;
-  if (process.env.AGENT_MNEMONIC) {
-    walletData = await importWallet(process.env.AGENT_MNEMONIC, networkName);
-    sendEvent("status", {
-      message: `Wallet loaded: ${walletData.address}`,
-    });
-  } else {
-    const newWallet = await createWallet(networkName);
-    walletData = newWallet;
-    sendEvent("status", {
-      message: `New wallet created: ${newWallet.address}`,
-    });
+  try {
+    if (process.env.AGENT_MNEMONIC) {
+      walletData = await importWallet(process.env.AGENT_MNEMONIC, networkName);
+      sendEvent("status", {
+        message: `Wallet loaded: ${walletData.address}`,
+      });
+    } else {
+      const newWallet = await createWallet(networkName);
+      walletData = newWallet;
+      sendEvent("status", {
+        message: `New wallet created: ${newWallet.address}`,
+      });
 
-    // Auto-fund from faucet on testnet/devnet
-    if (network.faucetUrl) {
-      sendEvent("status", { message: "Requesting testnet tokens from faucet..." });
-      const faucetResult = await requestFaucet(newWallet.address, networkName);
-      sendEvent("status", { message: faucetResult.message });
+      // Auto-fund from faucet on testnet/devnet
+      if (network.faucetUrl) {
+        sendEvent("status", { message: "Requesting testnet tokens from faucet..." });
+        const faucetResult = await requestFaucet(newWallet.address, networkName);
+        sendEvent("status", { message: faucetResult.message });
 
-      if (faucetResult.success) {
-        // Wait for faucet tx to be included in a block
-        await new Promise((r) => setTimeout(r, 5000));
+        if (faucetResult.success) {
+          // Wait for faucet tx to be included in a block
+          await new Promise((r) => setTimeout(r, 5000));
+        }
       }
     }
+  } catch (err) {
+    sendEvent("error", { message: `Wallet setup failed: ${(err as Error).message}` });
+    sendEvent("done", {});
+    return;
   }
 
-  // 2. Connect to blockchain
+  // 2. Connect to blockchain with timeout
   sendEvent("status", { message: "Connecting to TX blockchain..." });
-  const client = await TxClient.connectWithWallet(walletData);
+
+  let client: TxClient;
+  try {
+    const connectionPromise = TxClient.connectWithWallet(walletData);
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("Blockchain connection timed out after 30s")), 30000)
+    );
+    client = await Promise.race([connectionPromise, timeoutPromise]);
+  } catch (err) {
+    sendEvent("error", { message: `Blockchain connection failed: ${(err as Error).message}` });
+    sendEvent("done", {});
+    return;
+  }
 
   // 3. Check balance
   sendEvent("status", { message: "Checking wallet balance..." });

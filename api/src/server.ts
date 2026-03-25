@@ -82,6 +82,7 @@ app.get("/health", async (_req, res) => {
 
   const healthInfo: Record<string, unknown> = {
     status: "ok",
+    version: "1.1.0",
     network: networkName,
     chainId: network.chainId,
     rpcEndpoint: network.rpcEndpoint,
