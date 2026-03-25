@@ -861,22 +861,51 @@ function usePreset(key){
 }
 
 /* ===== CLIENT-SIDE PARSING ===== */
-function parseInput(text){
-  text=text.toLowerCase();
-  let name='TOKEN';
-  const nameMatch=text.match(/called\s+([a-z0-9]+)/i);
-  if(nameMatch)name=nameMatch[1].toUpperCase();
-  else{const w=text.match(/\b([A-Z]{2,8})\b/);if(w)name=w[1];}
+function parseInput(rawText){
+  const text=rawText.toLowerCase();
 
+  // ── Extract name ──
+  // Skip known noise words — these describe tokens, not name them
+  const noise = new Set(['a','an','the','token','tokens','coin','coins','asset','with','and','for',
+    'my','create','make','deploy','supply','called','named','mint','mintable','minting',
+    'burn','burnable','burning','freeze','freezable','freezing','whitelist','whitelistable',
+    'whitelisting','clawback','ibc','governance','dao','voting','global','enabled',
+    'k','m','b','t','million','billion','thousand','trillion','no','new','i','want']);
+
+  let name = '';
+  // First try "called X" or "named X"
+  const calledMatch = text.match(/(?:called|named)\s+([a-z0-9_]+)/i);
+  if(calledMatch){
+    name = calledMatch[1].toUpperCase();
+  } else {
+    // Otherwise pick the first word that isn't a noise word or a number
+    const words = rawText.split(/[\s,;|]+/).filter(Boolean);
+    for(const w of words){
+      const clean = w.replace(/[^a-zA-Z0-9]/g,'');
+      if(!clean) continue;
+      if(/^\d/.test(clean)) continue; // skip numbers like "100", "5M"
+      if(noise.has(clean.toLowerCase())) continue;
+      name = clean.toUpperCase();
+      break;
+    }
+  }
+  if(!name) name = 'MYTOKEN';
+
+  // ── Extract supply ──
   let supply=1000000;
-  const supMatch=text.match(/([\d,.]+)\s*(k|m|b|t)?(?:\s*supply)?/i);
+  const supMatch=text.match(/([\d,.]+)\s*(k|m|b|t|thousand|million|billion|trillion)?(?:\s*(?:supply|tokens?|coins?))?/i);
   if(supMatch){
     let n=parseFloat(supMatch[1].replace(/,/g,''));
     const suffix=(supMatch[2]||'').toLowerCase();
-    if(suffix==='k')n*=1e3;else if(suffix==='m')n*=1e6;else if(suffix==='b')n*=1e9;else if(suffix==='t')n*=1e12;
+    if(suffix==='k'||suffix==='thousand')n*=1e3;
+    else if(suffix==='m'||suffix==='million')n*=1e6;
+    else if(suffix==='b'||suffix==='billion')n*=1e9;
+    else if(suffix==='t'||suffix==='trillion')n*=1e12;
     supply=Math.floor(n);
   }
+  if(supply<=0) supply=1;
 
+  // ── Extract features ──
   const features={
     minting:/mint/i.test(text),
     burning:/burn/i.test(text),
@@ -1122,9 +1151,11 @@ function buildLiveTokenCard(data, desc){
   // Stats
   const stats = document.getElementById('tcStats');
   stats.innerHTML = '';
-  const supply = data.supply || data.initialSupply || 'N/A';
+  let supply = data.supply || data.initialSupply || 'N/A';
+  // Guard against NaN or invalid values
+  if(supply === 'NaN' || supply === 'undefined' || supply === 'null' || (typeof supply === 'number' && isNaN(supply))) supply = 'N/A';
   const statData = [
-    {val: typeof supply === 'number' ? supply.toLocaleString() : supply, label:'Total Supply'},
+    {val: typeof supply === 'number' ? supply.toLocaleString() : (isNaN(Number(supply)) ? supply : Number(supply).toLocaleString()), label:'Total Supply'},
     {val: data.decimals || 6, label:'Decimals'},
     {val:'Coreum Testnet', label:'Network'},
     {val: txHash ? txHash.slice(0,8) + '...' : 'N/A', label:'TX Hash'}
