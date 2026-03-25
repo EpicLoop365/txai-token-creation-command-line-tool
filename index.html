@@ -397,12 +397,95 @@ footer{
 ::-webkit-scrollbar-thumb{background:var(--border-light);border-radius:3px}
 ::-webkit-scrollbar-thumb:hover{background:var(--purple-dim)}
 
+/* ===== MODE TOGGLE ===== */
+.mode-toggle-wrap{
+  display:flex;align-items:center;gap:16px;margin-bottom:20px;flex-wrap:wrap;
+}
+.mode-toggle{
+  display:flex;align-items:center;
+  background:var(--bg3);border:1px solid var(--border);border-radius:999px;
+  padding:4px;cursor:pointer;position:relative;
+}
+.mode-toggle-option{
+  padding:8px 20px;border-radius:999px;font-size:.82rem;font-weight:600;
+  font-family:var(--mono);color:var(--text-muted);transition:all .3s;
+  position:relative;z-index:1;user-select:none;cursor:pointer;
+}
+.mode-toggle-option.active{color:#fff}
+.mode-toggle-slider{
+  position:absolute;top:4px;left:4px;height:calc(100% - 8px);
+  border-radius:999px;transition:all .35s cubic-bezier(.4,0,.2,1);
+  z-index:0;
+}
+.mode-toggle-slider.sim{
+  background:var(--purple);width:calc(50% - 4px);left:4px;
+}
+.mode-toggle-slider.live{
+  background:var(--green);width:calc(50% - 4px);left:calc(50%);
+}
+.mode-badge-testnet{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:5px 14px;border-radius:999px;
+  background:rgba(6,214,160,.1);border:1px solid rgba(6,214,160,.25);
+  font-family:var(--mono);font-size:.72rem;font-weight:600;color:var(--green);
+  opacity:0;transform:scale(.9);transition:all .3s;
+}
+.mode-badge-testnet.visible{opacity:1;transform:scale(1)}
+.mode-badge-testnet .dot-g{
+  width:6px;height:6px;border-radius:50%;background:var(--green);
+  animation:pulse-dot 1.5s infinite;
+}
+.demo-disclaimer{
+  font-size:.78rem;color:var(--text-muted);font-style:italic;
+  margin-top:8px;opacity:0;max-height:0;overflow:hidden;transition:all .3s;
+}
+.demo-disclaimer.visible{opacity:1;max-height:40px;margin-top:8px}
+
+/* Live mode glow on demo section */
+.demo-input-wrap.live-glow{
+  border-color:rgba(6,214,160,.35);
+  box-shadow:0 0 25px rgba(6,214,160,.08),inset 0 0 25px rgba(6,214,160,.03);
+}
+
+/* Live badge on token card */
+.tc-live-badge{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:5px 14px;border-radius:999px;background:rgba(6,214,160,.15);
+  color:var(--green);font-size:.72rem;font-weight:700;font-family:var(--mono);
+  border:1px solid rgba(6,214,160,.3);margin-left:12px;
+}
+.tc-live-badge .dot-g{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse-dot 1.5s infinite}
+
+/* Live explorer link */
+.tc-explorer-live a{color:var(--green);text-decoration:underline;text-underline-offset:3px}
+
+/* Live error */
+.demo-error{
+  background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);
+  border-radius:var(--radius-sm);padding:16px 20px;margin-bottom:20px;
+  font-family:var(--mono);font-size:.82rem;color:#f87171;display:none;
+}
+.demo-error.show{display:block;animation:fadeInUp .3s ease}
+
+/* Processing live status */
+.processing-status{
+  font-family:var(--mono);font-size:.78rem;color:var(--green);
+  margin-bottom:8px;display:flex;align-items:center;gap:8px;
+}
+.processing-status .dot-g{width:5px;height:5px;border-radius:50%;background:var(--green);animation:pulse-dot 1s infinite}
+.processing-thinking{
+  font-family:var(--mono);font-size:.75rem;color:var(--text-muted);
+  font-style:italic;margin-bottom:8px;padding-left:12px;
+  border-left:2px solid var(--border);max-height:80px;overflow-y:auto;
+}
+
 /* ===== RESPONSIVE ===== */
 @media(max-width:640px){
   .demo-input-row{flex-direction:column}
   .tc-stats{grid-template-columns:repeat(2,1fr)}
   .tc-cli{flex-direction:column;align-items:flex-start}
   .footer-inner{flex-direction:column;text-align:center}
+  .mode-toggle-option{padding:7px 14px;font-size:.75rem}
 }
 </style>
 </head>
@@ -455,7 +538,18 @@ footer{
       <div class="section-sub">Describe your token in plain English and watch the AI parse it into a deployable configuration.</div>
     </div>
 
-    <div class="demo-input-wrap reveal">
+    <div class="mode-toggle-wrap reveal">
+      <div class="mode-toggle" id="modeToggle" onclick="toggleMode()">
+        <div class="mode-toggle-slider sim" id="modeSlider"></div>
+        <div class="mode-toggle-option active" id="optSim">Simulated</div>
+        <div class="mode-toggle-option" id="optLive">Live</div>
+      </div>
+      <div class="mode-badge-testnet" id="testnetBadge"><span class="dot-g"></span> Testnet</div>
+    </div>
+
+    <div class="demo-error" id="demoError"></div>
+
+    <div class="demo-input-wrap reveal" id="demoInputWrap">
       <div class="demo-input-row">
         <input type="text" class="demo-input" id="demoInput" placeholder='Describe your token... e.g., "a gaming token called GEMS with 5M supply"'>
         <button class="demo-create-btn" id="demoBtn" onclick="runDemo()">Create Token</button>
@@ -465,6 +559,7 @@ footer{
         <button class="preset-btn" onclick="usePreset('loyalty')">Loyalty Points</button>
         <button class="preset-btn" onclick="usePreset('governance')">Governance Token</button>
       </div>
+      <div class="demo-disclaimer" id="demoDisclaimer">Tokens are deployed on Coreum testnet. No real value.</div>
     </div>
 
     <div class="demo-processing" id="demoProcessing">
@@ -632,6 +727,10 @@ footer{
 </footer>
 
 <script>
+/* ===== CONFIG ===== */
+const API_URL = 'https://txai-demo-api-production.up.railway.app'; // Railway backend
+let liveMode = false;
+
 /* ===== PARTICLES ===== */
 (function(){
   const c=document.getElementById('particles'),x=c.getContext('2d');
@@ -650,7 +749,6 @@ footer{
       x.beginPath();x.arc(d.x,d.y,d.r,0,Math.PI*2);
       x.fillStyle='rgba(124,109,250,'+d.o+')';x.fill();
     }
-    // Connect nearby dots
     for(let i=0;i<dots.length;i++){
       for(let j=i+1;j<dots.length;j++){
         const dx=dots[i].x-dots[j].x,dy=dots[i].y-dots[j].y,dist=Math.sqrt(dx*dx+dy*dy);
@@ -685,7 +783,6 @@ footer{
   function addLine(){
     if(i>=lines.length){
       const cur=document.createElement('span');cur.className='cursor';term.appendChild(cur);
-      // Restart after a pause
       setTimeout(()=>{term.innerHTML='';i=0;addLine()},4000);
       return;
     }
@@ -706,6 +803,38 @@ const observer=new IntersectionObserver((entries)=>{
   entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('visible');observer.unobserve(e.target)}});
 },{threshold:.15});
 document.querySelectorAll('.reveal').forEach(el=>observer.observe(el));
+
+/* ===== MODE TOGGLE ===== */
+function toggleMode(){
+  liveMode = !liveMode;
+  const slider = document.getElementById('modeSlider');
+  const optSim = document.getElementById('optSim');
+  const optLive = document.getElementById('optLive');
+  const badge = document.getElementById('testnetBadge');
+  const disclaimer = document.getElementById('demoDisclaimer');
+  const inputWrap = document.getElementById('demoInputWrap');
+  const btn = document.getElementById('demoBtn');
+
+  if(liveMode){
+    slider.className = 'mode-toggle-slider live';
+    optSim.classList.remove('active');
+    optLive.classList.add('active');
+    badge.classList.add('visible');
+    disclaimer.classList.add('visible');
+    inputWrap.classList.add('live-glow');
+    btn.textContent = 'Deploy Token (Testnet)';
+  } else {
+    slider.className = 'mode-toggle-slider sim';
+    optSim.classList.add('active');
+    optLive.classList.remove('active');
+    badge.classList.remove('visible');
+    disclaimer.classList.remove('visible');
+    inputWrap.classList.remove('live-glow');
+    btn.textContent = 'Create Token';
+  }
+  // Hide any previous error
+  document.getElementById('demoError').classList.remove('show');
+}
 
 /* ===== PRESETS ===== */
 const PRESETS={
@@ -734,13 +863,11 @@ function usePreset(key){
 /* ===== CLIENT-SIDE PARSING ===== */
 function parseInput(text){
   text=text.toLowerCase();
-  // Name
   let name='TOKEN';
   const nameMatch=text.match(/called\s+([a-z0-9]+)/i);
   if(nameMatch)name=nameMatch[1].toUpperCase();
   else{const w=text.match(/\b([A-Z]{2,8})\b/);if(w)name=w[1];}
 
-  // Supply
   let supply=1000000;
   const supMatch=text.match(/([\d,.]+)\s*(k|m|b|t)?(?:\s*supply)?/i);
   if(supMatch){
@@ -750,7 +877,6 @@ function parseInput(text){
     supply=Math.floor(n);
   }
 
-  // Features
   const features={
     minting:/mint/i.test(text),
     burning:/burn/i.test(text),
@@ -764,6 +890,300 @@ function parseInput(text){
   return{name,symbol:name.toLowerCase(),supply,decimals:6,features};
 }
 
+/* ===== SSE PARSING HELPER ===== */
+function parseSSEChunk(chunk){
+  const events = [];
+  const lines = chunk.split('\n');
+  let currentEvent = null;
+  let currentData = '';
+
+  for(const line of lines){
+    if(line.startsWith('event: ')){
+      if(currentEvent && currentData){
+        try{ events.push({event:currentEvent, data:JSON.parse(currentData)}); }
+        catch(e){ events.push({event:currentEvent, data:currentData}); }
+      }
+      currentEvent = line.slice(7).trim();
+      currentData = '';
+    } else if(line.startsWith('data: ')){
+      currentData += line.slice(6);
+    } else if(line === '' && currentEvent){
+      if(currentData){
+        try{ events.push({event:currentEvent, data:JSON.parse(currentData)}); }
+        catch(e){ events.push({event:currentEvent, data:currentData}); }
+      }
+      currentEvent = null;
+      currentData = '';
+    }
+  }
+  // Handle trailing event without final newline
+  if(currentEvent && currentData){
+    try{ events.push({event:currentEvent, data:JSON.parse(currentData)}); }
+    catch(e){ events.push({event:currentEvent, data:currentData}); }
+  }
+  return events;
+}
+
+/* ===== SHOW ERROR ===== */
+function showDemoError(msg){
+  const el = document.getElementById('demoError');
+  el.textContent = msg;
+  el.classList.add('show');
+}
+function hideDemoError(){
+  document.getElementById('demoError').classList.remove('show');
+}
+
+/* ===== LIVE MODE DEMO ===== */
+async function runLiveDemo(inputText){
+  const proc = document.getElementById('demoProcessing');
+  const card = document.getElementById('tokenCard');
+  const stream = document.getElementById('demoStream');
+  const btn = document.getElementById('demoBtn');
+
+  card.classList.remove('show'); card.style.display='none';
+  hideDemoError();
+  proc.classList.add('show');
+  stream.innerHTML = '';
+
+  // Change button to loading
+  btn.textContent = 'Deploying...';
+  btn.disabled = true;
+
+  // Add a status line container and thinking container
+  function addStatus(msg){
+    const el = document.createElement('div');
+    el.className = 'processing-status';
+    el.innerHTML = '<span class="dot-g"></span> ' + escapeHtml(msg);
+    stream.appendChild(el);
+    stream.scrollTop = stream.scrollHeight;
+  }
+  function addThinking(msg){
+    const el = document.createElement('div');
+    el.className = 'processing-thinking';
+    el.textContent = msg;
+    stream.appendChild(el);
+    stream.scrollTop = stream.scrollHeight;
+  }
+  function addStreamLine(msg, cls){
+    const el = document.createElement('div');
+    el.style.fontFamily = 'var(--mono)';
+    el.style.fontSize = '.78rem';
+    el.style.color = cls === 'tool' ? 'var(--purple)' : cls === 'result' ? 'var(--green)' : 'var(--text-dim)';
+    el.style.marginBottom = '4px';
+    el.textContent = msg;
+    stream.appendChild(el);
+    stream.scrollTop = stream.scrollHeight;
+  }
+
+  let successData = null;
+
+  try {
+    const response = await fetch(API_URL + '/api/create-token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ description: inputText })
+    });
+
+    if(!response.ok){
+      if(response.status === 429){
+        throw new Error('RATE_LIMIT');
+      }
+      throw new Error('HTTP_' + response.status);
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while(true){
+      const {done, value} = await reader.read();
+      if(done) break;
+
+      buffer += decoder.decode(value, {stream: true});
+
+      // Parse complete SSE events from buffer
+      const events = parseSSEChunk(buffer);
+      // Keep only the unparsed remainder
+      const lastDoubleNewline = buffer.lastIndexOf('\n\n');
+      if(lastDoubleNewline !== -1){
+        buffer = buffer.slice(lastDoubleNewline + 2);
+      }
+
+      for(const evt of events){
+        switch(evt.event){
+          case 'status':
+            addStatus(evt.data.message || evt.data);
+            break;
+          case 'thinking':
+            addThinking(typeof evt.data === 'string' ? evt.data : evt.data.text || JSON.stringify(evt.data));
+            break;
+          case 'tool_call':
+            addStreamLine('Calling ' + (evt.data.tool || 'tx_issue_smart_token') + '...', 'tool');
+            if(evt.data.args){
+              addStreamLine('  Args: ' + JSON.stringify(evt.data.args).slice(0,200), 'text');
+            }
+            break;
+          case 'tool_result':
+            if(evt.data.denom) addStreamLine('  Denom: ' + evt.data.denom, 'result');
+            if(evt.data.txHash) addStreamLine('  TX Hash: ' + evt.data.txHash, 'result');
+            if(typeof evt.data === 'string') addStreamLine('  Result: ' + evt.data, 'result');
+            break;
+          case 'text':
+            addStreamLine(typeof evt.data === 'string' ? evt.data : evt.data.text || '', 'text');
+            break;
+          case 'success':
+            successData = evt.data;
+            addStreamLine('Token deployed successfully!', 'result');
+            break;
+          case 'error':
+            const errMsg = typeof evt.data === 'string' ? evt.data : evt.data.message || 'Unknown error';
+            throw new Error('SERVER_ERROR:' + errMsg);
+          case 'done':
+            break;
+        }
+      }
+    }
+
+    // Process final buffer
+    if(buffer.trim()){
+      const finalEvents = parseSSEChunk(buffer);
+      for(const evt of finalEvents){
+        if(evt.event === 'success') successData = evt.data;
+      }
+    }
+
+  } catch(err){
+    proc.classList.remove('show');
+    btn.textContent = 'Deploy Token (Testnet)';
+    btn.disabled = false;
+    demoRunning = false;
+
+    if(err.message === 'RATE_LIMIT'){
+      showDemoError('Please wait 60 seconds between token creations.');
+    } else if(err.message.startsWith('SERVER_ERROR:')){
+      showDemoError(err.message.slice(13));
+    } else if(err.name === 'TypeError' || err.message.includes('fetch') || err.message.includes('network') || err.message.includes('Failed')){
+      showDemoError('Live demo unavailable. Try simulated mode.');
+    } else {
+      showDemoError('Connection error. Check your internet connection.');
+    }
+    return;
+  }
+
+  await sleep(300);
+  proc.classList.remove('show');
+
+  // Build card with real data if we got success
+  if(successData){
+    buildLiveTokenCard(successData, inputText);
+  } else {
+    // Fallback: parse input client-side for card display
+    const cfg = parseInput(inputText);
+    buildTokenCard(cfg, inputText);
+  }
+
+  card.style.display='block';
+  requestAnimationFrame(()=>card.classList.add('show'));
+
+  btn.textContent = 'Deploy Token (Testnet)';
+  btn.disabled = false;
+  demoRunning = false;
+}
+
+/* ===== BUILD LIVE TOKEN CARD ===== */
+function buildLiveTokenCard(data, desc){
+  const denom = data.denom || 'unknown';
+  const txHash = data.txHash || '';
+  const explorerUrl = data.explorerUrl || ('https://explorer.testnet-1.coreum.dev/coreum/transactions/' + txHash);
+  const features = data.features || {};
+
+  // Extract name from denom (e.g. "gems-testcore1abc..." -> "GEMS")
+  const denomName = denom.split('-')[0] || denom;
+  const displayName = denomName.toUpperCase();
+
+  document.getElementById('tcIcon').textContent = displayName.slice(0,2);
+  document.getElementById('tcName').textContent = displayName;
+  document.getElementById('tcSym').textContent = '$' + displayName;
+
+  // Update the deployed badge to show LIVE ON TESTNET
+  const deployedBadge = document.querySelector('.tc-deployed');
+  deployedBadge.innerHTML = '<span class="dot-live"></span> <span class="tc-live-badge"><span class="dot-g"></span> LIVE ON TESTNET</span>';
+
+  // Stats
+  const stats = document.getElementById('tcStats');
+  stats.innerHTML = '';
+  const supply = data.supply || data.initialSupply || 'N/A';
+  const statData = [
+    {val: typeof supply === 'number' ? supply.toLocaleString() : supply, label:'Total Supply'},
+    {val: data.decimals || 6, label:'Decimals'},
+    {val:'Coreum Testnet', label:'Network'},
+    {val: txHash ? txHash.slice(0,8) + '...' : 'N/A', label:'TX Hash'}
+  ];
+  statData.forEach(s=>{
+    const d = document.createElement('div'); d.className = 'tc-stat';
+    d.innerHTML = '<div class="tc-stat-val">' + s.val + '</div><div class="tc-stat-label">' + s.label + '</div>';
+    stats.appendChild(d);
+  });
+
+  // Features
+  const feats = document.getElementById('tcFeatures'); feats.innerHTML = '';
+  const fLabels = {minting:'Mintable',burning:'Burnable',ibcEnabled:'IBC Enabled',freezing:'Freezable',whitelisting:'Whitelistable',clawback:'Clawback',globalFreeze:'Global Freeze',governance:'Governance'};
+  if(features && typeof features === 'object'){
+    Object.entries(fLabels).forEach(([k, label])=>{
+      const v = features[k] || false;
+      const s = document.createElement('span');
+      s.className = 'tc-feat ' + (v ? 'on' : 'off');
+      s.textContent = label;
+      feats.appendChild(s);
+    });
+  }
+
+  // Allocation bar (same defaults)
+  const alloc = [
+    {cls:'creator',label:'Creator',pct:20,color:'var(--purple)'},
+    {cls:'community',label:'Community',pct:35,color:'var(--green)'},
+    {cls:'treasury',label:'Treasury',pct:25,color:'#f59e0b'},
+    {cls:'liquidity',label:'Liquidity',pct:20,color:'#3b82f6'},
+  ];
+  const bar = document.getElementById('allocBar'); bar.innerHTML = '';
+  const legend = document.getElementById('allocLegend'); legend.innerHTML = '';
+  alloc.forEach(a=>{
+    const seg = document.createElement('div'); seg.className = 'alloc-seg ' + a.cls;
+    seg.style.flex = '0 0 0%'; seg.textContent = a.pct + '%'; bar.appendChild(seg);
+    setTimeout(()=>{ seg.style.flex = '0 0 ' + a.pct + '%'; }, 50);
+    legend.innerHTML += '<div class="alloc-legend-item"><div class="alloc-legend-dot" style="background:' + a.color + '"></div>' + a.label + ' ' + a.pct + '%</div>';
+  });
+
+  // CLI command
+  const cmd = 'npx txai-create "' + desc + '"';
+  document.getElementById('tcCmd').textContent = cmd;
+
+  // JSON with real data
+  const json = {
+    token:{ denom: denom, txHash: txHash, network:'coreum-testnet-1' },
+    features: features,
+    explorerUrl: explorerUrl,
+    cli: 'txai create "' + desc + '"'
+  };
+  document.getElementById('tcJson').innerHTML = syntaxHL(JSON.stringify(json, null, 2));
+  window._lastCmd = cmd;
+  window._lastJson = JSON.stringify(json, null, 2);
+
+  // Explorer link - make it real and clickable
+  const explorerDiv = document.querySelector('.tc-explorer');
+  explorerDiv.className = 'tc-explorer tc-explorer-live';
+  explorerDiv.innerHTML = '<div class="tc-explorer-icon">&#9889;</div>' +
+    '<div class="tc-explorer-text">' +
+    'Token deployed on Coreum Testnet!<br>' +
+    '<a href="' + escapeHtml(explorerUrl) + '" target="_blank" rel="noopener">View on Coreum Explorer &#8599;</a>' +
+    '</div>';
+}
+
+function escapeHtml(str){
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
 /* ===== DEMO RUNNER ===== */
 let demoRunning=false;
 async function runDemo(preset){
@@ -772,6 +1192,14 @@ async function runDemo(preset){
   if(!input&&!preset)return;
   demoRunning=true;
   document.getElementById('demoBtn').disabled=true;
+  hideDemoError();
+
+  // If live mode, use the live demo path
+  if(liveMode){
+    const desc = preset ? preset.input : input;
+    await runLiveDemo(desc);
+    return;
+  }
 
   const cfg=preset||parseInput(input);
   const desc=preset?preset.input:input;
@@ -783,6 +1211,17 @@ async function runDemo(preset){
   proc.classList.add('show');
   const stream=document.getElementById('demoStream');
   stream.textContent='';
+
+  // Reset deployed badge for simulated mode
+  const deployedBadge = document.querySelector('.tc-deployed');
+  deployedBadge.innerHTML = '<span class="dot-live"></span> Deployed on Coreum';
+
+  // Reset explorer link for simulated mode
+  const explorerDiv = document.querySelector('.tc-explorer');
+  explorerDiv.className = 'tc-explorer';
+  explorerDiv.innerHTML = '<div class="tc-explorer-icon">&#9889;</div>' +
+    '<div class="tc-explorer-text">Token deployed successfully!<br>' +
+    '<a href="#" onclick="return false">View on Coreum Explorer &#8599;</a></div>';
 
   // Streaming text
   const lines=[
@@ -810,7 +1249,6 @@ async function runDemo(preset){
   await sleep(300);
   proc.classList.remove('show');
 
-  // Build card
   buildTokenCard(cfg,desc);
   card.style.display='block';
   requestAnimationFrame(()=>card.classList.add('show'));
@@ -830,13 +1268,12 @@ function streamLine(el,text){
 }
 function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
 
-/* ===== BUILD TOKEN CARD ===== */
+/* ===== BUILD TOKEN CARD (SIMULATED) ===== */
 function buildTokenCard(cfg,desc){
   document.getElementById('tcIcon').textContent=cfg.name.slice(0,2);
   document.getElementById('tcName').textContent=cfg.name;
   document.getElementById('tcSym').textContent='$'+cfg.symbol.toUpperCase();
 
-  // Stats
   const stats=document.getElementById('tcStats');
   stats.innerHTML='';
   const statData=[
@@ -851,7 +1288,6 @@ function buildTokenCard(cfg,desc){
     stats.appendChild(d);
   });
 
-  // Features
   const feats=document.getElementById('tcFeatures');feats.innerHTML='';
   const fLabels={minting:'Mintable',burning:'Burnable',ibcEnabled:'IBC Enabled',freezing:'Freezable',whitelisting:'Whitelistable',clawback:'Clawback',globalFreeze:'Global Freeze',governance:'Governance'};
   Object.entries(cfg.features).forEach(([k,v])=>{
@@ -861,7 +1297,6 @@ function buildTokenCard(cfg,desc){
     feats.appendChild(s);
   });
 
-  // Allocation bar
   const alloc=[
     {cls:'creator',label:'Creator',pct:20,color:'var(--purple)'},
     {cls:'community',label:'Community',pct:35,color:'var(--green)'},
@@ -877,11 +1312,9 @@ function buildTokenCard(cfg,desc){
     legend.innerHTML+='<div class="alloc-legend-item"><div class="alloc-legend-dot" style="background:'+a.color+'"></div>'+a.label+' '+a.pct+'%</div>';
   });
 
-  // CLI command
   const cmd='npx txai-create "'+desc+'"';
   document.getElementById('tcCmd').textContent=cmd;
 
-  // JSON
   const json={
     token:{name:cfg.name,symbol:cfg.symbol,initialSupply:String(cfg.supply),decimals:cfg.decimals,network:'coreum-mainnet-1'},
     features:cfg.features,

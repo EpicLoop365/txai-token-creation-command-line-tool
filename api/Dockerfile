@@ -1,0 +1,18 @@
+FROM node:18-alpine
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci
+
+COPY tsconfig.json ./
+COPY src/ ./src/
+
+RUN npx tsc
+
+# Remove dev dependencies after build
+RUN npm prune --production
+
+EXPOSE 3001
+
+CMD ["node", "dist/server.js"]
