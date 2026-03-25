@@ -142,6 +142,59 @@ app.get("/test-connection", async (_req, res) => {
   }
 });
 
+// ─── CREATE TOKEN (JSON — synchronous, returns full result) ─────────────────
+
+app.post("/api/create-token-sync", async (req, res) => {
+  const { description } = req.body as { description?: string };
+
+  if (!description || typeof description !== "string") {
+    res.status(400).json({ error: "Missing 'description' field." });
+    return;
+  }
+
+  if (description.length > 500) {
+    res.status(400).json({ error: "Description too long. Maximum 500 characters." });
+    return;
+  }
+
+  if (!process.env.ANTHROPIC_API_KEY) {
+    res.status(500).json({ error: "Server misconfigured: ANTHROPIC_API_KEY not set." });
+    return;
+  }
+
+  const clientIp =
+    (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() ||
+    req.ip ||
+    "unknown";
+
+  if (isRateLimited(clientIp)) {
+    res.status(429).json({ error: "Rate limited. Please wait 60 seconds between requests." });
+    return;
+  }
+
+  const events: Array<{ event: string; data: unknown }> = [];
+  const collectEvent = (event: string, data: unknown) => {
+    events.push({ event, data });
+  };
+
+  try {
+    await createToken(description, collectEvent);
+    // Find the success event
+    const successEvent = events.find((e) => e.event === "success");
+    const errorEvent = events.find((e) => e.event === "error");
+
+    if (successEvent) {
+      res.json({ success: true, events, result: successEvent.data });
+    } else if (errorEvent) {
+      res.json({ success: false, events, error: (errorEvent.data as { message: string }).message });
+    } else {
+      res.json({ success: false, events, error: "Token creation completed without result" });
+    }
+  } catch (err) {
+    res.json({ success: false, events, error: (err as Error).message });
+  }
+});
+
 // ─── CREATE TOKEN (SSE) ──────────────────────────────────────────────────────
 
 app.post("/api/create-token", async (req, res) => {
@@ -183,19 +236,22 @@ app.post("/api/create-token", async (req, res) => {
     return;
   }
 
-  // Setup SSE
+  // Setup SSE — disable ALL proxy buffering
   res.writeHead(200, {
     "Content-Type": "text/event-stream",
-    "Cache-Control": "no-cache",
-    Connection: "keep-alive",
+    "Cache-Control": "no-cache, no-transform",
+    "Connection": "keep-alive",
     "X-Accel-Buffering": "no",
+    "Content-Encoding": "identity",
   });
 
-  // Flush headers immediately to establish SSE connection
+  // Disable Nagle's algorithm for immediate flushing
+  req.socket.setNoDelay(true);
   res.flushHeaders();
 
   const sendEvent = (event: string, data: unknown) => {
-    res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+    const eventStr = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+    res.write(eventStr);
     // Force flush through any proxy buffering
     if (typeof (res as any).flush === "function") {
       (res as any).flush();

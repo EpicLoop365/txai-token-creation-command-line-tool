@@ -979,7 +979,10 @@ async function runLiveDemo(inputText){
   let successData = null;
 
   try {
-    const response = await fetch(API_URL + '/api/create-token', {
+    // Use sync endpoint — more reliable through Railway's proxy
+    addStatus('Sending to Claude AI...');
+
+    const response = await fetch(API_URL + '/api/create-token-sync', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ description: inputText })
@@ -992,25 +995,12 @@ async function runLiveDemo(inputText){
       throw new Error('HTTP_' + response.status);
     }
 
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
+    const result = await response.json();
 
-    while(true){
-      const {done, value} = await reader.read();
-      if(done) break;
-
-      buffer += decoder.decode(value, {stream: true});
-
-      // Parse complete SSE events from buffer
-      const events = parseSSEChunk(buffer);
-      // Keep only the unparsed remainder
-      const lastDoubleNewline = buffer.lastIndexOf('\n\n');
-      if(lastDoubleNewline !== -1){
-        buffer = buffer.slice(lastDoubleNewline + 2);
-      }
-
-      for(const evt of events){
+    // Replay the collected events in the UI
+    if(result.events && Array.isArray(result.events)){
+      for(const evt of result.events){
+        await new Promise(r => setTimeout(r, 150)); // Small delay for animation effect
         switch(evt.event){
           case 'status':
             addStatus(evt.data.message || evt.data);
@@ -1025,12 +1015,12 @@ async function runLiveDemo(inputText){
             }
             break;
           case 'tool_result':
-            if(evt.data.denom) addStreamLine('  Denom: ' + evt.data.denom, 'result');
-            if(evt.data.txHash) addStreamLine('  TX Hash: ' + evt.data.txHash, 'result');
-            if(typeof evt.data === 'string') addStreamLine('  Result: ' + evt.data, 'result');
+            if(evt.data.result && evt.data.result.denom) addStreamLine('  Denom: ' + evt.data.result.denom, 'result');
+            if(evt.data.result && evt.data.result.txHash) addStreamLine('  TX Hash: ' + evt.data.result.txHash, 'result');
+            if(evt.data.result && evt.data.result.explorerUrl) addStreamLine('  Explorer: ' + evt.data.result.explorerUrl, 'result');
             break;
           case 'text':
-            addStreamLine(typeof evt.data === 'string' ? evt.data : evt.data.text || '', 'text');
+            addStreamLine(typeof evt.data === 'string' ? evt.data : evt.data.content || '', 'text');
             break;
           case 'success':
             successData = evt.data;
@@ -1039,18 +1029,16 @@ async function runLiveDemo(inputText){
           case 'error':
             const errMsg = typeof evt.data === 'string' ? evt.data : evt.data.message || 'Unknown error';
             throw new Error('SERVER_ERROR:' + errMsg);
-          case 'done':
-            break;
         }
       }
     }
 
-    // Process final buffer
-    if(buffer.trim()){
-      const finalEvents = parseSSEChunk(buffer);
-      for(const evt of finalEvents){
-        if(evt.event === 'success') successData = evt.data;
-      }
+    // Use result directly if no events
+    if(!successData && result.success && result.result){
+      successData = result.result;
+    }
+    if(!result.success && result.error){
+      throw new Error('SERVER_ERROR:' + result.error);
     }
 
   } catch(err){
