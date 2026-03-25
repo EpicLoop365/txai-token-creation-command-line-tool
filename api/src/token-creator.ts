@@ -19,6 +19,41 @@ import { DEMO_TOOLS, DemoToolExecutor, getSystemPrompt } from "./tools";
 
 const MODEL = "claude-sonnet-4-20250514";
 const MAX_ITERATIONS = 10;
+const MAX_RETRIES = 3;
+
+/** Call Claude API with retry + exponential backoff for transient errors (429, 500, 503, 529) */
+async function callClaudeWithRetry(
+  anthropic: Anthropic,
+  params: Anthropic.MessageCreateParamsNonStreaming,
+  sendEvent: SendEventFn
+): Promise<Anthropic.Message> {
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    try {
+      return await anthropic.messages.create(params);
+    } catch (err) {
+      const status = (err as { status?: number }).status;
+      const isRetryable = status === 429 || status === 500 || status === 503 || status === 529;
+
+      if (isRetryable && attempt < MAX_RETRIES - 1) {
+        const waitSec = Math.pow(2, attempt + 1); // 2s, 4s, 8s
+        sendEvent("status", {
+          message: `AI service busy, retrying in ${waitSec}s... (attempt ${attempt + 2}/${MAX_RETRIES})`,
+        });
+        await new Promise((r) => setTimeout(r, waitSec * 1000));
+        continue;
+      }
+
+      // Non-retryable or exhausted retries — throw a clean error
+      if (status === 529 || status === 503) {
+        throw new Error("AI service is temporarily overloaded. Please try again in a minute.");
+      } else if (status === 429) {
+        throw new Error("AI rate limit reached. Please wait a moment and try again.");
+      }
+      throw err;
+    }
+  }
+  throw new Error("AI service unavailable after retries. Please try again.");
+}
 
 export type SendEventFn = (event: string, data: unknown) => void;
 
@@ -130,13 +165,17 @@ export async function createToken(
         message: `AI reasoning... (step ${iteration}/${MAX_ITERATIONS})`,
       });
 
-      const response = await anthropic.messages.create({
-        model: MODEL,
-        max_tokens: 4096,
-        system: systemPrompt,
-        tools: DEMO_TOOLS,
-        messages,
-      });
+      const response = await callClaudeWithRetry(
+        anthropic,
+        {
+          model: MODEL,
+          max_tokens: 4096,
+          system: systemPrompt,
+          tools: DEMO_TOOLS as Anthropic.Tool[],
+          messages,
+        },
+        sendEvent
+      );
 
       // Process response content blocks
       const toolUseBlocks: Anthropic.ToolUseBlock[] = [];
