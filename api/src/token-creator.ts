@@ -119,6 +119,7 @@ export async function createToken(
   let lastSupply: string | undefined;
   let lastFeatures: Record<string, boolean> | undefined;
   let lastDecimals: number | undefined;
+  let lastError: { message: string; txHash?: string; explorerUrl?: string } | null = null;
   let iteration = 0;
 
   try {
@@ -197,17 +198,16 @@ export async function createToken(
           if (toolArgs.features) lastFeatures = toolArgs.features as Record<string, boolean>;
           if (toolArgs.precision !== undefined) lastDecimals = Number(toolArgs.precision);
 
-          // If issuance failed, send error with tx link so user can inspect
+          // Track intermediate errors but don't emit them yet - Claude may retry
           if (!result.success) {
             const errMsg = issueData.error || result.error || "Token issuance failed";
             const txUrl = issueData.txHash
               ? `${NETWORKS[networkName].explorerUrl}/tx/transactions/${issueData.txHash}`
               : undefined;
-            sendEvent("error", {
-              message: errMsg,
-              txHash: issueData.txHash,
-              explorerUrl: txUrl,
-            });
+            lastError = { message: errMsg, txHash: issueData.txHash, explorerUrl: txUrl };
+          } else {
+            // Clear last error on success
+            lastError = null;
           }
         }
 
@@ -224,7 +224,7 @@ export async function createToken(
       messages.push({ role: "user", content: toolResults });
     }
 
-    // Send success event if we have a denom
+    // Send success event if we have a denom, otherwise emit the last error
     if (lastDenom) {
       sendEvent("success", {
         denom: lastDenom,
@@ -236,6 +236,10 @@ export async function createToken(
         network: networkName,
         walletAddress: walletData.address,
       });
+    } else if (lastError) {
+      sendEvent("error", lastError);
+    } else {
+      sendEvent("error", { message: "Token creation did not produce a result. Please try again." });
     }
   } catch (err) {
     sendEvent("error", {

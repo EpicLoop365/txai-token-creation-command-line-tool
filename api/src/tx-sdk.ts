@@ -206,22 +206,28 @@ export class TxClient {
         fee
       );
 
-    try {
-      const result: DeliverTxResponse = await broadcast();
-      return this.formatTxResult(result);
-    } catch (err) {
-      const message = (err as Error).message ?? String(err);
-      // Retry on sequence mismatch
-      if (
-        message.includes("account sequence mismatch") ||
-        message.includes("incorrect account sequence")
-      ) {
-        await new Promise((r) => setTimeout(r, 2000));
+    // Retry up to 3 times on sequence mismatch (concurrent users share one wallet)
+    let lastErr: Error | undefined;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        if (attempt > 0) {
+          await new Promise((r) => setTimeout(r, 2000 * attempt));
+        }
         const result: DeliverTxResponse = await broadcast();
         return this.formatTxResult(result);
+      } catch (err) {
+        const message = (err as Error).message ?? String(err);
+        if (
+          message.includes("account sequence mismatch") ||
+          message.includes("incorrect account sequence")
+        ) {
+          lastErr = err as Error;
+          continue;
+        }
+        throw err;
       }
-      throw err;
     }
+    throw lastErr!
   }
 
   private formatTxResult(result: DeliverTxResponse): TransactionResult {

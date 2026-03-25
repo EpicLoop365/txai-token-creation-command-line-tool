@@ -1003,6 +1003,7 @@ async function runLiveDemo(inputText){
     const result = await response.json();
 
     // Replay the collected events in the UI
+    let lastError = null;
     if(result.events && Array.isArray(result.events)){
       for(const evt of result.events){
         await new Promise(r => setTimeout(r, 150)); // Small delay for animation effect
@@ -1032,11 +1033,13 @@ async function runLiveDemo(inputText){
             addStreamLine('Token deployed successfully!', 'result');
             break;
           case 'error':
+            // Collect error but don't throw yet - Claude may retry and succeed
             const errData = typeof evt.data === 'string' ? {message: evt.data} : evt.data;
             const errMsg = errData.message || 'Unknown error';
             if(errData.explorerUrl) errorTxUrl = errData.explorerUrl;
             else if(errData.txHash) errorTxUrl = 'https://explorer.testnet-1.tx.org/tx/transactions/' + errData.txHash;
-            throw new Error('SERVER_ERROR:' + errMsg);
+            lastError = errMsg;
+            break;
         }
       }
     }
@@ -1045,10 +1048,17 @@ async function runLiveDemo(inputText){
     if(!successData && result.success && result.result){
       successData = result.result;
     }
-    if(!result.success && result.error){
-      if(result.explorerUrl) errorTxUrl = result.explorerUrl;
-      else if(result.txHash) errorTxUrl = 'https://explorer.testnet-1.tx.org/tx/transactions/' + result.txHash;
-      throw new Error('SERVER_ERROR:' + result.error);
+    // Only throw if there was NO success and there was an error
+    if(!successData) {
+      if(result.error || lastError){
+        const finalErr = result.error || lastError;
+        if(result.explorerUrl) errorTxUrl = result.explorerUrl;
+        else if(result.txHash) errorTxUrl = 'https://explorer.testnet-1.tx.org/tx/transactions/' + result.txHash;
+        throw new Error('SERVER_ERROR:' + finalErr);
+      }
+      if(!result.success){
+        throw new Error('SERVER_ERROR:Token creation did not produce a result. Please try again.');
+      }
     }
 
   } catch(err){
