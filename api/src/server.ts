@@ -5,6 +5,11 @@
  *   GET  /health          — health check with wallet + network info
  *   POST /api/create-token — accepts { description }, streams SSE events
  *   POST /api/chat         — conversational token advisor (no blockchain calls)
+ *   GET  /api/orderbook     — fetch bids/asks for a trading pair
+ *   GET  /api/orders        — fetch open orders for an address
+ *   GET  /api/pairs         — list known trading pairs
+ *   POST /api/trade         — AI-powered trade execution (SSE)
+ *   POST /api/dex-chat      — DEX trading advisor chat
  */
 
 import express from "express";
@@ -12,10 +17,16 @@ import cors from "cors";
 import Anthropic from "@anthropic-ai/sdk";
 import { createToken } from "./token-creator";
 import { getChatSystemPrompt } from "./tools";
+import { getDexChatSystemPrompt } from "./dex-tools";
+import { executeTrade } from "./dex-agent";
 import {
   importWallet,
   NETWORKS,
   NetworkName,
+  TxClient,
+  queryOrderbook,
+  queryOrdersByCreator,
+  queryOrderBooks,
 } from "./tx-sdk";
 
 // ─── RATE LIMITER ────────────────────────────────────────────────────────────
@@ -385,12 +396,145 @@ app.post("/api/create-token", async (req, res) => {
   }
 });
 
+// ─── DEX: GET ORDERBOOK ──────────────────────────────────────────────────────
+
+app.get("/api/orderbook", async (req, res) => {
+  const baseDenom = req.query.base as string;
+  const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
+  const quoteDenom = (req.query.quote as string) || NETWORKS[networkName].denom;
+  if (!baseDenom) { res.status(400).json({ error: "Missing 'base' query parameter." }); return; }
+  try {
+    const book = await queryOrderbook(baseDenom, quoteDenom, networkName);
+    res.json(book);
+  } catch (err) { res.status(500).json({ error: (err as Error).message }); }
+});
+
+// ─── DEX: GET ORDERS ─────────────────────────────────────────────────────────
+
+app.get("/api/orders", async (req, res) => {
+  const creator = req.query.creator as string;
+  const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
+  if (!creator) { res.status(400).json({ error: "Missing 'creator' query parameter." }); return; }
+  try {
+    const orders = await queryOrdersByCreator(creator, networkName);
+    res.json({ orders });
+  } catch (err) { res.status(500).json({ error: (err as Error).message }); }
+});
+
+// ─── DEX: GET PAIRS ──────────────────────────────────────────────────────────
+
+app.get("/api/pairs", async (_req, res) => {
+  const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
+  try {
+    const pairs = await queryOrderBooks(networkName);
+    res.json({ pairs });
+  } catch (err) { res.status(500).json({ error: (err as Error).message }); }
+});
+
+// ─── DEX: GET BALANCES ───────────────────────────────────────────────────────
+
+app.get("/api/balances", async (req, res) => {
+  const address = req.query.address as string;
+  const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
+  if (!address) { res.status(400).json({ error: "Missing 'address' query parameter." }); return; }
+  try {
+    if (!process.env.AGENT_MNEMONIC) { res.status(500).json({ error: "Server not configured." }); return; }
+    const txWallet = await importWallet(process.env.AGENT_MNEMONIC, networkName);
+    const client = await TxClient.connectWithWallet(txWallet);
+    const balances = await client.getBalances(address);
+    client.disconnect();
+    res.json({ address, balances });
+  } catch (err) { res.status(500).json({ error: (err as Error).message }); }
+});
+
+// ─── DEX: TRADE (AI Agent, SSE) ─────────────────────────────────────────────
+
+const tradeRateLimitMap = new Map<string, number>();
+const TRADE_RATE_LIMIT_MS = 60_000;
+
+app.post("/api/trade", async (req, res) => {
+  const { instruction } = req.body as { instruction?: string };
+  if (!instruction || typeof instruction !== "string" || !instruction.trim()) {
+    res.status(400).json({ error: "Missing 'instruction' field." }); return;
+  }
+  if (!process.env.AGENT_MNEMONIC || !process.env.ANTHROPIC_API_KEY) {
+    res.status(500).json({ error: "Server not configured." }); return;
+  }
+
+  const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || req.ip || "unknown";
+  const now = Date.now();
+  const lastTrade = tradeRateLimitMap.get(ip);
+  if (lastTrade && now - lastTrade < TRADE_RATE_LIMIT_MS) {
+    const wait = Math.ceil((TRADE_RATE_LIMIT_MS - (now - lastTrade)) / 1000);
+    res.status(429).json({ error: `Wait ${wait}s before placing another trade.` }); return;
+  }
+  tradeRateLimitMap.set(ip, now);
+
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+
+  const sendEvent = (event: string, data: Record<string, unknown>) => {
+    res.write(`data: ${JSON.stringify({ type: event, ...data })}\n\n`);
+  };
+
+  try { await executeTrade(instruction.trim(), sendEvent); }
+  catch (err) { sendEvent("error", { message: (err as Error).message }); }
+
+  res.write("data: [DONE]\n\n");
+  res.end();
+});
+
+// ─── DEX: CHAT (Trading Advisor) ────────────────────────────────────────────
+
+const dexChatRateLimitMap = new Map<string, number>();
+
+app.post("/api/dex-chat", async (req, res) => {
+  const { messages } = req.body as { messages?: Array<{ role: string; content: string }> };
+  if (!messages || !Array.isArray(messages) || messages.length === 0) {
+    res.status(400).json({ error: "Missing 'messages' array." }); return;
+  }
+  if (!process.env.ANTHROPIC_API_KEY) {
+    res.status(500).json({ error: "ANTHROPIC_API_KEY not set." }); return;
+  }
+
+  const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || req.ip || "unknown";
+  const now = Date.now();
+  const last = dexChatRateLimitMap.get(ip);
+  if (last && now - last < 5000) { res.status(429).json({ error: "Slow down." }); return; }
+  dexChatRateLimitMap.set(ip, now);
+
+  try {
+    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const response = await anthropic.messages.create({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 1024,
+      system: getDexChatSystemPrompt(),
+      messages: messages.map((m) => ({ role: m.role as "user" | "assistant", content: m.content })),
+    });
+
+    let reply = "";
+    for (const block of response.content) { if (block.type === "text") reply += block.text; }
+
+    let suggestedOrder: Record<string, unknown> | null = null;
+    const configMatch = reply.match(/===ORDER_CONFIG===\s*([\s\S]*?)\s*===ORDER_CONFIG===/);
+    if (configMatch) {
+      try { suggestedOrder = JSON.parse(configMatch[1].trim()); } catch { /* ignore */ }
+      reply = reply.replace(/===ORDER_CONFIG===\s*[\s\S]*?\s*===ORDER_CONFIG===/, "").trim();
+    }
+
+    res.json({ reply, suggestedOrder });
+  } catch (err) {
+    const status = (err as { status?: number }).status;
+    if (status === 529 || status === 503) { res.status(503).json({ error: "AI overloaded. Try again." }); }
+    else { res.status(500).json({ error: `Chat failed: ${(err as Error).message}` }); }
+  }
+});
+
 // ─── START ───────────────────────────────────────────────────────────────────
 
 app.listen(PORT, () => {
   const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
-  console.log(`TX Agent Demo API running on port ${PORT}`);
+  console.log(`TXAI Smart Token Studio API on port ${PORT}`);
   console.log(`Network: ${networkName}`);
-  console.log(`Health: http://localhost:${PORT}/health`);
-  console.log(`Create token: POST http://localhost:${PORT}/api/create-token`);
 });

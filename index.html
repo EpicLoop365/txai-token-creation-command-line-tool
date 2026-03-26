@@ -674,7 +674,148 @@ footer{
 
 .cp-hint{font-size:.7rem;color:var(--text-muted);margin-top:4px;line-height:1.4;font-style:italic}
 
+/* ===== DEX TAB ===== */
+.dex-wrap{display:none;animation:fadeUp .3s ease}
+.dex-wrap.show{display:block}
+
+.dex-pair-bar{
+  background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);
+  padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+}
+.dex-pair-bar label{font-family:var(--mono);font-size:.78rem;color:var(--text-dim);white-space:nowrap}
+.dex-pair-bar input{
+  flex:1;min-width:200px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);
+  padding:9px 12px;font-size:.82rem;font-family:var(--mono);color:var(--text);outline:none;transition:border-color .2s;
+}
+.dex-pair-bar input::placeholder{color:var(--text-muted)}
+.dex-pair-bar input:focus{border-color:var(--purple)}
+.dex-pair-label{font-family:var(--mono);font-size:.82rem;color:var(--text-muted)}
+.dex-load-btn{
+  padding:9px 20px;border-radius:var(--radius-sm);border:none;
+  background:var(--purple);color:#fff;font-weight:700;font-size:.82rem;
+  cursor:pointer;font-family:var(--mono);transition:all .25s;white-space:nowrap;
+}
+.dex-load-btn:hover{background:var(--purple-dim);transform:translateY(-1px)}
+
+.dex-grid{display:grid;grid-template-columns:260px 1fr 260px;gap:14px;margin-bottom:20px}
+.dex-panel{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.dex-panel-hdr{
+  padding:10px 14px;border-bottom:1px solid var(--border);
+  font-family:var(--mono);font-size:.76rem;font-weight:700;color:var(--text-dim);
+  text-transform:uppercase;letter-spacing:1px;display:flex;align-items:center;justify-content:space-between;
+}
+.dex-panel-body{padding:14px}
+
+.dex-side-tabs{display:flex;gap:0;margin-bottom:14px;border-radius:var(--radius-sm);overflow:hidden;border:1px solid var(--border)}
+.dex-side-tab{
+  flex:1;padding:9px;text-align:center;font-family:var(--mono);font-size:.78rem;font-weight:700;
+  cursor:pointer;transition:all .2s;border:none;background:var(--bg3);color:var(--text-dim);
+}
+.dex-side-tab.buy.active{background:rgba(0,255,136,.12);color:var(--green);box-shadow:inset 0 -2px 0 var(--green)}
+.dex-side-tab.sell.active{background:rgba(239,68,68,.12);color:#ef4444;box-shadow:inset 0 -2px 0 #ef4444}
+
+.dex-form-group{margin-bottom:10px}
+.dex-form-label{display:block;font-family:var(--mono);font-size:.68rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.dex-form-input{
+  width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);
+  padding:9px 11px;font-size:.84rem;font-family:var(--mono);color:var(--text);outline:none;transition:border-color .2s;box-sizing:border-box;
+}
+.dex-form-input::placeholder{color:var(--text-muted)}
+.dex-form-input:focus{border-color:var(--purple)}
+
+.dex-total{
+  padding:8px 11px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);
+  font-family:var(--mono);font-size:.82rem;color:var(--text);margin-bottom:12px;
+  display:flex;justify-content:space-between;
+}
+.dex-total .lbl{color:var(--text-muted);font-size:.68rem;text-transform:uppercase}
+
+.dex-place-btn{
+  width:100%;padding:11px;border:none;border-radius:var(--radius-sm);
+  font-family:var(--mono);font-weight:700;font-size:.85rem;cursor:pointer;transition:all .25s;
+}
+.dex-place-btn.buy{background:var(--green);color:var(--bg)}
+.dex-place-btn.buy:hover{background:var(--green-dim)}
+.dex-place-btn.sell{background:#ef4444;color:#fff}
+.dex-place-btn.sell:hover{background:#dc2626}
+.dex-place-btn:disabled{opacity:.5;cursor:not-allowed}
+
+.dex-wallet-info{
+  margin-top:10px;padding:7px 9px;background:var(--bg);border:1px solid var(--border);border-radius:6px;
+  font-family:var(--mono);font-size:.65rem;color:var(--text-muted);word-break:break-all;
+}
+.dex-wallet-info span{color:var(--purple)}
+
+/* Orderbook */
+.dex-ob-hdr{
+  display:grid;grid-template-columns:1fr 1fr 1fr;padding:7px 11px;
+  font-family:var(--mono);font-size:.68rem;font-weight:600;color:var(--text-muted);
+  text-transform:uppercase;border-bottom:1px solid var(--border);background:var(--bg3);
+}
+.dex-ob-hdr span:last-child{text-align:right}
+.dex-ob-hdr span:nth-child(2){text-align:center}
+.dex-ob-row{
+  display:grid;grid-template-columns:1fr 1fr 1fr;padding:4px 11px;
+  font-family:var(--mono);font-size:.74rem;position:relative;cursor:pointer;transition:background .15s;
+}
+.dex-ob-row:hover{background:rgba(255,255,255,.03)}
+.dex-ob-row span{position:relative;z-index:1}
+.dex-ob-row span:last-child{text-align:right}
+.dex-ob-row span:nth-child(2){text-align:center;color:var(--text-dim)}
+.dex-ob-row .dbar{position:absolute;top:0;right:0;bottom:0;opacity:.12;pointer-events:none;transition:width .3s}
+.dex-ob-row.ask .price{color:#ef4444}
+.dex-ob-row.ask .dbar{background:#ef4444}
+.dex-ob-row.bid .price{color:var(--green)}
+.dex-ob-row.bid .dbar{background:var(--green)}
+.dex-ob-spread{
+  padding:7px 11px;text-align:center;font-family:var(--mono);font-size:.7rem;color:var(--text-muted);
+  border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--bg);
+}
+.dex-ob-spread .sv{color:var(--purple);font-weight:600}
+.dex-ob-empty{padding:35px 14px;text-align:center;font-family:var(--mono);font-size:.78rem;color:var(--text-muted)}
+
+/* My Orders */
+.dex-order-row{
+  display:flex;align-items:center;gap:7px;padding:9px 12px;border-bottom:1px solid var(--border);
+  font-family:var(--mono);font-size:.72rem;
+}
+.dex-order-row:last-child{border-bottom:none}
+.dex-order-side{padding:2px 7px;border-radius:4px;font-weight:700;font-size:.65rem;text-transform:uppercase}
+.dex-order-side.buy{color:var(--green);background:rgba(0,255,136,.1)}
+.dex-order-side.sell{color:#ef4444;background:rgba(239,68,68,.1)}
+.dex-order-det{flex:1;display:flex;flex-direction:column;gap:1px}
+.dex-order-price{color:var(--text)}
+.dex-order-qty{color:var(--text-muted);font-size:.68rem}
+.dex-cancel-btn{
+  padding:3px 9px;border-radius:4px;border:1px solid var(--border);background:transparent;
+  color:var(--text-muted);font-family:var(--mono);font-size:.65rem;cursor:pointer;transition:all .2s;
+}
+.dex-cancel-btn:hover{border-color:#ef4444;color:#ef4444}
+.dex-no-orders{padding:28px 14px;text-align:center;font-family:var(--mono);font-size:.76rem;color:var(--text-muted)}
+
+/* DEX Processing */
+.dex-proc{
+  background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);
+  padding:14px 18px;margin-bottom:14px;display:none;
+}
+.dex-proc.show{display:block;animation:fadeUp .3s ease}
+.dex-proc-hdr{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.dex-proc-spinner{width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--purple);border-radius:50%;animation:spin .8s linear infinite}
+.dex-proc-title{font-family:var(--mono);font-size:.8rem;color:var(--purple);font-weight:700}
+.dex-proc-stream{font-family:var(--mono);font-size:.72rem;color:var(--text-dim);line-height:1.8;white-space:pre-wrap;max-height:180px;overflow-y:auto}
+
+/* DEX Status */
+.dex-status-dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:4px}
+.dex-status-dot.live{background:var(--green);animation:pulse-dot 2s infinite}
+.dex-status-dot.idle{background:var(--text-muted)}
+
 /* ===== RESPONSIVE ===== */
+@media(max-width:1024px){
+  .dex-grid{grid-template-columns:1fr 1fr;gap:12px}
+  .dex-grid .dex-order-form{order:2}
+  .dex-grid .dex-ob-panel{order:1;grid-column:span 2}
+  .dex-grid .dex-my-orders{order:3;grid-column:span 2}
+}
 @media(max-width:640px){
   .demo-input-row{flex-direction:column}
   .tc-stats{grid-template-columns:repeat(2,1fr)}
@@ -688,6 +829,8 @@ footer{
   .cp-row.triple{grid-template-columns:1fr}
   .cp-slider-row{flex-direction:column;align-items:flex-start;gap:8px}
   .cp-slider-label{width:auto}
+  .dex-grid{grid-template-columns:1fr}
+  .dex-grid .dex-ob-panel,.dex-grid .dex-my-orders{grid-column:span 1}
 }
 </style>
 </head>
@@ -744,6 +887,7 @@ footer{
     <div class="chat-tab-bar reveal">
       <button class="chat-tab active" id="tabCreate" onclick="switchTab('create')">🚀 Create</button>
       <button class="chat-tab" id="tabChat" onclick="switchTab('chat')">💬 Chat Advisor</button>
+      <button class="chat-tab" id="tabDex" onclick="switchTab('dex')">📊 DEX</button>
     </div>
 
     <!-- Create Mode (existing) -->
@@ -947,6 +1091,119 @@ footer{
       </div>
     </div>
 
+    <!-- DEX Mode -->
+    <div class="dex-wrap" id="dexWrap">
+
+      <!-- Pair Selector -->
+      <div class="dex-pair-bar">
+        <label>Trading Pair</label>
+        <input type="text" id="dexBaseDenom" placeholder="Enter token denom (e.g. mytoken-testcore1abc...)">
+        <span class="dex-pair-label">/ CORE</span>
+        <button class="dex-load-btn" id="dexLoadBtn" onclick="dexLoadOrderbook()">Load Orderbook</button>
+      </div>
+
+      <!-- Processing -->
+      <div class="dex-proc" id="dexProc">
+        <div class="dex-proc-hdr">
+          <div class="dex-proc-spinner"></div>
+          <div class="dex-proc-title">Processing Order...</div>
+        </div>
+        <div class="dex-proc-stream" id="dexProcStream"></div>
+      </div>
+
+      <!-- Trading Grid -->
+      <div class="dex-grid">
+
+        <!-- LEFT: Order Form -->
+        <div class="dex-panel dex-order-form">
+          <div class="dex-panel-hdr">Place Order</div>
+          <div class="dex-panel-body">
+            <div class="dex-side-tabs">
+              <button class="dex-side-tab buy active" onclick="dexSetSide('buy')">Buy</button>
+              <button class="dex-side-tab sell" onclick="dexSetSide('sell')">Sell</button>
+            </div>
+
+            <div class="dex-form-group">
+              <label class="dex-form-label">Price (CORE)</label>
+              <input type="number" class="dex-form-input" id="dexPrice" placeholder="0.00" step="any" oninput="dexUpdateTotal()">
+            </div>
+
+            <div class="dex-form-group">
+              <label class="dex-form-label">Quantity (Token)</label>
+              <input type="number" class="dex-form-input" id="dexQty" placeholder="0.00" step="any" oninput="dexUpdateTotal()">
+            </div>
+
+            <div class="dex-total">
+              <span class="lbl">Total</span>
+              <span id="dexTotalDisplay">0.00 CORE</span>
+            </div>
+
+            <button class="dex-place-btn buy" id="dexPlaceBtn" onclick="dexPlaceOrder()" disabled>
+              Place Buy Order
+            </button>
+
+            <div class="dex-wallet-info">
+              Agent Wallet: <span id="dexWalletAddr">Loading...</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- CENTER: Orderbook -->
+        <div class="dex-panel dex-ob-panel">
+          <div class="dex-panel-hdr">
+            Orderbook
+            <span id="dexObStatus" style="font-size:.65rem;font-weight:500;text-transform:none;letter-spacing:0">
+              <span class="dex-status-dot idle"></span> Idle
+            </span>
+          </div>
+          <div style="padding:0">
+            <div class="dex-ob-hdr">
+              <span>Price</span>
+              <span>Amount</span>
+              <span>Total</span>
+            </div>
+            <div id="dexAskRows"></div>
+            <div class="dex-ob-spread" id="dexSpreadRow" style="display:none">
+              Spread: <span class="sv" id="dexSpreadVal">--</span>
+            </div>
+            <div id="dexBidRows"></div>
+            <div class="dex-ob-empty" id="dexObEmpty">Enter a token denom and load the orderbook to begin trading.</div>
+          </div>
+        </div>
+
+        <!-- RIGHT: My Orders -->
+        <div class="dex-panel dex-my-orders">
+          <div class="dex-panel-hdr">My Orders</div>
+          <div id="dexMyOrdersBody" style="padding:0">
+            <div class="dex-no-orders">No open orders</div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- DEX Chat -->
+      <div style="margin-top:16px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden">
+        <button style="display:flex;align-items:center;gap:8px;padding:12px 16px;background:transparent;border:none;width:100%;cursor:pointer;font-family:var(--mono);font-size:.82rem;font-weight:600;color:var(--text-dim);transition:color .2s" onclick="dexToggleChat()" id="dexChatToggle">
+          🤖 AI Trading Advisor <span style="margin-left:auto;font-size:.7rem;transition:transform .3s" id="dexChatArrow">▼</span>
+        </button>
+        <div id="dexChatContainer" style="display:none;flex-direction:column;max-height:400px">
+          <div id="dexChatMessages" style="flex:1;padding:14px;overflow-y:auto;max-height:300px;min-height:150px;display:flex;flex-direction:column;gap:10px;scroll-behavior:smooth">
+            <div class="chat-msg assistant">
+              <div class="chat-msg-avatar" style="background:var(--green);color:var(--bg);width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700">AI</div>
+              <div class="chat-msg-bubble" style="background:var(--bg4);border-bottom-left-radius:4px;padding:10px 14px;border-radius:var(--radius);font-size:.85rem;line-height:1.5">
+                <p>I'm your AI trading advisor for the TX orderbook. Ask about strategies, or tell me to place an order in natural language.</p>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;gap:10px;padding:12px 14px;border-top:1px solid var(--border);background:var(--bg3)">
+            <input type="text" class="dex-form-input" id="dexChatInput" placeholder="Ask about trading or describe an order..." style="flex:1;font-family:var(--sans);font-size:.85rem" onkeydown="if(event.key==='Enter')dexSendChat()">
+            <button onclick="dexSendChat()" id="dexChatSendBtn" style="background:var(--green);color:var(--bg);border:none;border-radius:var(--radius-sm);padding:8px 16px;font-family:var(--mono);font-weight:700;font-size:.78rem;cursor:pointer;transition:all .2s;white-space:nowrap">Send</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
   </div>
 </section>
 
@@ -1075,26 +1332,37 @@ let chatMode = false;
 let chatHistory = [];
 let chatBusy = false;
 
-/* ===== TAB SWITCHING (Create vs Chat) ===== */
+/* ===== TAB SWITCHING (Create vs Chat vs DEX) ===== */
 function switchTab(tab){
   const tabCreate = document.getElementById('tabCreate');
   const tabChat = document.getElementById('tabChat');
+  const tabDex = document.getElementById('tabDex');
   const createWrap = document.getElementById('createModeWrap');
   const chatWrap = document.getElementById('chatWrap');
+  const dexWrap = document.getElementById('dexWrap');
+
+  // Reset all tabs
+  tabCreate.classList.remove('active');
+  tabChat.classList.remove('active');
+  tabDex.classList.remove('active');
+  createWrap.style.display = 'none';
+  chatWrap.classList.remove('show');
+  dexWrap.classList.remove('show');
+  chatMode = false;
 
   if(tab === 'chat'){
     chatMode = true;
-    tabCreate.classList.remove('active');
     tabChat.classList.add('active');
-    createWrap.style.display = 'none';
     chatWrap.classList.add('show');
     document.getElementById('chatInput').focus();
+  } else if(tab === 'dex'){
+    tabDex.classList.add('active');
+    dexWrap.classList.add('show');
+    // Auto-fetch wallet on first load
+    if(!dexAgentWallet) dexFetchWallet();
   } else {
-    chatMode = false;
-    tabChat.classList.remove('active');
     tabCreate.classList.add('active');
     createWrap.style.display = '';
-    chatWrap.classList.remove('show');
   }
 }
 
@@ -1812,6 +2080,9 @@ function buildLiveTokenCard(data, desc){
     'Token deployed on Testnet!<br>' +
     '<a href="' + escapeHtml(explorerUrl) + '" target="_blank" rel="noopener">View on TX Explorer &#8599;</a>' +
     '</div>';
+
+  // Auto-populate DEX tab with newly created token
+  if(denom) populateDexFromToken(denom);
 }
 
 function escapeHtml(str){
@@ -1963,6 +2234,325 @@ function copyJson(){
 
 /* Enter key */
 document.getElementById('demoInput').addEventListener('keydown',e=>{if(e.key==='Enter')runDemo()});
+
+/* ===== DEX TAB ===== */
+const DEX_QUOTE_DENOM = 'utestcore';
+const DEX_QUOTE_SYMBOL = 'CORE';
+const DEX_REFRESH_MS = 10000;
+
+let dexSide = 'buy';
+let dexBaseDenom = '';
+let dexRefreshTimer = null;
+let dexChatHistory = [];
+let dexAgentWallet = '';
+let dexChatOpen = false;
+
+function dexSetSide(side){
+  dexSide = side;
+  document.querySelectorAll('.dex-side-tab').forEach(t => t.classList.remove('active'));
+  document.querySelector(`.dex-side-tab.${side}`).classList.add('active');
+  const btn = document.getElementById('dexPlaceBtn');
+  btn.className = `dex-place-btn ${side}`;
+  btn.textContent = `Place ${side.charAt(0).toUpperCase() + side.slice(1)} Order`;
+  dexUpdateTotal();
+}
+
+function dexUpdateTotal(){
+  const price = parseFloat(document.getElementById('dexPrice').value) || 0;
+  const qty = parseFloat(document.getElementById('dexQty').value) || 0;
+  document.getElementById('dexTotalDisplay').textContent = (price * qty).toFixed(6) + ' ' + DEX_QUOTE_SYMBOL;
+  document.getElementById('dexPlaceBtn').disabled = !(price > 0 && qty > 0 && dexBaseDenom);
+}
+
+function dexFetchWallet(){
+  fetch(API_URL + '/api/orders').then(r => r.json()).then(data => {
+    if(data.wallet){
+      dexAgentWallet = data.wallet;
+      document.getElementById('dexWalletAddr').textContent = dexAgentWallet;
+    }
+  }).catch(() => {
+    document.getElementById('dexWalletAddr').textContent = 'Not connected';
+  });
+}
+
+function dexLoadOrderbook(){
+  const denom = document.getElementById('dexBaseDenom').value.trim();
+  if(!denom) return;
+  dexBaseDenom = denom;
+  dexFetchOrderbook();
+  dexFetchMyOrders();
+  if(dexRefreshTimer) clearInterval(dexRefreshTimer);
+  dexRefreshTimer = setInterval(() => { dexFetchOrderbook(); dexFetchMyOrders(); }, DEX_REFRESH_MS);
+  document.getElementById('dexObStatus').innerHTML = '<span class="dex-status-dot live"></span> Live';
+  dexUpdateTotal();
+}
+
+async function dexFetchOrderbook(){
+  if(!dexBaseDenom) return;
+  try {
+    const res = await fetch(`${API_URL}/api/orderbook?baseDenom=${encodeURIComponent(dexBaseDenom)}&quoteDenom=${encodeURIComponent(DEX_QUOTE_DENOM)}`);
+    const data = await res.json();
+    dexRenderOrderbook(data);
+  } catch(err){ console.error('DEX orderbook fetch error:', err); }
+}
+
+function dexRenderOrderbook(data){
+  const askC = document.getElementById('dexAskRows');
+  const bidC = document.getElementById('dexBidRows');
+  const spreadRow = document.getElementById('dexSpreadRow');
+  const emptyMsg = document.getElementById('dexObEmpty');
+
+  const asks = (data.asks || []).sort((a, b) => parseFloat(b.price) - parseFloat(a.price));
+  const bids = (data.bids || []).sort((a, b) => parseFloat(b.price) - parseFloat(a.price));
+
+  if(!asks.length && !bids.length){
+    askC.innerHTML = ''; bidC.innerHTML = '';
+    spreadRow.style.display = 'none';
+    emptyMsg.style.display = 'block';
+    emptyMsg.textContent = 'No orders in the book for this pair.';
+    return;
+  }
+  emptyMsg.style.display = 'none';
+  spreadRow.style.display = 'block';
+
+  const allQtys = [...asks, ...bids].map(o => parseFloat(o.quantity || o.amount || 0));
+  const maxQty = Math.max(...allQtys, 1);
+
+  let askHTML = '';
+  asks.forEach(o => {
+    const p = parseFloat(o.price), q = parseFloat(o.quantity || o.amount || 0);
+    const pct = (q / maxQty) * 100;
+    askHTML += `<div class="dex-ob-row ask" onclick="dexFillPrice(${p})">
+      <span class="price">${dexFmt(p)}</span><span>${dexFmt(q)}</span><span>${dexFmt(p*q)}</span>
+      <div class="dbar" style="width:${pct}%"></div></div>`;
+  });
+  askC.innerHTML = askHTML;
+
+  const lowestAsk = asks.length ? parseFloat(asks[asks.length - 1].price) : null;
+  const highestBid = bids.length ? parseFloat(bids[0].price) : null;
+  if(lowestAsk !== null && highestBid !== null){
+    const spread = lowestAsk - highestBid;
+    document.getElementById('dexSpreadVal').textContent = `${dexFmt(spread)} (${((spread / lowestAsk) * 100).toFixed(2)}%)`;
+  } else {
+    document.getElementById('dexSpreadVal').textContent = '--';
+  }
+
+  let bidHTML = '';
+  bids.forEach(o => {
+    const p = parseFloat(o.price), q = parseFloat(o.quantity || o.amount || 0);
+    const pct = (q / maxQty) * 100;
+    bidHTML += `<div class="dex-ob-row bid" onclick="dexFillPrice(${p})">
+      <span class="price">${dexFmt(p)}</span><span>${dexFmt(q)}</span><span>${dexFmt(p*q)}</span>
+      <div class="dbar" style="width:${pct}%"></div></div>`;
+  });
+  bidC.innerHTML = bidHTML;
+}
+
+function dexFillPrice(price){
+  document.getElementById('dexPrice').value = price;
+  dexUpdateTotal();
+}
+
+async function dexFetchMyOrders(){
+  try {
+    const res = await fetch(`${API_URL}/api/orders`);
+    const data = await res.json();
+    dexRenderMyOrders(data.orders || data || []);
+    if(data.wallet){
+      dexAgentWallet = data.wallet;
+      document.getElementById('dexWalletAddr').textContent = dexAgentWallet;
+    }
+  } catch(err){ console.error('DEX orders fetch error:', err); }
+}
+
+function dexRenderMyOrders(orders){
+  const body = document.getElementById('dexMyOrdersBody');
+  if(!orders.length){ body.innerHTML = '<div class="dex-no-orders">No open orders</div>'; return; }
+  let html = '';
+  orders.forEach(o => {
+    const side = (o.side || o.direction || '').toLowerCase();
+    const sc = side === 'sell' ? 'sell' : 'buy';
+    const price = o.price || '--';
+    const qty = o.quantity || o.amount || '--';
+    const id = o.id || o.order_id || '';
+    html += `<div class="dex-order-row">
+      <span class="dex-order-side ${sc}">${side}</span>
+      <div class="dex-order-det">
+        <span class="dex-order-price">${dexFmt(parseFloat(price))} ${DEX_QUOTE_SYMBOL}</span>
+        <span class="dex-order-qty">Qty: ${dexFmt(parseFloat(qty))}</span>
+      </div>
+      <button class="dex-cancel-btn" onclick="dexCancelOrder('${id}')">Cancel</button>
+    </div>`;
+  });
+  body.innerHTML = html;
+}
+
+async function dexPlaceOrder(){
+  const price = document.getElementById('dexPrice').value;
+  const qty = document.getElementById('dexQty').value;
+  if(!price || !qty || !dexBaseDenom) return;
+  const instruction = `Place a limit ${dexSide} order for ${qty} tokens of ${dexBaseDenom} at a price of ${price} ${DEX_QUOTE_SYMBOL} per token on the DEX orderbook.`;
+  await dexExecuteTrade(instruction);
+}
+
+async function dexExecuteTrade(instruction){
+  const panel = document.getElementById('dexProc');
+  const stream = document.getElementById('dexProcStream');
+  panel.classList.add('show');
+  stream.textContent = '';
+  document.getElementById('dexPlaceBtn').disabled = true;
+
+  try {
+    const res = await fetch(`${API_URL}/api/trade`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ instruction })
+    });
+
+    if(res.headers.get('content-type')?.includes('text/event-stream')){
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      while(true){
+        const { value, done } = await reader.read();
+        if(done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
+        for(const line of lines){
+          if(line.startsWith('data: ')){
+            const payload = line.slice(6);
+            if(payload === '[DONE]') continue;
+            try {
+              const parsed = JSON.parse(payload);
+              if(parsed.message){ stream.textContent += parsed.message + '\n'; stream.scrollTop = stream.scrollHeight; }
+              if(parsed.status === 'complete' || parsed.done){
+                setTimeout(() => { dexFetchOrderbook(); dexFetchMyOrders(); }, 2000);
+              }
+            } catch{ stream.textContent += payload + '\n'; stream.scrollTop = stream.scrollHeight; }
+          }
+        }
+      }
+    } else {
+      const data = await res.json();
+      stream.textContent = data.message || data.result || JSON.stringify(data, null, 2);
+      setTimeout(() => { dexFetchOrderbook(); dexFetchMyOrders(); }, 2000);
+    }
+  } catch(err){
+    stream.textContent = 'Error: ' + err.message;
+  } finally {
+    document.getElementById('dexPlaceBtn').disabled = false;
+    setTimeout(() => panel.classList.remove('show'), 8000);
+  }
+}
+
+async function dexCancelOrder(orderId){
+  if(!orderId) return;
+  await dexExecuteTrade(`Cancel order ${orderId} on the DEX orderbook.`);
+}
+
+/* DEX Chat */
+function dexToggleChat(){
+  dexChatOpen = !dexChatOpen;
+  const container = document.getElementById('dexChatContainer');
+  const arrow = document.getElementById('dexChatArrow');
+  if(dexChatOpen){
+    container.style.display = 'flex';
+    arrow.style.transform = 'rotate(180deg)';
+    document.getElementById('dexChatInput').focus();
+  } else {
+    container.style.display = 'none';
+    arrow.style.transform = '';
+  }
+}
+
+async function dexSendChat(){
+  const input = document.getElementById('dexChatInput');
+  const msg = input.value.trim();
+  if(!msg) return;
+  input.value = '';
+  dexChatHistory.push({ role: 'user', content: msg });
+  dexAppendMsg('user', msg);
+  document.getElementById('dexChatSendBtn').disabled = true;
+
+  // Show typing
+  const container = document.getElementById('dexChatMessages');
+  const typingEl = document.createElement('div');
+  typingEl.className = 'chat-typing';
+  typingEl.id = 'dexChatTyping';
+  typingEl.innerHTML = '<div class="chat-typing-dots"><span></span><span></span><span></span></div>';
+  container.appendChild(typingEl);
+  container.scrollTop = container.scrollHeight;
+
+  try {
+    const res = await fetch(`${API_URL}/api/dex-chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: dexChatHistory })
+    });
+    const data = await res.json();
+    const reply = data.message || data.reply || data.response || '';
+    dexChatHistory.push({ role: 'assistant', content: reply });
+
+    // Remove typing
+    const t = document.getElementById('dexChatTyping'); if(t) t.remove();
+    dexAppendMsg('assistant', reply);
+
+    // Check for ===ORDER_CONFIG=== marker
+    const configMatch = reply.match(/===ORDER_CONFIG===\s*(\{[\s\S]*?\})\s*===ORDER_CONFIG===/);
+    if(configMatch){
+      try {
+        const cfg = JSON.parse(configMatch[1]);
+        if(cfg.side) dexSetSide(cfg.side);
+        if(cfg.price) document.getElementById('dexPrice').value = cfg.price;
+        if(cfg.quantity) document.getElementById('dexQty').value = cfg.quantity;
+        if(cfg.baseDenom && !dexBaseDenom){
+          document.getElementById('dexBaseDenom').value = cfg.baseDenom;
+          dexBaseDenom = cfg.baseDenom;
+        }
+        dexUpdateTotal();
+      } catch(e){}
+    }
+  } catch(err){
+    const t = document.getElementById('dexChatTyping'); if(t) t.remove();
+    dexAppendMsg('assistant', 'Connection error. Please try again.');
+  }
+  document.getElementById('dexChatSendBtn').disabled = false;
+}
+
+function dexAppendMsg(role, text){
+  const container = document.getElementById('dexChatMessages');
+  const avatar = role === 'user' ? 'You' : 'AI';
+  const avatarBg = role === 'user' ? 'var(--purple)' : 'var(--green)';
+  const avatarColor = role === 'user' ? 'white' : 'var(--bg)';
+  const bubbleBg = role === 'user' ? 'var(--purple-dim)' : 'var(--bg4)';
+  const bubbleColor = role === 'user' ? 'white' : 'var(--text)';
+  const align = role === 'user' ? 'flex-end' : 'flex-start';
+  const dir = role === 'user' ? 'row-reverse' : 'row';
+  // Clean out ===ORDER_CONFIG=== markers from display
+  let displayText = text.replace(/===ORDER_CONFIG===[\s\S]*?===ORDER_CONFIG===/g, '').trim();
+  const html = `<div style="display:flex;gap:10px;max-width:85%;align-self:${align};flex-direction:${dir};animation:fadeUp .3s ease">
+    <div style="width:30px;height:30px;border-radius:50%;background:${avatarBg};color:${avatarColor};display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;flex-shrink:0">${avatar}</div>
+    <div style="padding:10px 14px;border-radius:var(--radius);background:${bubbleBg};color:${bubbleColor};font-size:.85rem;line-height:1.5"><p>${escapeHtml(displayText)}</p></div>
+  </div>`;
+  container.insertAdjacentHTML('beforeend', html);
+  container.scrollTop = container.scrollHeight;
+}
+
+function dexFmt(n){
+  if(isNaN(n) || n === null || n === undefined) return '--';
+  if(n === 0) return '0';
+  if(Math.abs(n) >= 1) return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 });
+  return n.toPrecision(6);
+}
+
+/* Auto-populate DEX after token creation */
+function populateDexFromToken(denom){
+  if(denom){
+    document.getElementById('dexBaseDenom').value = denom;
+    // Show a brief toast or just set it ready
+  }
+}
 </script>
 </body>
 </html>

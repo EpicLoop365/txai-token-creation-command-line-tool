@@ -488,3 +488,133 @@ export async function requestFaucet(
     return { success: false, message: `Could not reach faucet: ${(err as Error).message}` };
   }
 }
+
+// ─── DEX ENUMS ───────────────────────────────────────────────────────────────
+
+export enum DexSide {
+  BUY = 1,
+  SELL = 2,
+}
+
+export enum DexOrderType {
+  LIMIT = 1,
+  MARKET = 2,
+}
+
+export enum DexTimeInForce {
+  GTC = 1,
+  IOC = 2,
+  FOK = 3,
+}
+
+// ─── DEX OPERATIONS ──────────────────────────────────────────────────────────
+
+export interface PlaceOrderParams {
+  baseDenom: string;
+  quoteDenom: string;
+  side: DexSide;
+  orderType: DexOrderType;
+  price?: string;
+  quantity: string;
+  timeInForce?: DexTimeInForce;
+}
+
+export async function placeOrder(
+  client: TxClient,
+  params: PlaceOrderParams
+): Promise<TransactionResult & { orderId: string }> {
+  const orderId = `ord-${Date.now()}-${Math.random().toString(16).slice(2, 6)}`;
+  const msg = {
+    typeUrl: "/coreum.dex.v1.MsgPlaceOrder",
+    value: {
+      sender: client.address,
+      type: params.orderType,
+      id: orderId,
+      baseDenom: params.baseDenom,
+      quoteDenom: params.quoteDenom,
+      price: params.price ?? "",
+      quantity: params.quantity,
+      side: params.side,
+      timeInForce: params.timeInForce ?? DexTimeInForce.GTC,
+    },
+  };
+  console.log(`[placeOrder] ${DexSide[params.side]} order: ${orderId}`);
+  const result = await client.signAndBroadcastMsg(msg, 300000);
+  return { ...result, orderId };
+}
+
+export async function cancelOrder(
+  client: TxClient,
+  orderId: string
+): Promise<TransactionResult> {
+  const msg = {
+    typeUrl: "/coreum.dex.v1.MsgCancelOrder",
+    value: { sender: client.address, id: orderId },
+  };
+  return client.signAndBroadcastMsg(msg, 150000);
+}
+
+// ─── DEX QUERIES (REST) ─────────────────────────────────────────────────────
+
+export interface DexOrder {
+  id: string;
+  creator: string;
+  type: string;
+  baseDenom: string;
+  quoteDenom: string;
+  price: string;
+  quantity: string;
+  side: string;
+  remainingQuantity: string;
+  remainingBalance: string;
+}
+
+export interface OrderbookData {
+  bids: DexOrder[];
+  asks: DexOrder[];
+}
+
+export async function queryOrderbook(
+  baseDenom: string,
+  quoteDenom: string,
+  networkName: NetworkName = "testnet"
+): Promise<OrderbookData> {
+  const network = NETWORKS[networkName];
+  const baseUrl = `${network.restEndpoint}/coreum/dex/v1/order-book-orders`;
+  const [bidsResp, asksResp] = await Promise.all([
+    fetch(`${baseUrl}?base_denom=${encodeURIComponent(baseDenom)}&quote_denom=${encodeURIComponent(quoteDenom)}&side=SIDE_BUY`),
+    fetch(`${baseUrl}?base_denom=${encodeURIComponent(baseDenom)}&quote_denom=${encodeURIComponent(quoteDenom)}&side=SIDE_SELL`),
+  ]);
+  const parseSide = async (resp: Response): Promise<DexOrder[]> => {
+    if (!resp.ok) return [];
+    const data = await resp.json() as { orders?: DexOrder[] };
+    return data.orders ?? [];
+  };
+  const [bids, asks] = await Promise.all([parseSide(bidsResp), parseSide(asksResp)]);
+  return { bids, asks };
+}
+
+export async function queryOrdersByCreator(
+  creator: string,
+  networkName: NetworkName = "testnet"
+): Promise<DexOrder[]> {
+  const network = NETWORKS[networkName];
+  try {
+    const resp = await fetch(`${network.restEndpoint}/coreum/dex/v1/orders?creator=${encodeURIComponent(creator)}`);
+    if (!resp.ok) return [];
+    const data = await resp.json() as { orders?: DexOrder[] };
+    return data.orders ?? [];
+  } catch { return []; }
+}
+
+export async function queryOrderBooks(
+  networkName: NetworkName = "testnet"
+): Promise<Array<{ baseDenom: string; quoteDenom: string }>> {
+  const network = NETWORKS[networkName];
+  try {
+    const resp = await fetch(`${network.restEndpoint}/coreum/dex/v1/order-books`);
+    if (!resp.ok) return [];
+    const data = await resp.json() as { orderBooks?: Array<{ baseDenom: string; quoteDenom: string }> };
+    return data.orderBooks ?? [];
+  } catch { return []; }
+}
