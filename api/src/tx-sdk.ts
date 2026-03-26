@@ -432,6 +432,111 @@ export async function mintTokens(
   return client.signAndBroadcastMsg(msg, 200000);
 }
 
+export async function burnTokens(
+  client: TxClient,
+  denom: string,
+  amount: string
+): Promise<TransactionResult> {
+  const msg = {
+    typeUrl: "/coreum.asset.ft.v1.MsgBurn",
+    value: {
+      sender: client.address,
+      coin: { denom, amount },
+    },
+  };
+  return client.signAndBroadcastMsg(msg, 200000);
+}
+
+export async function freezeAccount(
+  client: TxClient,
+  denom: string,
+  account: string,
+  amount: string
+): Promise<TransactionResult> {
+  const msg = {
+    typeUrl: "/coreum.asset.ft.v1.MsgFreeze",
+    value: {
+      sender: client.address,
+      account,
+      coin: { denom, amount },
+    },
+  };
+  return client.signAndBroadcastMsg(msg, 200000);
+}
+
+export async function unfreezeAccount(
+  client: TxClient,
+  denom: string,
+  account: string,
+  amount: string
+): Promise<TransactionResult> {
+  const msg = {
+    typeUrl: "/coreum.asset.ft.v1.MsgUnfreeze",
+    value: {
+      sender: client.address,
+      account,
+      coin: { denom, amount },
+    },
+  };
+  return client.signAndBroadcastMsg(msg, 200000);
+}
+
+export async function globallyFreezeToken(
+  client: TxClient,
+  denom: string
+): Promise<TransactionResult> {
+  const msg = {
+    typeUrl: "/coreum.asset.ft.v1.MsgGloballyFreeze",
+    value: { sender: client.address, denom },
+  };
+  return client.signAndBroadcastMsg(msg, 200000);
+}
+
+export async function globallyUnfreezeToken(
+  client: TxClient,
+  denom: string
+): Promise<TransactionResult> {
+  const msg = {
+    typeUrl: "/coreum.asset.ft.v1.MsgGloballyUnfreeze",
+    value: { sender: client.address, denom },
+  };
+  return client.signAndBroadcastMsg(msg, 200000);
+}
+
+export async function clawbackTokens(
+  client: TxClient,
+  denom: string,
+  account: string,
+  amount: string
+): Promise<TransactionResult> {
+  const msg = {
+    typeUrl: "/coreum.asset.ft.v1.MsgClawback",
+    value: {
+      sender: client.address,
+      account,
+      coin: { denom, amount },
+    },
+  };
+  return client.signAndBroadcastMsg(msg, 200000);
+}
+
+export async function setWhitelistedLimit(
+  client: TxClient,
+  denom: string,
+  account: string,
+  amount: string
+): Promise<TransactionResult> {
+  const msg = {
+    typeUrl: "/coreum.asset.ft.v1.MsgSetWhitelistedLimit",
+    value: {
+      sender: client.address,
+      account,
+      coin: { denom, amount },
+    },
+  };
+  return client.signAndBroadcastMsg(msg, 200000);
+}
+
 export interface SmartTokenInfo {
   denom: string;
   issuer?: string;

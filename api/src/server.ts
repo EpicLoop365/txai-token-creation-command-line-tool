@@ -27,6 +27,15 @@ import {
   queryOrderbook,
   queryOrdersByCreator,
   queryOrderBooks,
+  getTokenInfo,
+  mintTokens,
+  burnTokens,
+  freezeAccount,
+  unfreezeAccount,
+  globallyFreezeToken,
+  globallyUnfreezeToken,
+  clawbackTokens,
+  setWhitelistedLimit,
 } from "./tx-sdk";
 import { defaultRegistryTypes } from "@cosmjs/stargate";
 import { Registry, GeneratedType } from "@cosmjs/proto-signing";
@@ -495,6 +504,138 @@ app.post("/api/trade", async (req, res) => {
 
   res.write("data: [DONE]\n\n");
   res.end();
+});
+
+// ─── TOKEN MANAGEMENT ─────────────────────────────────────────────────────
+
+app.get("/api/token-info", async (req, res) => {
+  const denom = req.query.denom as string;
+  if (!denom) { res.status(400).json({ error: "Missing 'denom' query param." }); return; }
+  const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
+  try {
+    const info = await getTokenInfo(denom, networkName);
+    // Also fetch total supply
+    const network = NETWORKS[networkName];
+    let supply = "0";
+    try {
+      const supplyRes = await fetch(`${network.restEndpoint}/cosmos/bank/v1beta1/supply/by_denom?denom=${encodeURIComponent(denom)}`);
+      const supplyData = await supplyRes.json() as { amount?: { amount?: string } };
+      supply = supplyData.amount?.amount || "0";
+    } catch { /* ignore */ }
+    res.json({ ...info, supply });
+  } catch (err) { res.status(500).json({ error: (err as Error).message }); }
+});
+
+app.post("/api/token/mint", async (req, res) => {
+  const { denom, amount, recipient } = req.body as { denom?: string; amount?: string; recipient?: string };
+  if (!denom || !amount) { res.status(400).json({ error: "Missing denom or amount." }); return; }
+  if (!process.env.AGENT_MNEMONIC) { res.status(500).json({ error: "Server not configured." }); return; }
+  const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
+  try {
+    const txWallet = await importWallet(process.env.AGENT_MNEMONIC, networkName);
+    const client = await TxClient.connectWithWallet(txWallet);
+    const result = await mintTokens(client, denom, amount, recipient);
+    client.disconnect();
+    res.json(result);
+  } catch (err) { res.status(500).json({ error: (err as Error).message }); }
+});
+
+app.post("/api/token/burn", async (req, res) => {
+  const { denom, amount } = req.body as { denom?: string; amount?: string };
+  if (!denom || !amount) { res.status(400).json({ error: "Missing denom or amount." }); return; }
+  if (!process.env.AGENT_MNEMONIC) { res.status(500).json({ error: "Server not configured." }); return; }
+  const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
+  try {
+    const txWallet = await importWallet(process.env.AGENT_MNEMONIC, networkName);
+    const client = await TxClient.connectWithWallet(txWallet);
+    const result = await burnTokens(client, denom, amount);
+    client.disconnect();
+    res.json(result);
+  } catch (err) { res.status(500).json({ error: (err as Error).message }); }
+});
+
+app.post("/api/token/freeze", async (req, res) => {
+  const { denom, account, amount } = req.body as { denom?: string; account?: string; amount?: string };
+  if (!denom || !account || !amount) { res.status(400).json({ error: "Missing denom, account, or amount." }); return; }
+  if (!process.env.AGENT_MNEMONIC) { res.status(500).json({ error: "Server not configured." }); return; }
+  const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
+  try {
+    const txWallet = await importWallet(process.env.AGENT_MNEMONIC, networkName);
+    const client = await TxClient.connectWithWallet(txWallet);
+    const result = await freezeAccount(client, denom, account, amount);
+    client.disconnect();
+    res.json(result);
+  } catch (err) { res.status(500).json({ error: (err as Error).message }); }
+});
+
+app.post("/api/token/unfreeze", async (req, res) => {
+  const { denom, account, amount } = req.body as { denom?: string; account?: string; amount?: string };
+  if (!denom || !account || !amount) { res.status(400).json({ error: "Missing denom, account, or amount." }); return; }
+  if (!process.env.AGENT_MNEMONIC) { res.status(500).json({ error: "Server not configured." }); return; }
+  const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
+  try {
+    const txWallet = await importWallet(process.env.AGENT_MNEMONIC, networkName);
+    const client = await TxClient.connectWithWallet(txWallet);
+    const result = await unfreezeAccount(client, denom, account, amount);
+    client.disconnect();
+    res.json(result);
+  } catch (err) { res.status(500).json({ error: (err as Error).message }); }
+});
+
+app.post("/api/token/global-freeze", async (req, res) => {
+  const { denom } = req.body as { denom?: string };
+  if (!denom) { res.status(400).json({ error: "Missing denom." }); return; }
+  if (!process.env.AGENT_MNEMONIC) { res.status(500).json({ error: "Server not configured." }); return; }
+  const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
+  try {
+    const txWallet = await importWallet(process.env.AGENT_MNEMONIC, networkName);
+    const client = await TxClient.connectWithWallet(txWallet);
+    const result = await globallyFreezeToken(client, denom);
+    client.disconnect();
+    res.json(result);
+  } catch (err) { res.status(500).json({ error: (err as Error).message }); }
+});
+
+app.post("/api/token/global-unfreeze", async (req, res) => {
+  const { denom } = req.body as { denom?: string };
+  if (!denom) { res.status(400).json({ error: "Missing denom." }); return; }
+  if (!process.env.AGENT_MNEMONIC) { res.status(500).json({ error: "Server not configured." }); return; }
+  const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
+  try {
+    const txWallet = await importWallet(process.env.AGENT_MNEMONIC, networkName);
+    const client = await TxClient.connectWithWallet(txWallet);
+    const result = await globallyUnfreezeToken(client, denom);
+    client.disconnect();
+    res.json(result);
+  } catch (err) { res.status(500).json({ error: (err as Error).message }); }
+});
+
+app.post("/api/token/clawback", async (req, res) => {
+  const { denom, account, amount } = req.body as { denom?: string; account?: string; amount?: string };
+  if (!denom || !account || !amount) { res.status(400).json({ error: "Missing denom, account, or amount." }); return; }
+  if (!process.env.AGENT_MNEMONIC) { res.status(500).json({ error: "Server not configured." }); return; }
+  const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
+  try {
+    const txWallet = await importWallet(process.env.AGENT_MNEMONIC, networkName);
+    const client = await TxClient.connectWithWallet(txWallet);
+    const result = await clawbackTokens(client, denom, account, amount);
+    client.disconnect();
+    res.json(result);
+  } catch (err) { res.status(500).json({ error: (err as Error).message }); }
+});
+
+app.post("/api/token/whitelist", async (req, res) => {
+  const { denom, account, amount } = req.body as { denom?: string; account?: string; amount?: string };
+  if (!denom || !account || !amount) { res.status(400).json({ error: "Missing denom, account, or amount." }); return; }
+  if (!process.env.AGENT_MNEMONIC) { res.status(500).json({ error: "Server not configured." }); return; }
+  const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
+  try {
+    const txWallet = await importWallet(process.env.AGENT_MNEMONIC, networkName);
+    const client = await TxClient.connectWithWallet(txWallet);
+    const result = await setWhitelistedLimit(client, denom, amount, account);
+    client.disconnect();
+    res.json(result);
+  } catch (err) { res.status(500).json({ error: (err as Error).message }); }
 });
 
 // ─── DEX: BUILD UNSIGNED TX (for Keplr/Leap wallet signing) ─────────────

@@ -1067,6 +1067,155 @@ footer{
   .dex-pair-manual{width:100%}
   .dex-pair-select-wrap{min-width:auto}
 }
+
+/* ===== TOKEN MANAGER TAB ===== */
+.manage-wrap{display:none;padding:20px 0;max-width:900px;margin:0 auto}
+.manage-wrap.show{display:block}
+
+.manage-select-bar{
+  display:flex;align-items:flex-end;gap:12px;margin-bottom:20px;
+}
+.manage-select-group{flex:1}
+.manage-label{
+  display:block;font-family:var(--mono);font-size:.7rem;color:var(--text-muted);
+  text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;
+}
+.manage-input{
+  width:100%;padding:10px 14px;background:var(--bg3);border:1px solid var(--border);
+  border-radius:8px;color:var(--text);font-family:var(--mono);font-size:.8rem;
+  outline:none;transition:border-color .2s;box-sizing:border-box;
+}
+.manage-input:focus{border-color:var(--purple)}
+.manage-load-btn{
+  padding:10px 24px;background:var(--purple);color:#fff;border:none;border-radius:8px;
+  font-family:var(--mono);font-size:.8rem;font-weight:600;cursor:pointer;
+  transition:opacity .2s;white-space:nowrap;
+}
+.manage-load-btn:hover{opacity:.85}
+.manage-load-btn:disabled{opacity:.5;cursor:not-allowed}
+
+.manage-info-card{
+  background:var(--bg2);border:1px solid var(--border);border-radius:12px;
+  overflow:hidden;
+}
+.manage-info-header{
+  padding:20px 24px;border-bottom:1px solid var(--border);background:var(--bg3);
+}
+.manage-token-name{
+  font-family:var(--mono);font-size:1.4rem;font-weight:700;color:var(--text);
+  margin-bottom:4px;
+}
+.manage-token-denom{
+  font-family:var(--mono);font-size:.68rem;color:var(--purple);
+  word-break:break-all;margin-bottom:6px;
+}
+.manage-issuer{font-family:var(--mono);font-size:.65rem;color:var(--text-muted)}
+
+.manage-stats{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
+  gap:1px;background:var(--border);border-bottom:1px solid var(--border);
+}
+.manage-stat{
+  background:var(--bg2);padding:14px 18px;display:flex;flex-direction:column;gap:4px;
+}
+.manage-stat-label{
+  font-family:var(--mono);font-size:.6rem;color:var(--text-muted);
+  text-transform:uppercase;letter-spacing:.5px;
+}
+.manage-stat-value{
+  font-family:var(--mono);font-size:.9rem;font-weight:600;color:var(--text);
+}
+
+.manage-features{
+  display:flex;flex-wrap:wrap;gap:8px;padding:16px 24px;
+  border-bottom:1px solid var(--border);
+}
+.manage-feature-badge{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:5px 12px;border-radius:20px;
+  font-family:var(--mono);font-size:.68rem;font-weight:600;
+  border:1px solid;
+}
+.manage-feature-badge.on{
+  background:rgba(34,197,94,.1);color:var(--green);border-color:rgba(34,197,94,.3);
+}
+.manage-feature-badge.off{
+  background:rgba(255,255,255,.03);color:var(--text-muted);border-color:var(--border);
+  opacity:.5;
+}
+
+.manage-issuer-notice{
+  display:flex;align-items:center;gap:10px;
+  padding:14px 24px;background:rgba(239,68,68,.08);
+  border-bottom:1px solid rgba(239,68,68,.2);
+  font-family:var(--mono);font-size:.75rem;color:#fca5a5;
+}
+.manage-notice-icon{font-size:1rem}
+
+.manage-actions{padding:16px 24px;display:flex;flex-direction:column;gap:16px}
+
+.manage-action-card{
+  background:var(--bg3);border:1px solid var(--border);border-radius:10px;
+  overflow:hidden;
+}
+.manage-action-hdr{
+  padding:12px 16px;border-bottom:1px solid var(--border);
+  font-family:var(--mono);font-size:.8rem;font-weight:700;color:var(--text);
+  display:flex;align-items:center;gap:8px;
+}
+.manage-action-icon{font-size:1.1rem}
+.manage-action-body{padding:16px}
+.manage-action-desc{
+  font-family:var(--mono);font-size:.72rem;color:var(--text-muted);margin:0 0 12px;
+}
+
+.manage-field-row{display:flex;gap:12px;margin-bottom:12px}
+.manage-field{flex:1;display:flex;flex-direction:column;gap:4px}
+.manage-field label{
+  font-family:var(--mono);font-size:.62rem;color:var(--text-muted);
+  text-transform:uppercase;letter-spacing:.4px;
+}
+
+.manage-btn-row{display:flex;gap:10px}
+.manage-exec-btn{
+  flex:1;padding:10px 20px;border:none;border-radius:8px;
+  font-family:var(--mono);font-size:.78rem;font-weight:600;
+  cursor:pointer;transition:all .2s;
+}
+.manage-exec-btn:disabled{opacity:.5;cursor:not-allowed}
+.manage-exec-btn.mint{background:var(--green);color:#000}
+.manage-exec-btn.mint:hover{opacity:.85}
+.manage-exec-btn.burn{background:#ef4444;color:#fff}
+.manage-exec-btn.burn:hover{opacity:.85}
+.manage-exec-btn.freeze{background:#3b82f6;color:#fff}
+.manage-exec-btn.freeze:hover{opacity:.85}
+.manage-exec-btn.unfreeze{background:#22d3ee;color:#000}
+.manage-exec-btn.unfreeze:hover{opacity:.85}
+.manage-exec-btn.clawback{background:#f59e0b;color:#000}
+.manage-exec-btn.clawback:hover{opacity:.85}
+.manage-exec-btn.whitelist{background:var(--purple);color:#fff}
+.manage-exec-btn.whitelist:hover{opacity:.85}
+
+.manage-result{
+  margin:16px 24px;padding:16px;border-radius:10px;
+  display:flex;align-items:center;gap:12px;
+  font-family:var(--mono);font-size:.78rem;
+}
+.manage-result.success{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3)}
+.manage-result.error{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3)}
+.manage-result-icon{font-size:1.4rem}
+.manage-result-msg{flex:1;color:var(--text)}
+.manage-result-link{
+  color:var(--purple);font-size:.7rem;text-decoration:none;
+  white-space:nowrap;
+}
+.manage-result-link:hover{text-decoration:underline}
+
+@media(max-width:640px){
+  .manage-field-row{flex-direction:column}
+  .manage-select-bar{flex-direction:column}
+  .manage-stats{grid-template-columns:1fr 1fr}
+}
 </style>
 </head>
 <body>
@@ -1123,6 +1272,7 @@ footer{
       <button class="chat-tab active" id="tabCreate" onclick="switchTab('create')">🚀 Create</button>
       <button class="chat-tab" id="tabChat" onclick="switchTab('chat')">💬 Chat Advisor</button>
       <button class="chat-tab" id="tabDex" onclick="switchTab('dex')">📊 DEX</button>
+      <button class="chat-tab" id="tabManage" onclick="switchTab('manage')">⚙️ Manage</button>
     </div>
 
     <!-- Create Mode (existing) -->
@@ -1526,6 +1676,186 @@ footer{
 
     </div>
 
+    <!-- ===== MANAGE TAB ===== -->
+    <div class="manage-wrap" id="manageWrap">
+
+      <!-- Token Selector -->
+      <div class="manage-select-bar">
+        <div class="manage-select-group">
+          <label class="manage-label">Token Denom</label>
+          <input type="text" class="manage-input" id="manageTokenDenom" placeholder="Paste token denom (e.g. mytoken-testcore1...)">
+        </div>
+        <button class="manage-load-btn" id="manageLoadBtn" onclick="manageLoadToken()">Load Token</button>
+      </div>
+
+      <!-- Token Info Card -->
+      <div class="manage-info-card" id="manageInfoCard" style="display:none">
+        <div class="manage-info-header">
+          <div class="manage-token-name" id="manageTokenName">--</div>
+          <div class="manage-token-denom" id="manageTokenDenomDisplay">--</div>
+          <div class="manage-issuer" id="manageIssuer">Issuer: --</div>
+        </div>
+
+        <div class="manage-stats">
+          <div class="manage-stat">
+            <span class="manage-stat-label">Total Supply</span>
+            <span class="manage-stat-value" id="manageSupply">--</span>
+          </div>
+          <div class="manage-stat">
+            <span class="manage-stat-label">Precision</span>
+            <span class="manage-stat-value" id="managePrecision">--</span>
+          </div>
+          <div class="manage-stat">
+            <span class="manage-stat-label">Burn Rate</span>
+            <span class="manage-stat-value" id="manageBurnRate">--</span>
+          </div>
+          <div class="manage-stat">
+            <span class="manage-stat-label">Commission</span>
+            <span class="manage-stat-value" id="manageCommission">--</span>
+          </div>
+          <div class="manage-stat">
+            <span class="manage-stat-label">Globally Frozen</span>
+            <span class="manage-stat-value" id="manageGlobalFrozen">--</span>
+          </div>
+        </div>
+
+        <!-- Feature Badges -->
+        <div class="manage-features" id="manageFeatures"></div>
+
+        <!-- Issuer Actions -->
+        <div class="manage-issuer-notice" id="manageIssuerNotice" style="display:none">
+          <span class="manage-notice-icon">⚠️</span>
+          You are not the issuer of this token. Management actions are disabled.
+        </div>
+
+        <!-- Action Panels -->
+        <div class="manage-actions" id="manageActions">
+
+          <!-- Mint -->
+          <div class="manage-action-card" id="manageActionMint" style="display:none">
+            <div class="manage-action-hdr">
+              <span class="manage-action-icon">🪙</span> Mint Tokens
+            </div>
+            <div class="manage-action-body">
+              <div class="manage-field-row">
+                <div class="manage-field">
+                  <label>Amount (human)</label>
+                  <input type="number" class="manage-input" id="manageMintAmt" placeholder="e.g. 1000" step="any">
+                </div>
+                <div class="manage-field">
+                  <label>Recipient (optional)</label>
+                  <input type="text" class="manage-input" id="manageMintRecipient" placeholder="testcore1... (defaults to issuer)">
+                </div>
+              </div>
+              <button class="manage-exec-btn mint" onclick="manageExecMint()">Mint</button>
+            </div>
+          </div>
+
+          <!-- Burn -->
+          <div class="manage-action-card" id="manageActionBurn" style="display:none">
+            <div class="manage-action-hdr">
+              <span class="manage-action-icon">🔥</span> Burn Tokens
+            </div>
+            <div class="manage-action-body">
+              <div class="manage-field-row">
+                <div class="manage-field">
+                  <label>Amount (human)</label>
+                  <input type="number" class="manage-input" id="manageBurnAmt" placeholder="e.g. 500" step="any">
+                </div>
+              </div>
+              <button class="manage-exec-btn burn" onclick="manageExecBurn()">Burn</button>
+            </div>
+          </div>
+
+          <!-- Freeze Account -->
+          <div class="manage-action-card" id="manageActionFreeze" style="display:none">
+            <div class="manage-action-hdr">
+              <span class="manage-action-icon">❄️</span> Freeze / Unfreeze Account
+            </div>
+            <div class="manage-action-body">
+              <div class="manage-field-row">
+                <div class="manage-field">
+                  <label>Account Address</label>
+                  <input type="text" class="manage-input" id="manageFreezeAccount" placeholder="testcore1...">
+                </div>
+                <div class="manage-field">
+                  <label>Amount (human)</label>
+                  <input type="number" class="manage-input" id="manageFreezeAmt" placeholder="e.g. 1000" step="any">
+                </div>
+              </div>
+              <div class="manage-btn-row">
+                <button class="manage-exec-btn freeze" onclick="manageExecFreeze()">Freeze</button>
+                <button class="manage-exec-btn unfreeze" onclick="manageExecUnfreeze()">Unfreeze</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Global Freeze -->
+          <div class="manage-action-card" id="manageActionGlobalFreeze" style="display:none">
+            <div class="manage-action-hdr">
+              <span class="manage-action-icon">🌐</span> Global Freeze
+            </div>
+            <div class="manage-action-body">
+              <p class="manage-action-desc">Freeze or unfreeze all transfers of this token globally.</p>
+              <div class="manage-btn-row">
+                <button class="manage-exec-btn freeze" onclick="manageExecGlobalFreeze()">Global Freeze</button>
+                <button class="manage-exec-btn unfreeze" onclick="manageExecGlobalUnfreeze()">Global Unfreeze</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Clawback -->
+          <div class="manage-action-card" id="manageActionClawback" style="display:none">
+            <div class="manage-action-hdr">
+              <span class="manage-action-icon">🔙</span> Clawback Tokens
+            </div>
+            <div class="manage-action-body">
+              <div class="manage-field-row">
+                <div class="manage-field">
+                  <label>From Account</label>
+                  <input type="text" class="manage-input" id="manageClawbackAccount" placeholder="testcore1...">
+                </div>
+                <div class="manage-field">
+                  <label>Amount (human)</label>
+                  <input type="number" class="manage-input" id="manageClawbackAmt" placeholder="e.g. 500" step="any">
+                </div>
+              </div>
+              <button class="manage-exec-btn clawback" onclick="manageExecClawback()">Clawback</button>
+            </div>
+          </div>
+
+          <!-- Whitelist -->
+          <div class="manage-action-card" id="manageActionWhitelist" style="display:none">
+            <div class="manage-action-hdr">
+              <span class="manage-action-icon">📋</span> Whitelist Account
+            </div>
+            <div class="manage-action-body">
+              <div class="manage-field-row">
+                <div class="manage-field">
+                  <label>Account Address</label>
+                  <input type="text" class="manage-input" id="manageWhitelistAccount" placeholder="testcore1...">
+                </div>
+                <div class="manage-field">
+                  <label>Limit Amount (human)</label>
+                  <input type="number" class="manage-input" id="manageWhitelistAmt" placeholder="e.g. 10000" step="any">
+                </div>
+              </div>
+              <button class="manage-exec-btn whitelist" onclick="manageExecWhitelist()">Set Whitelist Limit</button>
+            </div>
+          </div>
+
+        </div><!-- end manage-actions -->
+
+        <!-- TX Result -->
+        <div class="manage-result" id="manageResult" style="display:none">
+          <div class="manage-result-icon" id="manageResultIcon">✓</div>
+          <div class="manage-result-msg" id="manageResultMsg">Success</div>
+          <a class="manage-result-link" id="manageResultLink" target="_blank">View on Explorer</a>
+        </div>
+
+      </div><!-- end manage-info-card -->
+    </div><!-- end manage-wrap -->
+
   </div>
 </section>
 
@@ -1654,22 +1984,26 @@ let chatMode = false;
 let chatHistory = [];
 let chatBusy = false;
 
-/* ===== TAB SWITCHING (Create vs Chat vs DEX) ===== */
+/* ===== TAB SWITCHING (Create vs Chat vs DEX vs Manage) ===== */
 function switchTab(tab){
   const tabCreate = document.getElementById('tabCreate');
   const tabChat = document.getElementById('tabChat');
   const tabDex = document.getElementById('tabDex');
+  const tabManage = document.getElementById('tabManage');
   const createWrap = document.getElementById('createModeWrap');
   const chatWrap = document.getElementById('chatWrap');
   const dexWrap = document.getElementById('dexWrap');
+  const manageWrap = document.getElementById('manageWrap');
 
   // Reset all tabs
   tabCreate.classList.remove('active');
   tabChat.classList.remove('active');
   tabDex.classList.remove('active');
+  tabManage.classList.remove('active');
   createWrap.style.display = 'none';
   chatWrap.classList.remove('show');
   dexWrap.classList.remove('show');
+  manageWrap.classList.remove('show');
   // Reset container width when leaving DEX
   dexWrap.closest('.container').style.maxWidth = '';
   chatMode = false;
@@ -1688,6 +2022,10 @@ function switchTab(tab){
     if(!dexAgentWallet) dexFetchWallet();
     if(!document.getElementById('dexPairSelect').options.length || document.getElementById('dexPairSelect').options.length <= 1) dexFetchPairs();
     setTimeout(() => dexDrawDepthChart(), 100);
+  } else if(tab === 'manage'){
+    tabManage.classList.add('active');
+    manageWrap.classList.add('show');
+    document.getElementById('manageTokenDenom').focus();
   } else {
     tabCreate.classList.add('active');
     createWrap.style.display = '';
@@ -2409,8 +2747,11 @@ function buildLiveTokenCard(data, desc){
     '<a href="' + escapeHtml(explorerUrl) + '" target="_blank" rel="noopener">View on TX Explorer &#8599;</a>' +
     '</div>';
 
-  // Auto-populate DEX tab with newly created token
-  if(denom) populateDexFromToken(denom);
+  // Auto-populate DEX and Manage tabs with newly created token
+  if(denom){
+    populateDexFromToken(denom);
+    populateManageFromToken(denom);
+  }
 }
 
 function escapeHtml(str){
@@ -3732,6 +4073,230 @@ function populateDexFromToken(denom){
 window.addEventListener('resize', () => {
   if(dexLastOrderbook) dexDrawDepthChart();
 });
+
+/* ===== TOKEN MANAGER ===== */
+let manageTokenData = null;
+
+async function manageLoadToken(){
+  const denom = document.getElementById('manageTokenDenom').value.trim();
+  if(!denom) return;
+
+  const btn = document.getElementById('manageLoadBtn');
+  btn.disabled = true;
+  btn.textContent = 'Loading...';
+  document.getElementById('manageResult').style.display = 'none';
+
+  try {
+    const res = await fetch(`${API_URL}/api/token-info?denom=${encodeURIComponent(denom)}`);
+    const data = await res.json();
+    if(data.error) throw new Error(data.error);
+
+    manageTokenData = data;
+    manageTokenData.denom = denom;
+
+    // Populate info header
+    const symbol = data.symbol || data.subunit || denom.split('-')[0] || denom;
+    document.getElementById('manageTokenName').textContent = symbol.toUpperCase();
+    document.getElementById('manageTokenDenomDisplay').textContent = denom;
+    document.getElementById('manageIssuer').textContent = `Issuer: ${data.issuer || 'unknown'}`;
+
+    // Populate stats
+    const precision = data.precision || 6;
+    const supply = data.supply || '0';
+    const humanSupply = (parseInt(supply) / Math.pow(10, precision)).toLocaleString(undefined, {maximumFractionDigits: precision});
+    document.getElementById('manageSupply').textContent = humanSupply;
+    document.getElementById('managePrecision').textContent = precision;
+
+    const burnRate = data.burn_rate || data.burnRate || '0';
+    const burnPct = (parseFloat(burnRate) * 100).toFixed(2);
+    document.getElementById('manageBurnRate').textContent = burnPct + '%';
+
+    const commission = data.send_commission_rate || data.sendCommissionRate || '0';
+    const commPct = (parseFloat(commission) * 100).toFixed(2);
+    document.getElementById('manageCommission').textContent = commPct + '%';
+
+    const globalFrozen = data.globally_frozen || data.globallyFrozen || false;
+    const frozenEl = document.getElementById('manageGlobalFrozen');
+    frozenEl.textContent = globalFrozen ? 'Yes' : 'No';
+    frozenEl.style.color = globalFrozen ? '#ef4444' : 'var(--green)';
+
+    // Feature badges
+    const features = data.features || [];
+    const allFeatures = [
+      { key: 'minting', label: 'Minting', icon: '🪙' },
+      { key: 'burning', label: 'Burning', icon: '🔥' },
+      { key: 'freezing', label: 'Freezing', icon: '❄️' },
+      { key: 'whitelisting', label: 'Whitelisting', icon: '📋' },
+      { key: 'ibc', label: 'IBC', icon: '🌐' },
+      { key: 'clawback', label: 'Clawback', icon: '🔙' },
+    ];
+    const featureEl = document.getElementById('manageFeatures');
+    featureEl.innerHTML = allFeatures.map(f => {
+      const isOn = features.some(feat =>
+        feat.toLowerCase().includes(f.key.toLowerCase()) ||
+        feat.toLowerCase().replace(/_/g,'').includes(f.key.toLowerCase())
+      );
+      return `<span class="manage-feature-badge ${isOn ? 'on' : 'off'}">${f.icon} ${f.label}</span>`;
+    }).join('');
+
+    // Check if current agent wallet is the issuer
+    const isIssuer = data.issuer && dexAgentWallet && data.issuer === dexAgentWallet;
+    document.getElementById('manageIssuerNotice').style.display = isIssuer ? 'none' : 'flex';
+
+    // Show/hide action panels based on features and issuer status
+    const hasFeature = (key) => features.some(f =>
+      f.toLowerCase().includes(key.toLowerCase()) ||
+      f.toLowerCase().replace(/_/g,'').includes(key.toLowerCase())
+    );
+
+    document.getElementById('manageActionMint').style.display = hasFeature('minting') ? '' : 'none';
+    document.getElementById('manageActionBurn').style.display = hasFeature('burning') ? '' : 'none';
+    document.getElementById('manageActionFreeze').style.display = hasFeature('freezing') ? '' : 'none';
+    document.getElementById('manageActionGlobalFreeze').style.display = hasFeature('freezing') ? '' : 'none';
+    document.getElementById('manageActionClawback').style.display = hasFeature('clawback') ? '' : 'none';
+    document.getElementById('manageActionWhitelist').style.display = hasFeature('whitelisting') ? '' : 'none';
+
+    // Disable buttons if not issuer
+    if(!isIssuer){
+      document.querySelectorAll('.manage-exec-btn').forEach(b => b.disabled = true);
+    } else {
+      document.querySelectorAll('.manage-exec-btn').forEach(b => b.disabled = false);
+    }
+
+    document.getElementById('manageInfoCard').style.display = '';
+  } catch(err){
+    alert('Failed to load token: ' + (err.message || err));
+    document.getElementById('manageInfoCard').style.display = 'none';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Load Token';
+  }
+}
+
+function manageGetPrecision(){
+  return manageTokenData?.precision || 6;
+}
+
+function manageToSmallest(humanAmount){
+  return Math.round(parseFloat(humanAmount) * Math.pow(10, manageGetPrecision())).toString();
+}
+
+function manageShowResult(success, message, txHash){
+  const el = document.getElementById('manageResult');
+  el.style.display = 'flex';
+  el.className = 'manage-result ' + (success ? 'success' : 'error');
+  document.getElementById('manageResultIcon').textContent = success ? '✓' : '✗';
+  document.getElementById('manageResultMsg').textContent = message;
+  const link = document.getElementById('manageResultLink');
+  if(txHash){
+    link.style.display = '';
+    link.href = `https://explorer.testnet-1.tx.org/tx/${txHash}`;
+    link.textContent = 'View on Explorer →';
+  } else {
+    link.style.display = 'none';
+  }
+  // Refresh token info after successful operation
+  if(success) setTimeout(() => manageLoadToken(), 3000);
+}
+
+async function manageExec(endpoint, body, actionLabel){
+  try {
+    const res = await fetch(`${API_URL}/api/token/${endpoint}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if(data.error) throw new Error(data.error);
+    if(data.success === false) throw new Error(data.error || 'Transaction failed');
+    manageShowResult(true, `${actionLabel} successful!`, data.txHash);
+  } catch(err){
+    manageShowResult(false, `${actionLabel} failed: ${err.message}`, null);
+  }
+}
+
+async function manageExecMint(){
+  const amt = document.getElementById('manageMintAmt').value;
+  if(!amt) return;
+  const recipient = document.getElementById('manageMintRecipient').value.trim() || undefined;
+  await manageExec('mint', {
+    denom: manageTokenData.denom,
+    amount: manageToSmallest(amt),
+    recipient
+  }, 'Mint');
+}
+
+async function manageExecBurn(){
+  const amt = document.getElementById('manageBurnAmt').value;
+  if(!amt) return;
+  await manageExec('burn', {
+    denom: manageTokenData.denom,
+    amount: manageToSmallest(amt)
+  }, 'Burn');
+}
+
+async function manageExecFreeze(){
+  const account = document.getElementById('manageFreezeAccount').value.trim();
+  const amt = document.getElementById('manageFreezeAmt').value;
+  if(!account || !amt) return;
+  await manageExec('freeze', {
+    denom: manageTokenData.denom,
+    account,
+    amount: manageToSmallest(amt)
+  }, 'Freeze');
+}
+
+async function manageExecUnfreeze(){
+  const account = document.getElementById('manageFreezeAccount').value.trim();
+  const amt = document.getElementById('manageFreezeAmt').value;
+  if(!account || !amt) return;
+  await manageExec('unfreeze', {
+    denom: manageTokenData.denom,
+    account,
+    amount: manageToSmallest(amt)
+  }, 'Unfreeze');
+}
+
+async function manageExecGlobalFreeze(){
+  await manageExec('global-freeze', {
+    denom: manageTokenData.denom
+  }, 'Global Freeze');
+}
+
+async function manageExecGlobalUnfreeze(){
+  await manageExec('global-unfreeze', {
+    denom: manageTokenData.denom
+  }, 'Global Unfreeze');
+}
+
+async function manageExecClawback(){
+  const account = document.getElementById('manageClawbackAccount').value.trim();
+  const amt = document.getElementById('manageClawbackAmt').value;
+  if(!account || !amt) return;
+  await manageExec('clawback', {
+    denom: manageTokenData.denom,
+    account,
+    amount: manageToSmallest(amt)
+  }, 'Clawback');
+}
+
+async function manageExecWhitelist(){
+  const account = document.getElementById('manageWhitelistAccount').value.trim();
+  const amt = document.getElementById('manageWhitelistAmt').value;
+  if(!account || !amt) return;
+  await manageExec('whitelist', {
+    denom: manageTokenData.denom,
+    account,
+    amount: manageToSmallest(amt)
+  }, 'Whitelist');
+}
+
+/* Auto-populate Manage tab from token creation */
+function populateManageFromToken(denom){
+  if(denom){
+    document.getElementById('manageTokenDenom').value = denom;
+  }
+}
 </script>
 </body>
 </html>
