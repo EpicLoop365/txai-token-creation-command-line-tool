@@ -590,6 +590,8 @@ function buildLiveTokenCard(data, desc){
   if(denom){
     populateDexFromToken(denom);
     populateManageFromToken(denom);
+    // Register token with connected wallet (Leap/Keplr) so it shows up
+    registerTokenWithWallet(denom, displayName, data.decimals || 6);
   }
 }
 
@@ -1110,6 +1112,10 @@ async function runWalletTokenCreation(inputText){
 
     // Auto-select in DEX dropdown
     dexAutoSelectToken(denom);
+
+    // Register token with connected wallet (Leap/Keplr) so it shows up
+    const symbol = (tokenConfig.subunit || 'token').toUpperCase();
+    registerTokenWithWallet(denom, symbol, precision);
 
   } catch(err){
     proc.classList.remove('show');

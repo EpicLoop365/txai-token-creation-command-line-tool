@@ -151,6 +151,34 @@ function dexGetActiveAddress(){
   return walletMode !== 'agent' ? connectedAddress : dexAgentWallet;
 }
 
+/* ---- Register a custom token with Leap/Keplr so it shows in wallet ---- */
+async function registerTokenWithWallet(denom, symbol, decimals) {
+  if (walletMode === 'agent' || !connectedAddress) return; // no wallet connected
+
+  const walletObj = walletMode === 'keplr' ? window.keplr : window.leap;
+  if (!walletObj || !walletObj.experimentalSuggestChain) return;
+
+  try {
+    // Re-suggest chain with the new token added to currencies
+    const updatedChainInfo = JSON.parse(JSON.stringify(COREUM_CHAIN_INFO));
+
+    // Only add if not already present
+    const alreadyExists = updatedChainInfo.currencies.some(c => c.coinMinimalDenom === denom);
+    if (!alreadyExists) {
+      updatedChainInfo.currencies.push({
+        coinDenom: symbol.toUpperCase(),
+        coinMinimalDenom: denom,
+        coinDecimals: decimals || 6,
+      });
+    }
+
+    await walletObj.experimentalSuggestChain(updatedChainInfo);
+    console.log(`Registered token ${symbol} (${denom}) with ${walletMode} wallet`);
+  } catch (err) {
+    console.warn('Could not register token with wallet:', err.message);
+  }
+}
+
 /* ---- Client-Side Transaction (Keplr/Leap) ---- */
 
 async function dexBuildAndSignTx(messages, gasLimit){
