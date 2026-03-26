@@ -1471,17 +1471,11 @@ footer{
           <div class="cp-section-title"><em class="icon">🖼️</em> Metadata</div>
           <div class="cp-row">
             <div class="cp-field" style="grid-column:1/-1">
-              <label class="cp-label">Token Logo</label>
-              <div style="display:flex;gap:8px;align-items:center">
-                <input class="cp-input" id="cpUri" placeholder="https://yoursite.com/logo.png" style="flex:1">
-                <label class="logo-upload-btn" id="logoUploadBtn">
-                  <input type="file" accept="image/*" id="logoFileInput" onchange="handleLogoUpload(event)" style="display:none">
-                  Upload
-                </label>
-              </div>
+              <label class="cp-label">Token Logo URL</label>
+              <input class="cp-input" id="cpUri" placeholder="https://yoursite.com/logo.png">
               <div class="logo-preview-wrap" id="logoPreviewWrap" style="display:none">
                 <img id="logoPreview" class="logo-preview-img" alt="Token logo preview">
-                <button class="logo-remove-btn" onclick="removeLogoUpload()" title="Remove logo">&times;</button>
+                <button class="logo-remove-btn" onclick="removeLogoPreview()" title="Clear">&times;</button>
               </div>
             </div>
           </div>
@@ -2289,75 +2283,27 @@ function updateSlider(sliderId, valId){
   document.getElementById(valId).textContent = val + '%';
 }
 
-/* ---- Logo Upload ---- */
-let uploadedLogoUrl = '';
-
-async function handleLogoUpload(event){
-  const file = event.target.files[0];
-  if(!file) return;
-  if(!file.type.startsWith('image/')){
-    alert('Please select an image file (PNG, JPG, GIF, SVG).');
-    return;
-  }
-  if(file.size > 5 * 1024 * 1024){
-    alert('Image too large. Maximum 5MB.');
-    return;
-  }
-
-  const btn = document.getElementById('logoUploadBtn');
-  btn.classList.add('logo-uploading');
-  btn.querySelector('input').disabled = true;
-
-  // Show local preview immediately
-  const reader = new FileReader();
-  reader.onload = function(e){
-    const preview = document.getElementById('logoPreview');
-    preview.src = e.target.result;
-    document.getElementById('logoPreviewWrap').style.display = 'inline-block';
-  };
-  reader.readAsDataURL(file);
-
-  try {
-    // Upload to imgbb (free image hosting, no API key needed for anonymous uploads)
-    const formData = new FormData();
-    formData.append('image', file);
-
-    // Use the free imgbb API (anonymous upload)
-    const resp = await fetch('https://api.imgbb.com/1/upload?key=7a1bc214d39a9e7bfa6e904741350673', {
-      method: 'POST',
-      body: formData,
-    });
-
-    if(!resp.ok) throw new Error('Upload failed');
-    const data = await resp.json();
-
-    if(data.success && data.data && data.data.url){
-      uploadedLogoUrl = data.data.url;
-      document.getElementById('cpUri').value = uploadedLogoUrl;
+/* ---- Logo URL Preview ---- */
+document.addEventListener('DOMContentLoaded', () => {
+  const cpUri = document.getElementById('cpUri');
+  if(cpUri) cpUri.addEventListener('input', () => {
+    const url = cpUri.value.trim();
+    const wrap = document.getElementById('logoPreviewWrap');
+    const img = document.getElementById('logoPreview');
+    if(url && (url.endsWith('.png') || url.endsWith('.jpg') || url.endsWith('.jpeg') || url.endsWith('.gif') || url.endsWith('.svg') || url.endsWith('.webp'))){
+      img.src = url;
+      img.onerror = () => { wrap.style.display = 'none'; };
+      img.onload = () => { wrap.style.display = 'inline-block'; };
     } else {
-      throw new Error('Upload response invalid');
+      wrap.style.display = 'none';
     }
-  } catch(err){
-    console.error('Logo upload error:', err);
-    // Fallback: use data URL directly (large but works)
-    const dataUrl = document.getElementById('logoPreview').src;
-    if(dataUrl && dataUrl.startsWith('data:')){
-      uploadedLogoUrl = '';
-      // Can't use data URL for on-chain URI, inform user
-      alert('Image hosting unavailable. Please enter a URL manually, or host your image at imgur.com, imgbb.com, etc.');
-    }
-  } finally {
-    btn.classList.remove('logo-uploading');
-    btn.querySelector('input').disabled = false;
-  }
-}
+  });
+});
 
-function removeLogoUpload(){
-  uploadedLogoUrl = '';
+function removeLogoPreview(){
   document.getElementById('cpUri').value = '';
   document.getElementById('logoPreviewWrap').style.display = 'none';
   document.getElementById('logoPreview').src = '';
-  document.getElementById('logoFileInput').value = '';
 }
 
 function getCustomizeConfig(){
@@ -4713,8 +4659,21 @@ function manageShowResult(success, message, txHash){
   if(success) setTimeout(() => manageLoadToken(), 3000);
 }
 
+/* Check if the connected wallet is the issuer of the currently loaded token */
+function manageIsWalletIssuer(){
+  return connectedAddress && manageTokenData && manageTokenData.issuer === connectedAddress;
+}
+
+/* Execute a manage operation — routes through wallet signing if connected wallet is issuer */
 async function manageExec(endpoint, body, actionLabel){
   try {
+    // If the connected wallet is the issuer, sign with Keplr/Leap
+    if(manageIsWalletIssuer()){
+      await manageExecWallet(endpoint, body, actionLabel);
+      return;
+    }
+
+    // Otherwise use the server's agent wallet
     const res = await fetch(`${API_URL}/api/token/${endpoint}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -4727,6 +4686,71 @@ async function manageExec(endpoint, body, actionLabel){
   } catch(err){
     manageShowResult(false, `${actionLabel} failed: ${err.message}`, null);
   }
+}
+
+/* Execute manage operation via connected wallet (Keplr/Leap) */
+async function manageExecWallet(endpoint, body, actionLabel){
+  // Build the appropriate MsgType for this operation
+  let msg;
+  const denom = body.denom;
+  const sender = connectedAddress;
+
+  switch(endpoint){
+    case 'mint':
+      msg = {
+        typeUrl: '/coreum.asset.ft.v1.MsgMint',
+        value: { sender, coin: { denom, amount: body.amount }, recipient: body.recipient || sender }
+      };
+      break;
+    case 'burn':
+      msg = {
+        typeUrl: '/coreum.asset.ft.v1.MsgBurn',
+        value: { sender, coin: { denom, amount: body.amount } }
+      };
+      break;
+    case 'freeze':
+      msg = {
+        typeUrl: '/coreum.asset.ft.v1.MsgFreeze',
+        value: { sender, account: body.account, coin: { denom, amount: body.amount } }
+      };
+      break;
+    case 'unfreeze':
+      msg = {
+        typeUrl: '/coreum.asset.ft.v1.MsgUnfreeze',
+        value: { sender, account: body.account, coin: { denom, amount: body.amount } }
+      };
+      break;
+    case 'global-freeze':
+      msg = {
+        typeUrl: '/coreum.asset.ft.v1.MsgGloballyFreeze',
+        value: { sender, denom }
+      };
+      break;
+    case 'global-unfreeze':
+      msg = {
+        typeUrl: '/coreum.asset.ft.v1.MsgGloballyUnfreeze',
+        value: { sender, denom }
+      };
+      break;
+    case 'clawback':
+      msg = {
+        typeUrl: '/coreum.asset.ft.v1.MsgClawback',
+        value: { sender, account: body.account, coin: { denom, amount: body.amount } }
+      };
+      break;
+    case 'whitelist':
+      msg = {
+        typeUrl: '/coreum.asset.ft.v1.MsgSetWhitelistedLimit',
+        value: { sender, account: body.account, coin: { denom, amount: body.amount } }
+      };
+      break;
+    default:
+      throw new Error('Unknown operation: ' + endpoint);
+  }
+
+  const result = await dexBuildAndSignTx([msg], 300000);
+  const txHash = result.txhash || result.hash || '';
+  manageShowResult(true, `${actionLabel} successful!`, txHash);
 }
 
 async function manageExecMint(){
