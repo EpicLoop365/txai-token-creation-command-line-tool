@@ -906,6 +906,12 @@ app.post("/api/dex/place-order", async (req, res) => {
   if (!process.env.AGENT_MNEMONIC) {
     res.status(500).json({ error: "Server not configured." }); return;
   }
+  // Validate price format: Coreum DEX requires ^(([1-9])|([1-9]\d*[1-9]))(e-?[1-9]\d*)?$
+  const priceRegex = /^(([1-9])|([1-9]\d*[1-9]))(e-?[1-9]\d*)?$/;
+  if (!priceRegex.test(price)) {
+    res.status(400).json({ error: `Invalid price format "${price}". Must be integer mantissa with optional exponent, e.g. "15e-4" not "1.5e-3".` });
+    return;
+  }
   const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
   let client: TxClient | null = null;
   try {

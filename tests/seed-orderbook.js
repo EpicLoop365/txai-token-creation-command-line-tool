@@ -118,7 +118,31 @@ function generatePriceLevels(basePrice, count, side) {
   return levels;
 }
 
-function formatPrice(price) { return price.toExponential(); }
+/**
+ * Format price for Coreum DEX: must match ^(([1-9])|([1-9]\d*[1-9]))(e-?[1-9]\d*)?$
+ * Mantissa must be a positive integer with no trailing zeros.
+ * Examples: 0.001 → "1e-3", 0.0015 → "15e-4", 0.00099 → "99e-5"
+ */
+function formatPrice(price) {
+  if (price <= 0) throw new Error(`Invalid price: ${price}`);
+  // Use default toExponential() which gives minimal significant digits
+  const s = price.toExponential();  // e.g. "1.5e-3" or "9.9e-4"
+  const [mantissaStr, expStr] = s.split('e');
+  let exp = parseInt(expStr);
+  // mantissaStr is like "1.5" or "1" — get digits without decimal
+  const parts = mantissaStr.split('.');
+  const fracPart = parts[1] || '';
+  let digits = parts[0] + fracPart;  // "15" or "1"
+  // Adjust exponent for the fractional digits we absorbed
+  exp = exp - fracPart.length;
+  // Strip trailing zeros from digits (Coreum doesn't allow them)
+  while (digits.length > 1 && digits.endsWith('0')) {
+    digits = digits.slice(0, -1);
+    exp++;
+  }
+  if (exp === 0) return digits;
+  return `${digits}e${exp}`;
+}
 function toRaw(amount) { return Math.round(amount * Math.pow(10, DECIMALS)).toString(); }
 
 // ─── State ──────────────────────────────────────────────────────────────────
