@@ -3136,6 +3136,12 @@ function dexGetActiveAddress(){
 /* ---- Client-Side Transaction (Keplr/Leap) ---- */
 
 async function dexBuildAndSignTx(messages, gasLimit){
+  // Get the signer's public key (needed for AuthInfo)
+  const accounts = await connectedOfflineSigner.getAccounts();
+  const pubkeyBytes = accounts[0].pubkey;
+  // Convert Uint8Array to hex string for transport
+  const pubkeyHex = Array.from(pubkeyBytes).map(b => b.toString(16).padStart(2, '0')).join('');
+
   // Step 1: Ask server to build the unsigned tx bytes using Coreum protobuf registry
   const buildRes = await fetch(`${API_URL}/api/build-tx`, {
     method: 'POST',
@@ -3144,6 +3150,7 @@ async function dexBuildAndSignTx(messages, gasLimit){
       signerAddress: connectedAddress,
       messages: messages,
       gasLimit: gasLimit || 300000,
+      pubkeyHex: pubkeyHex,
     })
   });
 

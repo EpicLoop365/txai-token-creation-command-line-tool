@@ -712,14 +712,20 @@ app.post("/api/token/whitelist", async (req, res) => {
 // ─── DEX: BUILD UNSIGNED TX (for Keplr/Leap wallet signing) ─────────────
 
 app.post("/api/build-tx", async (req, res) => {
-  const { signerAddress, messages, gasLimit } = req.body as {
+  const { signerAddress, messages, gasLimit, pubkeyHex } = req.body as {
     signerAddress?: string;
     messages?: Array<{ typeUrl: string; value: Record<string, unknown> }>;
     gasLimit?: number;
+    pubkeyHex?: string;
   };
 
   if (!signerAddress || !messages || !Array.isArray(messages) || messages.length === 0) {
     res.status(400).json({ error: "Missing signerAddress or messages." });
+    return;
+  }
+
+  if (!pubkeyHex) {
+    res.status(400).json({ error: "Missing pubkeyHex (signer's public key)." });
     return;
   }
 
@@ -740,8 +746,9 @@ app.post("/api/build-tx", async (req, res) => {
     }));
 
     // Build TxBody
-    const { TxBody, AuthInfo, Fee, SignDoc } = await import("cosmjs-types/cosmos/tx/v1beta1/tx");
+    const { TxBody, AuthInfo, Fee, SignerInfo, ModeInfo } = await import("cosmjs-types/cosmos/tx/v1beta1/tx");
     const { Any } = await import("cosmjs-types/google/protobuf/any");
+    const { SignMode } = await import("cosmjs-types/cosmos/tx/signing/v1beta1/signing");
 
     const bodyBytes = TxBody.encode(
       TxBody.fromPartial({
@@ -765,9 +772,23 @@ app.post("/api/build-tx", async (req, res) => {
     // Build fee
     const feeAmount = Math.ceil(gas * 0.0625).toString();
 
+    // Decode the pubkey from hex
+    const pubkeyBytes = Buffer.from(pubkeyHex, "hex");
+
     const authInfoBytes = AuthInfo.encode(
       AuthInfo.fromPartial({
-        signerInfos: [], // Keplr fills this
+        signerInfos: [
+          SignerInfo.fromPartial({
+            publicKey: Any.fromPartial({
+              typeUrl: "/cosmos.crypto.secp256k1.PubKey",
+              value: Buffer.from([10, pubkeyBytes.length, ...pubkeyBytes]),  // protobuf: field 1, length-delimited
+            }),
+            modeInfo: ModeInfo.fromPartial({
+              single: { mode: SignMode.SIGN_MODE_DIRECT },
+            }),
+            sequence: BigInt(sequence),
+          }),
+        ],
         fee: Fee.fromPartial({
           amount: [{ denom: network.denom, amount: feeAmount }],
           gasLimit: BigInt(gas),
