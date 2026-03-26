@@ -111,8 +111,10 @@ function generatePriceLevels(basePrice, count, side) {
   for (let i = 0; i < count; i++) {
     const pct = minPct + (spreadPct - minPct) * (i / Math.max(count - 1, 1));
     const multiplier = side === 'buy' ? 1 - (pct / 100) : 1 + (pct / 100);
-    const price = basePrice * multiplier;
-    const quantity = Math.floor(Math.random() * 100) + 1;
+    // Round to 6 decimal places (tick size) to avoid floating point artifacts
+    const price = Math.round(basePrice * multiplier * 1e6) / 1e6;
+    // Keep quantities small to reduce collateral requirements
+    const quantity = Math.floor(Math.random() * 20) + 1;
     levels.push({ price, quantity });
   }
   return levels;
@@ -189,7 +191,22 @@ async function run() {
   tokenName = baseDenom.split('-')[0].toUpperCase();
   pass(`Token: ${tokenName}`);
 
-  // ── Step 3: Check agent balances ──
+  // ── Step 3: Fund wallet from faucet ──
+  info('Requesting funds from testnet faucet...');
+  try {
+    const faucetRes = await fetch(`https://faucet.testnet-1.coreum.dev/api/faucet`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ address: agentWallet }),
+    });
+    if (faucetRes.ok) pass('Faucet funded wallet');
+    else warn(`Faucet returned ${faucetRes.status} (may have been recently funded)`);
+  } catch (e) {
+    warn(`Faucet request failed: ${e.message.slice(0, 50)}`);
+  }
+  await sleep(3000); // wait for faucet tx to propagate
+
+  // ── Step 4: Check agent balances ──
   const balRes = await fetchJSON(`${API_URL}/api/balances?address=${agentWallet}`);
   const agentBals = {};
   (balRes.balances || []).forEach(b => { agentBals[b.denom] = parseInt(b.amount); });
@@ -197,13 +214,13 @@ async function run() {
   const agentTokens = (agentBals[baseDenom] || 0) / 1e6;
   pass(`Agent: ${agentTX.toFixed(2)} TX, ${agentTokens.toLocaleString()} ${tokenName}`);
 
-  // ── Step 4: Check existing orderbook ──
+  // ── Step 5: Check existing orderbook ──
   const ob = await fetchJSON(
     `${API_URL}/api/orderbook?baseDenom=${encodeURIComponent(baseDenom)}&quoteDenom=${encodeURIComponent(QUOTE_DENOM)}`
   );
   info(`Current orderbook: ${ob.bids.length} bids, ${ob.asks.length} asks`);
 
-  // ── Step 5: Generate order levels ──
+  // ── Step 6: Generate order levels ──
   const buyLevels = generatePriceLevels(BASE_PRICE, NUM_BUYS, 'buy');
   const sellLevels = generatePriceLevels(BASE_PRICE, NUM_SELLS, 'sell');
 
