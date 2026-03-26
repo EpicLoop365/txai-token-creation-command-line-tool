@@ -49,7 +49,11 @@ function warn(msg) { log('⚠️ ', msg); }
 
 async function fetchJSON(url, opts) {
   const res = await fetch(url, opts);
-  const data = await res.json();
+  const text = await res.text();
+  let data;
+  try { data = JSON.parse(text); } catch {
+    throw new Error(`HTTP ${res.status}: ${text.slice(0, 100)}`);
+  }
   if (VERBOSE) console.log('    →', JSON.stringify(data).slice(0, 200));
   if (!res.ok) throw new Error(`HTTP ${res.status}: ${data.error || JSON.stringify(data).slice(0, 100)}`);
   return data;
@@ -191,39 +195,44 @@ async function run() {
     const label = `BUY  ${String(i + 1).padStart(2)}/${NUM_BUYS}`;
     process.stdout.write(`  ${label}: ${level.quantity} ${tokenName} @ ${level.price.toFixed(6)} TX ... `);
 
-    try {
-      const result = await fetchJSON(`${API_URL}/api/dex/place-order`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          baseDenom,
-          quoteDenom: QUOTE_DENOM,
-          side: 'buy',
-          price: formatPrice(level.price),
-          quantity: toRaw(level.quantity),
-        }),
-      });
+    const orderBody = JSON.stringify({
+      baseDenom,
+      quoteDenom: QUOTE_DENOM,
+      side: 'buy',
+      price: formatPrice(level.price),
+      quantity: toRaw(level.quantity),
+    });
 
-      if (result.success) {
-        console.log(`✅ ${result.orderId || ''}`);
-        placedOrders.push({ side: 'buy', orderId: result.orderId, ...level });
-        placed++;
-      } else {
-        console.log(`⚠️  ${result.error || 'unknown error'}`);
-        errors++;
+    let ok = false;
+    for (let attempt = 0; attempt < 3 && !ok; attempt++) {
+      if (attempt > 0) {
+        process.stdout.write(`  ↻ Retry ${attempt}... `);
+        await sleep(8000);
       }
-    } catch (err) {
-      console.log(`❌ ${err.message}`);
-      errors++;
-      // If we get sequence errors, wait a bit
-      if (err.message.includes('sequence')) {
-        info('Waiting for sequence sync...');
-        await sleep(5000);
+      try {
+        const result = await fetchJSON(`${API_URL}/api/dex/place-order`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: orderBody,
+        });
+        if (result.success) {
+          console.log(`✅ ${result.orderId || ''}`);
+          placedOrders.push({ side: 'buy', orderId: result.orderId, ...level });
+          placed++;
+          ok = true;
+        } else {
+          console.log(`⚠️  ${result.error || 'unknown error'}`);
+          if (!result.error?.includes('sequence')) break; // non-retryable
+        }
+      } catch (err) {
+        console.log(`❌ ${err.message.slice(0, 80)}`);
+        if (err.message.includes('Service Unavailable')) await sleep(10000);
       }
     }
+    if (!ok) errors++;
 
-    // Small delay between orders to avoid overwhelming the chain
-    await sleep(1500);
+    // Delay between orders — server needs time to connect wallet + broadcast TX
+    await sleep(5000);
   }
 
   // Place sell orders
@@ -232,35 +241,41 @@ async function run() {
     const label = `SELL ${String(i + 1).padStart(2)}/${NUM_SELLS}`;
     process.stdout.write(`  ${label}: ${level.quantity} ${tokenName} @ ${level.price.toFixed(6)} TX ... `);
 
-    try {
-      const result = await fetchJSON(`${API_URL}/api/dex/place-order`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          baseDenom,
-          quoteDenom: QUOTE_DENOM,
-          side: 'sell',
-          price: formatPrice(level.price),
-          quantity: toRaw(level.quantity),
-        }),
-      });
+    const orderBody = JSON.stringify({
+      baseDenom,
+      quoteDenom: QUOTE_DENOM,
+      side: 'sell',
+      price: formatPrice(level.price),
+      quantity: toRaw(level.quantity),
+    });
 
-      if (result.success) {
-        console.log(`✅ ${result.orderId || ''}`);
-        placedOrders.push({ side: 'sell', orderId: result.orderId, ...level });
-        placed++;
-      } else {
-        console.log(`⚠️  ${result.error || 'unknown error'}`);
-        errors++;
+    let ok = false;
+    for (let attempt = 0; attempt < 3 && !ok; attempt++) {
+      if (attempt > 0) {
+        process.stdout.write(`  ↻ Retry ${attempt}... `);
+        await sleep(8000);
       }
-    } catch (err) {
-      console.log(`❌ ${err.message}`);
-      errors++;
-      if (err.message.includes('sequence')) {
-        info('Waiting for sequence sync...');
-        await sleep(5000);
+      try {
+        const result = await fetchJSON(`${API_URL}/api/dex/place-order`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: orderBody,
+        });
+        if (result.success) {
+          console.log(`✅ ${result.orderId || ''}`);
+          placedOrders.push({ side: 'sell', orderId: result.orderId, ...level });
+          placed++;
+          ok = true;
+        } else {
+          console.log(`⚠️  ${result.error || 'unknown error'}`);
+          if (!result.error?.includes('sequence')) break;
+        }
+      } catch (err) {
+        console.log(`❌ ${err.message.slice(0, 80)}`);
+        if (err.message.includes('Service Unavailable')) await sleep(10000);
       }
     }
+    if (!ok) errors++;
 
     await sleep(1500);
   }
