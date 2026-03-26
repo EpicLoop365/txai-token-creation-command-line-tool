@@ -1068,6 +1068,19 @@ footer{
   .dex-pair-select-wrap{min-width:auto}
 }
 
+/* ===== CREATE TAB WALLET BAR ===== */
+.create-wallet-bar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 20px;margin-bottom:16px;
+  background:var(--bg2);border:1px solid var(--border);border-radius:10px;
+  position:relative;z-index:50;
+}
+.create-wallet-info{display:flex;align-items:center;gap:12px}
+.create-wallet-mode{display:flex;align-items:center;gap:10px}
+.create-wallet-hint{
+  font-family:var(--mono);font-size:.68rem;color:var(--text-muted);
+}
+
 /* ===== TOKEN MANAGER TAB ===== */
 .manage-wrap{display:none;padding:20px 0;max-width:900px;margin:0 auto}
 .manage-wrap.show{display:block}
@@ -1287,6 +1300,39 @@ footer{
     </div>
 
     <div class="demo-error" id="demoError"></div>
+
+    <!-- Create Tab Wallet Connection -->
+    <div class="create-wallet-bar reveal" id="createWalletBar">
+      <div class="create-wallet-info">
+        <div class="create-wallet-mode" id="createWalletMode">
+          <span class="dex-wallet-mode-badge agent">Agent Wallet</span>
+          <span class="create-wallet-hint">Token will be owned by the demo agent</span>
+        </div>
+      </div>
+      <div class="dex-wallet-area" id="createWalletArea">
+        <div id="createWalletDisconnected">
+          <button class="dex-connect-btn" onclick="createShowWalletOptions()">Connect Your Wallet</button>
+          <div class="dex-wallet-dropdown" id="createWalletDropdown">
+            <button class="dex-wallet-opt" onclick="createConnectWallet('keplr')">
+              <img src="https://raw.githubusercontent.com/nicolaracco/kepler-ui/main/packages/icons/src/icons/keplr-logo.svg" alt="Keplr" onerror="this.style.display='none'">
+              Keplr Wallet
+            </button>
+            <button class="dex-wallet-opt" onclick="createConnectWallet('leap')">
+              <img src="https://assets.leapwallet.io/logos/leap-cosmos-logo.svg" alt="Leap" onerror="this.style.display='none'">
+              Leap Wallet
+            </button>
+          </div>
+        </div>
+        <div id="createWalletConnected" style="display:none">
+          <div class="dex-connected-badge">
+            <span class="dot"></span>
+            <span class="provider" id="createWalletProvider">keplr</span>
+            <span class="addr" id="createConnectedAddr"></span>
+          </div>
+          <button class="dex-disconnect-btn" onclick="createDisconnectWallet()">Disconnect</button>
+        </div>
+      </div>
+    </div>
 
     <div class="demo-input-wrap reveal live-glow" id="demoInputWrap">
       <div class="demo-input-row">
@@ -2778,6 +2824,11 @@ async function runDemo(preset){
   // If live mode, use the live demo path
   if(liveMode){
     const desc = preset ? preset.input : input;
+    // Route to wallet-signed creation if wallet is connected
+    if(walletMode !== 'agent' && connectedAddress){
+      await runWalletTokenCreation(desc);
+      return;
+    }
     await runLiveDemo(desc);
     return;
   }
@@ -3026,6 +3077,9 @@ async function dexConnectWallet(provider){
     // Listen for account changes
     window.addEventListener('keplr_keystorechange', dexOnWalletAccountChange);
 
+    // Sync Create tab wallet UI
+    createUpdateWalletUI(true, provider);
+
     console.log(`Connected ${provider} wallet: ${connectedAddress}`);
   } catch(err){
     console.error('Wallet connect error:', err);
@@ -3038,12 +3092,15 @@ function dexDisconnectWallet(){
   connectedAddress = '';
   connectedOfflineSigner = null;
 
-  // Restore UI
+  // Restore DEX UI
   document.getElementById('dexWalletDisconnected').style.display = '';
   document.getElementById('dexWalletConnected').style.display = 'none';
   document.getElementById('dexModeBadge').className = 'dex-wallet-mode-badge agent';
   document.getElementById('dexModeBadge').textContent = 'Agent';
   document.getElementById('dexWalletAddr').textContent = dexAgentWallet || 'Loading...';
+
+  // Sync Create tab wallet UI
+  createUpdateWalletUI(false);
 
   // Refetch agent balances
   if(dexAgentWallet) dexFetchBalances(dexAgentWallet);
@@ -3293,6 +3350,253 @@ async function dexCancelOrderWallet(orderId){
     alert('Failed to cancel order: ' + (err.message || err));
     dexSessionLog[0].status = 'failed';
     dexRenderSessionHistory();
+  }
+}
+
+/* ---- Create Tab Wallet Connection ---- */
+function createShowWalletOptions(){
+  const dd = document.getElementById('createWalletDropdown');
+  dd.classList.toggle('show');
+  const handler = (e) => {
+    if(!document.getElementById('createWalletArea').contains(e.target)){
+      dd.classList.remove('show');
+      document.removeEventListener('click', handler);
+    }
+  };
+  setTimeout(() => document.addEventListener('click', handler), 10);
+}
+
+async function createConnectWallet(provider){
+  document.getElementById('createWalletDropdown').classList.remove('show');
+
+  const walletObj = provider === 'keplr' ? window.keplr : window.leap;
+  if(!walletObj){
+    alert(`${provider === 'keplr' ? 'Keplr' : 'Leap'} wallet extension not found.\n\nPlease install it from:\n${
+      provider === 'keplr' ? 'https://www.keplr.app/download' : 'https://www.leapwallet.io/download'
+    }`);
+    return;
+  }
+
+  try {
+    if(walletObj.experimentalSuggestChain) await walletObj.experimentalSuggestChain(COREUM_CHAIN_INFO);
+    await walletObj.enable(COREUM_CHAIN_ID);
+
+    const signer = walletObj.getOfflineSigner
+      ? walletObj.getOfflineSigner(COREUM_CHAIN_ID)
+      : await walletObj.getOfflineSignerAuto(COREUM_CHAIN_ID);
+    const accounts = await signer.getAccounts();
+    if(!accounts || !accounts.length){ alert('No accounts found.'); return; }
+
+    // Update shared wallet state
+    connectedAddress = accounts[0].address;
+    connectedOfflineSigner = signer;
+    walletMode = provider;
+
+    // Update Create tab UI
+    createUpdateWalletUI(true, provider);
+
+    // Also update DEX tab if it was previously shown
+    document.getElementById('dexWalletDisconnected').style.display = 'none';
+    document.getElementById('dexWalletConnected').style.display = 'flex';
+    document.getElementById('dexWalletProvider').textContent = provider;
+    document.getElementById('dexConnectedAddr').textContent =
+      connectedAddress.slice(0, 12) + '...' + connectedAddress.slice(-4);
+    document.getElementById('dexModeBadge').className = 'dex-wallet-mode-badge connected';
+    document.getElementById('dexModeBadge').textContent = provider === 'keplr' ? 'Keplr' : 'Leap';
+    document.getElementById('dexWalletAddr').textContent = connectedAddress;
+
+    window.addEventListener('keplr_keystorechange', dexOnWalletAccountChange);
+    console.log(`Connected ${provider} wallet (Create tab): ${connectedAddress}`);
+  } catch(err){
+    console.error('Wallet connect error:', err);
+    alert('Failed to connect wallet: ' + (err.message || err));
+  }
+}
+
+function createDisconnectWallet(){
+  walletMode = 'agent';
+  connectedAddress = '';
+  connectedOfflineSigner = null;
+
+  // Update Create tab UI
+  createUpdateWalletUI(false);
+
+  // Also update DEX tab
+  document.getElementById('dexWalletDisconnected').style.display = '';
+  document.getElementById('dexWalletConnected').style.display = 'none';
+  document.getElementById('dexModeBadge').className = 'dex-wallet-mode-badge agent';
+  document.getElementById('dexModeBadge').textContent = 'Agent';
+  document.getElementById('dexWalletAddr').textContent = dexAgentWallet || 'Loading...';
+
+  window.removeEventListener('keplr_keystorechange', dexOnWalletAccountChange);
+}
+
+function createUpdateWalletUI(connected, provider){
+  if(connected){
+    document.getElementById('createWalletDisconnected').style.display = 'none';
+    document.getElementById('createWalletConnected').style.display = 'flex';
+    document.getElementById('createWalletProvider').textContent = provider;
+    document.getElementById('createConnectedAddr').textContent =
+      connectedAddress.slice(0, 12) + '...' + connectedAddress.slice(-4);
+    document.getElementById('createConnectedAddr').title = connectedAddress;
+    document.getElementById('createWalletMode').innerHTML =
+      '<span class="dex-wallet-mode-badge connected">' + (provider === 'keplr' ? 'Keplr' : 'Leap') + '</span>' +
+      '<span class="create-wallet-hint">You will be the token issuer</span>';
+    document.getElementById('demoBtn').textContent = 'Create Token (Your Wallet)';
+  } else {
+    document.getElementById('createWalletDisconnected').style.display = '';
+    document.getElementById('createWalletConnected').style.display = 'none';
+    document.getElementById('createWalletMode').innerHTML =
+      '<span class="dex-wallet-mode-badge agent">Agent Wallet</span>' +
+      '<span class="create-wallet-hint">Token will be owned by the demo agent</span>';
+    document.getElementById('demoBtn').textContent = 'Deploy Token (Testnet)';
+  }
+}
+
+/* ---- Wallet-Signed Token Creation ---- */
+async function runWalletTokenCreation(inputText){
+  const proc = document.getElementById('demoProcessing');
+  const card = document.getElementById('tokenCard');
+  const stream = document.getElementById('demoStream');
+  const btn = document.getElementById('demoBtn');
+
+  card.classList.remove('show'); card.style.display = 'none';
+  hideDemoError();
+  proc.classList.add('show');
+  stream.innerHTML = '';
+
+  btn.textContent = 'Parsing...';
+  btn.disabled = true;
+
+  function addStatus(msg){
+    const el = document.createElement('div');
+    el.className = 'processing-status';
+    el.innerHTML = '<span class="dot-g"></span> ' + escapeHtml(msg);
+    stream.appendChild(el);
+    stream.scrollTop = stream.scrollHeight;
+  }
+  function addStreamLine(msg, cls){
+    const el = document.createElement('div');
+    el.style.fontFamily = 'var(--mono)';
+    el.style.fontSize = '.78rem';
+    el.style.color = cls === 'tool' ? 'var(--purple)' : cls === 'result' ? 'var(--green)' : 'var(--text-dim)';
+    el.style.marginBottom = '4px';
+    el.textContent = msg;
+    stream.appendChild(el);
+    stream.scrollTop = stream.scrollHeight;
+  }
+
+  try {
+    // Step 1: Ask AI to parse token config (without issuing)
+    addStatus('Sending to Claude AI for parsing...');
+
+    const parseRes = await fetch(API_URL + '/api/parse-token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ description: inputText })
+    });
+
+    if(!parseRes.ok){
+      if(parseRes.status === 429) throw new Error('RATE_LIMIT');
+      throw new Error('HTTP_' + parseRes.status);
+    }
+
+    const parsed = await parseRes.json();
+    if(parsed.error) throw new Error('SERVER_ERROR:' + parsed.error);
+
+    const tokenConfig = parsed.config;
+    addStatus('AI parsed token configuration');
+    addStreamLine('  Name: ' + (tokenConfig.name || 'N/A'), 'tool');
+    addStreamLine('  Symbol: ' + (tokenConfig.subunit || 'N/A'), 'tool');
+    addStreamLine('  Supply: ' + (tokenConfig.initialAmount || 'N/A'), 'tool');
+
+    // Step 2: Build MsgIssue for user signing
+    addStatus('Building transaction for your wallet...');
+    btn.textContent = 'Sign in Wallet...';
+
+    const precision = tokenConfig.precision || 6;
+    const rawAmount = (BigInt(Math.round(parseFloat(tokenConfig.initialAmount || '1000000'))) * BigInt(Math.pow(10, precision))).toString();
+
+    // Build features array (numeric indices like the chain expects)
+    const featureMap = { minting: 0, burning: 1, freezing: 2, whitelisting: 3, ibcEnabled: 4, clawback: 5 };
+    const features = [];
+    if(tokenConfig.features){
+      for(const [key, val] of Object.entries(tokenConfig.features)){
+        if(val && featureMap[key] !== undefined) features.push(featureMap[key]);
+      }
+    }
+
+    // Convert burn rate and commission rate to chain format (string decimal)
+    const burnRate = tokenConfig.burnRate ? String(parseFloat(tokenConfig.burnRate)) : '0';
+    const sendCommissionRate = tokenConfig.sendCommissionRate ? String(parseFloat(tokenConfig.sendCommissionRate)) : '0';
+
+    const msg = {
+      typeUrl: '/coreum.asset.ft.v1.MsgIssue',
+      value: {
+        issuer: connectedAddress,
+        symbol: (tokenConfig.subunit || 'token').toUpperCase(),
+        subunit: (tokenConfig.subunit || 'token').toLowerCase(),
+        precision: precision,
+        initial_amount: rawAmount,
+        description: tokenConfig.description || inputText,
+        features: features,
+        burn_rate: burnRate,
+        send_commission_rate: sendCommissionRate,
+        uri: tokenConfig.uri || '',
+        uri_hash: tokenConfig.uriHash || '',
+      }
+    };
+
+    addStatus('Requesting wallet signature...');
+    addStreamLine('  Issuer: ' + connectedAddress, 'text');
+
+    // Step 3: Sign with Keplr/Leap
+    const result = await dexBuildAndSignTx([msg], 500000);
+
+    const txHash = result.txhash || result.hash || '';
+    addStreamLine('Transaction signed and broadcast!', 'result');
+    addStreamLine('  TX Hash: ' + txHash, 'result');
+
+    // Build the denom (subunit-issuerAddress)
+    const denom = (tokenConfig.subunit || 'token').toLowerCase() + '-' + connectedAddress;
+    addStreamLine('  Denom: ' + denom, 'result');
+    addStatus('Token created successfully!');
+
+    await sleep(500);
+    proc.classList.remove('show');
+
+    // Build the live token card
+    buildLiveTokenCard({
+      denom: denom,
+      txHash: txHash,
+      supply: tokenConfig.initialAmount,
+      decimals: precision,
+      features: tokenConfig.features || {},
+      explorerUrl: 'https://explorer.testnet-1.tx.org/tx/transactions/' + txHash,
+    }, inputText);
+
+    card.style.display = 'block';
+    requestAnimationFrame(() => card.classList.add('show'));
+
+    // Auto-populate manage tab
+    populateManageFromToken(denom);
+
+  } catch(err){
+    proc.classList.remove('show');
+
+    if(err.message === 'RATE_LIMIT'){
+      showDemoError('Please wait 60 seconds between token creations.');
+    } else if(err.message.startsWith('SERVER_ERROR:')){
+      showDemoError(err.message.slice(13));
+    } else if(err.message.includes('Request rejected') || err.message.includes('User rejected')){
+      showDemoError('Transaction was rejected in your wallet.');
+    } else {
+      showDemoError('Token creation failed: ' + (err.message || 'Unknown error'));
+    }
+  } finally {
+    btn.textContent = 'Create Token (Your Wallet)';
+    btn.disabled = false;
+    demoRunning = false;
   }
 }
 

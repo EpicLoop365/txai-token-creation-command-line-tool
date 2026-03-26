@@ -506,6 +506,77 @@ app.post("/api/trade", async (req, res) => {
   res.end();
 });
 
+// ─── PARSE TOKEN (AI parse without issuing — for wallet-signed creation) ──
+
+app.post("/api/parse-token", async (req, res) => {
+  const { description } = req.body as { description?: string };
+  if (!description || typeof description !== "string") {
+    res.status(400).json({ error: "Missing 'description' field." });
+    return;
+  }
+  if (description.length > 500) {
+    res.status(400).json({ error: "Description too long. Maximum 500 characters." });
+    return;
+  }
+  if (!process.env.ANTHROPIC_API_KEY) {
+    res.status(500).json({ error: "ANTHROPIC_API_KEY not set." });
+    return;
+  }
+
+  const clientIp = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || req.ip || "unknown";
+  if (isRateLimited(clientIp)) {
+    res.status(429).json({ error: "Rate limited. Please wait 60 seconds." });
+    return;
+  }
+
+  try {
+    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+    const response = await anthropic.messages.create({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 1024,
+      system: `You are a token configuration parser for the TX (Coreum) blockchain.
+Given a natural language description of a token, extract the configuration parameters.
+Return ONLY a valid JSON object with these fields:
+- subunit: string (3-50 chars, lowercase alphanumeric, e.g. "gems")
+- name: string (display name, e.g. "GameCoin Gems")
+- description: string (brief description)
+- initialAmount: string (human-readable number, e.g. "1000000" for 1M tokens)
+- precision: number (decimal places, default 6)
+- features: object with boolean fields: minting, burning, freezing, whitelisting, clawback, ibcEnabled
+- burnRate: string (decimal like "0.01" for 1%, or "0" for none)
+- sendCommissionRate: string (decimal like "0.02" for 2%, or "0" for none)
+
+Only include fields that are explicitly or implicitly requested. Default features to false unless mentioned.
+Default precision to 6. Default burnRate and sendCommissionRate to "0".
+Return ONLY the JSON object, no markdown, no explanation.`,
+      messages: [{ role: "user", content: description }],
+    });
+
+    let text = "";
+    for (const block of response.content) {
+      if (block.type === "text") text += block.text;
+    }
+
+    // Parse the JSON from Claude's response
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      res.status(500).json({ error: "Failed to parse AI response into token config." });
+      return;
+    }
+
+    const config = JSON.parse(jsonMatch[0]);
+    res.json({ config });
+  } catch (err) {
+    const status = (err as { status?: number }).status;
+    if (status === 529 || status === 503) {
+      res.status(503).json({ error: "AI overloaded. Try again." });
+    } else {
+      res.status(500).json({ error: `Parse failed: ${(err as Error).message}` });
+    }
+  }
+});
+
 // ─── TOKEN MANAGEMENT ─────────────────────────────────────────────────────
 
 app.get("/api/token-info", async (req, res) => {
