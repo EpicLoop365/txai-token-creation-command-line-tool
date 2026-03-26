@@ -971,6 +971,17 @@ let dexDemoEventSource = null;
 let dexDemoStartTime = null;
 let dexDemoTimerInterval = null;
 let dexDemoOrderCounts = { A: 0, B: 0, Taker: 0 };
+const EXPLORER_TX_URL = 'https://explorer.testnet-1.tx.org/tx/transactions/';
+const EXPLORER_ACCT_URL = 'https://explorer.testnet-1.tx.org/tx/accounts/';
+
+function txLink(hash) {
+  if (!hash) return '';
+  return ` <a href="${EXPLORER_TX_URL}${hash}" target="_blank" class="demo-tx-link" title="View on Explorer">${hash.slice(0, 8)}...</a>`;
+}
+function addrLink(addr) {
+  if (!addr) return '';
+  return `<a href="${EXPLORER_ACCT_URL}${addr}" target="_blank" class="demo-addr-link" title="View on Explorer">${addr.slice(0, 14)}...</a>`;
+}
 
 function dexStartDemo() {
   const overlay = document.getElementById('dexDemoOverlay');
@@ -1094,13 +1105,13 @@ function dexDemoProcessEvent(event, data) {
       break;
 
     case 'wallet':
-      dexDemoLog('success', `${data.agent}: ${data.address.slice(0, 20)}...`);
+      dexDemoLog('success', `${data.agent} (${data.role}): ${addrLink(data.address)}`);
       if (data.agent.includes('Maker A')) {
-        document.getElementById('demoAddrA').textContent = data.address.slice(0, 16) + '...';
+        document.getElementById('demoAddrA').innerHTML = addrLink(data.address);
       } else if (data.agent.includes('Maker B')) {
-        document.getElementById('demoAddrB').textContent = data.address.slice(0, 16) + '...';
+        document.getElementById('demoAddrB').innerHTML = addrLink(data.address);
       } else if (data.agent.includes('Taker')) {
-        document.getElementById('demoAddrTaker').textContent = data.address.slice(0, 16) + '...';
+        document.getElementById('demoAddrTaker').innerHTML = addrLink(data.address);
       }
       break;
 
@@ -1111,30 +1122,35 @@ function dexDemoProcessEvent(event, data) {
       break;
 
     case 'balance':
-      dexDemoLog('success', `${data.agent}: ${data.display}`);
-      if (data.agent.includes('Maker A')) {
-        document.getElementById('demoBalA').textContent = data.display;
-      } else if (data.agent.includes('Maker B')) {
-        document.getElementById('demoBalB').textContent = data.display;
-      } else if (data.agent.includes('Taker')) {
-        document.getElementById('demoBalTaker').textContent = data.display;
+      if (data.tokenBalance) {
+        dexDemoLog('success', `${data.agent}: ${data.txBalance} | ${data.tokenBalance}`);
+      } else {
+        dexDemoLog('success', `${data.agent}: ${data.display}`);
+      }
+      if (data.agent?.includes('Maker A')) {
+        document.getElementById('demoBalA').textContent = data.display || data.txBalance || '--';
+      } else if (data.agent?.includes('Maker B')) {
+        document.getElementById('demoBalB').textContent = data.display || data.txBalance || '--';
+      } else if (data.agent?.includes('Taker')) {
+        document.getElementById('demoBalTaker').textContent = data.display || data.txBalance || '--';
       }
       break;
 
     case 'token':
-      dexDemoLog('success', `Token created: ${data.symbol} (${data.supply.toLocaleString()} supply)`);
+      dexDemoLog('success', `Target token: <b>${data.symbol}</b>`);
       break;
 
     case 'transfer':
-      dexDemoLog('info', `Sent ${data.amount.toLocaleString()} ${data.symbol} from ${data.from} to ${data.to}`);
+      dexDemoLog('transfer', `💰 ${data.from} → ${data.to}: <b>${data.amount.toLocaleString()} ${data.symbol}</b>${txLink(data.txHash)}`);
       break;
 
     case 'order': {
       const sideIcon = data.side === 'buy' ? '🟢' : '🔴';
       const statusIcon = data.status === 'placed' ? '✅' : data.status === 'error' ? '❌' : '⚠️';
-      const overlap = data.overlap ? ' [OVERLAP]' : '';
+      const overlap = data.overlap ? ' <span class="demo-overlap-badge">MATCH</span>' : '';
+      const tx = data.txHash ? txLink(data.txHash) : '';
       dexDemoLog(data.status === 'error' ? 'error' : 'order',
-        `${sideIcon} ${statusIcon} ${data.agent?.split(' ')[0] || '?'}: ${data.side?.toUpperCase()} ${data.quantity || '?'} @ ${data.priceDisplay || data.price}${overlap}`);
+        `${sideIcon} ${statusIcon} ${data.agent?.split(' ')[0] || '?'}: ${data.side?.toUpperCase()} <b>${data.quantity || '?'} ${data.symbol || ''}</b> @ ${data.priceDisplay || data.price} TX${overlap}${tx}`);
 
       // Update order count
       if (data.agent?.includes('Maker A')) {
@@ -1154,12 +1170,12 @@ function dexDemoProcessEvent(event, data) {
     }
 
     case 'fill':
-      dexDemoLog('fill', `⚡ FILL: ${data.quantity} ${data.symbol} @ ${data.priceDisplay} — ${data.buyer} ↔ ${data.seller}`);
+      dexDemoLog('fill', `⚡ FILL: <b>${data.buyQty || data.quantity} ${data.symbol}</b> @ ${data.priceDisplay} TX — ${data.buyer} ↔ ${data.seller}${txLink(data.txHash)}`);
       break;
 
     case 'taker':
       const takerIcon = data.action === 'buy' ? '🟢' : '🔴';
-      dexDemoLog('taker', `${takerIcon} Taker ${data.action?.toUpperCase()}: ${data.quantity || '?'} @ ${data.price}`);
+      dexDemoLog('taker', `${takerIcon} Taker ${data.action?.toUpperCase()}: <b>${data.quantity || '?'}</b> @ ${data.price}${txLink(data.txHash)}`);
       dexDemoOrderCounts.Taker++;
       document.getElementById('demoOrdersTaker').textContent = dexDemoOrderCounts.Taker;
       break;

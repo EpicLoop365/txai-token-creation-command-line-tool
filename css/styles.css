@@ -1386,8 +1386,18 @@ footer{
 .demo-log-entry.warn{color:#f59e0b}
 .demo-log-entry.order{color:#e6edf3}
 .demo-log-entry.fill{color:#a855f7;font-weight:600;background:rgba(168,85,247,.08);padding:4px 6px;border-radius:4px}
+.demo-log-entry.transfer{color:#f59e0b;background:rgba(245,158,11,.06);padding:4px 6px;border-radius:4px}
 .demo-log-entry.taker{color:#2563eb}
 .demo-log-time{color:#484f58;margin-right:8px}
+.demo-tx-link{color:#58a6ff;text-decoration:none;font-family:'JetBrains Mono',monospace;font-size:0.72rem;opacity:.8}
+.demo-tx-link:hover{opacity:1;text-decoration:underline}
+.demo-addr-link{color:#58a6ff;text-decoration:none;font-family:'JetBrains Mono',monospace;font-size:0.72rem}
+.demo-addr-link:hover{text-decoration:underline}
+.demo-overlap-badge{
+  display:inline-block;background:#7c3aed;color:#fff;font-size:0.6rem;
+  padding:1px 5px;border-radius:3px;margin-left:4px;vertical-align:middle;
+  font-weight:700;letter-spacing:.5px;
+}
 
 /* Summary */
 .dex-demo-summary{
