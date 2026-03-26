@@ -1091,6 +1091,56 @@ footer{
   .dex-pair-select-wrap{min-width:auto}
 }
 
+/* ===== WALLET CHOICE MODAL ===== */
+.wallet-choice-overlay{
+  position:fixed;inset:0;z-index:9999;
+  background:rgba(0,0,0,.7);backdrop-filter:blur(8px);
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;pointer-events:none;transition:opacity .25s ease;
+}
+.wallet-choice-overlay.show{opacity:1;pointer-events:auto}
+.wallet-choice-modal{
+  background:var(--bg2);border:1px solid var(--border-light);border-radius:var(--radius-lg);
+  padding:36px 32px 28px;max-width:560px;width:90%;
+  animation:fadeInUp .3s ease;
+}
+.wallet-choice-title{
+  font-family:var(--mono);font-size:1.15rem;font-weight:700;color:var(--text);
+  text-align:center;margin-bottom:6px;
+}
+.wallet-choice-subtitle{
+  font-size:.85rem;color:var(--text-muted);text-align:center;margin-bottom:24px;
+}
+.wallet-choice-cards{display:flex;gap:16px;margin-bottom:20px}
+@media(max-width:560px){.wallet-choice-cards{flex-direction:column}}
+.wallet-choice-card{
+  flex:1;padding:22px 18px;border-radius:var(--radius);
+  border:2px solid var(--border);background:var(--bg3);
+  cursor:pointer;transition:all .25s;text-align:center;
+}
+.wallet-choice-card:hover{border-color:var(--purple);background:rgba(124,109,250,.06)}
+.wallet-choice-card.recommended{border-color:var(--green-dim);position:relative}
+.wallet-choice-card.recommended::after{
+  content:'Recommended';position:absolute;top:-10px;right:12px;
+  font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;
+  background:var(--green);color:#000;padding:2px 8px;border-radius:4px;
+}
+.wc-icon{font-size:2rem;margin-bottom:10px}
+.wc-label{font-family:var(--mono);font-size:.95rem;font-weight:700;color:var(--text);margin-bottom:6px}
+.wc-desc{font-size:.75rem;color:var(--text-dim);line-height:1.5}
+.wc-badge{
+  display:inline-block;margin-top:10px;padding:3px 10px;border-radius:6px;
+  font-size:.65rem;font-weight:600;letter-spacing:.03em;
+}
+.wc-badge.free{background:rgba(6,214,160,.15);color:var(--green)}
+.wc-badge.own{background:rgba(124,109,250,.15);color:var(--purple)}
+.wallet-choice-dismiss{
+  display:block;margin:0 auto;background:none;border:none;
+  color:var(--text-muted);font-size:.78rem;cursor:pointer;
+  font-family:var(--sans);padding:6px 12px;
+}
+.wallet-choice-dismiss:hover{color:var(--text)}
+
 /* ===== CREATE TAB WALLET BAR ===== */
 /* Global Wallet Bar */
 .global-wallet-bar{
@@ -1317,6 +1367,29 @@ footer{
       <button class="chat-tab" id="tabChat" onclick="switchTab('chat')">💬 Chat Advisor</button>
       <button class="chat-tab" id="tabDex" onclick="switchTab('dex')">📊 Order Book txDEX</button>
       <button class="chat-tab" id="tabManage" onclick="switchTab('manage')">⚙️ Manage Smart Token</button>
+    </div>
+
+    <!-- Wallet Choice Modal -->
+    <div class="wallet-choice-overlay" id="walletChoiceOverlay" onclick="if(event.target===this)closeWalletChoice()">
+      <div class="wallet-choice-modal">
+        <div class="wallet-choice-title">How do you want to create this token?</div>
+        <div class="wallet-choice-subtitle">Choose who owns and controls the token after creation</div>
+        <div class="wallet-choice-cards">
+          <div class="wallet-choice-card" onclick="chooseWalletMode('agent')">
+            <div class="wc-icon">&#129302;</div>
+            <div class="wc-label">AI Agent Wallet</div>
+            <div class="wc-desc">Quick demo &mdash; the AI agent creates and owns the token. Great for testing and exploring.</div>
+            <span class="wc-badge free">No wallet needed</span>
+          </div>
+          <div class="wallet-choice-card recommended" onclick="chooseWalletMode('connect')">
+            <div class="wc-icon">&#128273;</div>
+            <div class="wc-label">Your Wallet</div>
+            <div class="wc-desc">Connect Keplr or Leap &mdash; you are the issuer. You can mint, burn, freeze &amp; manage the token.</div>
+            <span class="wc-badge own">You own the token</span>
+          </div>
+        </div>
+        <button class="wallet-choice-dismiss" onclick="closeWalletChoice()">Cancel</button>
+      </div>
     </div>
 
     <!-- Global Wallet Bar -->
@@ -2848,6 +2921,130 @@ function escapeHtml(str){
 
 /* ===== DEMO RUNNER ===== */
 let demoRunning=false;
+// ─── Wallet Choice Modal ────────────────────────────────────────────────────
+let _pendingPreset = null;   // stash preset while modal is open
+
+function showWalletChoice(preset){
+  _pendingPreset = preset || null;
+  document.getElementById('walletChoiceOverlay').classList.add('show');
+}
+function closeWalletChoice(){
+  document.getElementById('walletChoiceOverlay').classList.remove('show');
+  _pendingPreset = null;
+  demoRunning = false;
+  document.getElementById('demoBtn').disabled = false;
+}
+async function chooseWalletMode(mode){
+  document.getElementById('walletChoiceOverlay').classList.remove('show');
+  if(mode === 'connect'){
+    // Need to connect wallet first — show the dropdown from global bar
+    // After connection completes, re-trigger runDemo
+    const ok = await connectWalletForChoice();
+    if(!ok){
+      // User cancelled or failed — reset
+      demoRunning = false;
+      document.getElementById('demoBtn').disabled = false;
+      _pendingPreset = null;
+      return;
+    }
+  }
+  // Now actually run the demo with the chosen mode
+  _runDemoInternal(_pendingPreset);
+  _pendingPreset = null;
+}
+
+async function connectWalletForChoice(){
+  // Show inline wallet picker in the modal
+  return new Promise((resolve) => {
+    // Build a small picker overlay
+    const overlay = document.getElementById('walletChoiceOverlay');
+    overlay.classList.add('show');
+    const modal = overlay.querySelector('.wallet-choice-modal');
+    modal.innerHTML = `
+      <div class="wallet-choice-title">Connect Your Wallet</div>
+      <div class="wallet-choice-subtitle">Choose a wallet provider to sign the token creation transaction</div>
+      <div class="wallet-choice-cards">
+        <div class="wallet-choice-card" id="wcKeplr" style="cursor:pointer">
+          <div class="wc-icon"><img src="https://raw.githubusercontent.com/nicolaracco/kepler-ui/main/packages/icons/src/icons/keplr-logo.svg" alt="Keplr" style="width:48px;height:48px" onerror="this.parentElement.textContent='K'"></div>
+          <div class="wc-label">Keplr Wallet</div>
+          <div class="wc-desc">Most popular Cosmos wallet. Browser extension required.</div>
+        </div>
+        <div class="wallet-choice-card" id="wcLeap" style="cursor:pointer">
+          <div class="wc-icon"><img src="https://assets.leapwallet.io/logos/leap-cosmos-logo.svg" alt="Leap" style="width:48px;height:48px" onerror="this.parentElement.textContent='L'"></div>
+          <div class="wc-label">Leap Wallet</div>
+          <div class="wc-desc">Fast Cosmos wallet with clean UI. Browser extension required.</div>
+        </div>
+      </div>
+      <button class="wallet-choice-dismiss" id="wcCancel">Cancel</button>
+    `;
+    document.getElementById('wcCancel').onclick = () => {
+      overlay.classList.remove('show');
+      resetWalletChoiceModal();
+      resolve(false);
+    };
+    overlay.onclick = (e) => {
+      if(e.target === overlay){
+        overlay.classList.remove('show');
+        resetWalletChoiceModal();
+        resolve(false);
+      }
+    };
+    document.getElementById('wcKeplr').onclick = async () => {
+      overlay.classList.remove('show');
+      await globalConnectWallet('keplr');
+      resetWalletChoiceModal();
+      resolve(walletMode !== 'agent' && !!connectedAddress);
+    };
+    document.getElementById('wcLeap').onclick = async () => {
+      overlay.classList.remove('show');
+      await globalConnectWallet('leap');
+      resetWalletChoiceModal();
+      resolve(walletMode !== 'agent' && !!connectedAddress);
+    };
+  });
+}
+
+function resetWalletChoiceModal(){
+  // Restore original modal content
+  const overlay = document.getElementById('walletChoiceOverlay');
+  const modal = overlay.querySelector('.wallet-choice-modal');
+  modal.innerHTML = `
+    <div class="wallet-choice-title">How do you want to create this token?</div>
+    <div class="wallet-choice-subtitle">Choose who owns and controls the token after creation</div>
+    <div class="wallet-choice-cards">
+      <div class="wallet-choice-card" onclick="chooseWalletMode('agent')">
+        <div class="wc-icon">&#129302;</div>
+        <div class="wc-label">AI Agent Wallet</div>
+        <div class="wc-desc">Quick demo &mdash; the AI agent creates and owns the token. Great for testing and exploring.</div>
+        <span class="wc-badge free">No wallet needed</span>
+      </div>
+      <div class="wallet-choice-card recommended" onclick="chooseWalletMode('connect')">
+        <div class="wc-icon">&#128273;</div>
+        <div class="wc-label">Your Wallet</div>
+        <div class="wc-desc">Connect Keplr or Leap &mdash; you are the issuer. You can mint, burn, freeze &amp; manage the token.</div>
+        <span class="wc-badge own">You own the token</span>
+      </div>
+    </div>
+    <button class="wallet-choice-dismiss" onclick="closeWalletChoice()">Cancel</button>
+  `;
+}
+
+async function _runDemoInternal(preset){
+  // Called after wallet choice is made — now actually execute
+  if(!preset) mergeCustomizeIntoInput();
+  const input = document.getElementById('demoInput').value.trim();
+  const desc = preset ? preset.input : input;
+  demoRunning = true;
+  document.getElementById('demoBtn').disabled = true;
+  hideDemoError();
+
+  if(walletMode !== 'agent' && connectedAddress){
+    await runWalletTokenCreation(desc);
+  } else {
+    await runLiveDemo(desc);
+  }
+}
+
 async function runDemo(preset){
   if(demoRunning)return;
   // Merge customize panel settings into the input
@@ -2858,18 +3055,20 @@ async function runDemo(preset){
   document.getElementById('demoBtn').disabled=true;
   hideDemoError();
 
-  // If live mode, use the live demo path
+  // If live mode, show wallet choice if not already connected
   if(liveMode){
-    const desc = preset ? preset.input : input;
-    // Route to wallet-signed creation if wallet is connected
+    // If wallet already connected, skip the choice and go straight
     if(walletMode !== 'agent' && connectedAddress){
+      const desc = preset ? preset.input : input;
       await runWalletTokenCreation(desc);
       return;
     }
-    await runLiveDemo(desc);
+    // Show the choice modal: Agent vs Connect Wallet
+    showWalletChoice(preset);
     return;
   }
 
+  // Simulated mode — fall through
   const cfg=preset||parseInput(input);
   const desc=preset?preset.input:input;
 
