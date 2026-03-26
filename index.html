@@ -1098,7 +1098,7 @@ footer{
       <div class="dex-pair-bar">
         <label>Trading Pair</label>
         <input type="text" id="dexBaseDenom" placeholder="Enter token denom (e.g. mytoken-testcore1abc...)">
-        <span class="dex-pair-label">/ CORE</span>
+        <span class="dex-pair-label">/ TX</span>
         <button class="dex-load-btn" id="dexLoadBtn" onclick="dexLoadOrderbook()">Load Orderbook</button>
       </div>
 
@@ -1124,7 +1124,7 @@ footer{
             </div>
 
             <div class="dex-form-group">
-              <label class="dex-form-label">Price (CORE)</label>
+              <label class="dex-form-label">Price (TX)</label>
               <input type="number" class="dex-form-input" id="dexPrice" placeholder="0.00" step="any" oninput="dexUpdateTotal()">
             </div>
 
@@ -1135,7 +1135,7 @@ footer{
 
             <div class="dex-total">
               <span class="lbl">Total</span>
-              <span id="dexTotalDisplay">0.00 CORE</span>
+              <span id="dexTotalDisplay">0.00 TX</span>
             </div>
 
             <button class="dex-place-btn buy" id="dexPlaceBtn" onclick="dexPlaceOrder()" disabled>
@@ -2237,7 +2237,8 @@ document.getElementById('demoInput').addEventListener('keydown',e=>{if(e.key==='
 
 /* ===== DEX TAB ===== */
 const DEX_QUOTE_DENOM = 'utestcore';
-const DEX_QUOTE_SYMBOL = 'CORE';
+const DEX_QUOTE_SYMBOL = 'TX';
+const DEX_DECIMALS = 6; // Both quote (utestcore) and most tokens use 6 decimals
 const DEX_REFRESH_MS = 10000;
 
 let dexSide = 'buy';
@@ -2318,12 +2319,23 @@ function dexRenderOrderbook(data){
   const allQtys = [...asks, ...bids].map(o => parseFloat(o.quantity || o.amount || 0));
   const maxQty = Math.max(...allQtys, 1);
 
+  // Convert chain values to human-readable
+  // Price from chain: raw utestcore per smallest base unit. Human price = rawPrice / 10^(quoteDecimals - baseDecimals)
+  // For same-decimal tokens (both 6): humanPrice = rawPrice (it's already the ratio)
+  // Quantity from chain: in smallest units. humanQty = rawQty / 10^baseDecimals
+  const qDec = DEX_DECIMALS; // quote decimals (utestcore = 6)
+  const bDec = DEX_DECIMALS; // base token decimals (assume 6, most tokens)
+
   let askHTML = '';
   asks.forEach(o => {
-    const p = parseFloat(o.price), q = parseFloat(o.quantity || o.amount || 0);
-    const pct = (q / maxQty) * 100;
-    askHTML += `<div class="dex-ob-row ask" onclick="dexFillPrice(${p})">
-      <span class="price">${dexFmt(p)}</span><span>${dexFmt(q)}</span><span>${dexFmt(p*q)}</span>
+    const rawP = parseFloat(o.price) || 0;
+    const rawQ = parseFloat(o.quantity || o.remainingQuantity || o.amount || 0);
+    const humanP = rawP; // price ratio stays same when both have same decimals
+    const humanQ = rawQ / Math.pow(10, bDec);
+    const humanTotal = humanP * humanQ;
+    const pct = (rawQ / maxQty) * 100;
+    askHTML += `<div class="dex-ob-row ask" onclick="dexFillPrice(${humanP})">
+      <span class="price">${dexFmt(humanP)}</span><span>${dexFmt(humanQ)}</span><span>${dexFmt(humanTotal)}</span>
       <div class="dbar" style="width:${pct}%"></div></div>`;
   });
   askC.innerHTML = askHTML;
@@ -2339,10 +2351,14 @@ function dexRenderOrderbook(data){
 
   let bidHTML = '';
   bids.forEach(o => {
-    const p = parseFloat(o.price), q = parseFloat(o.quantity || o.amount || 0);
-    const pct = (q / maxQty) * 100;
-    bidHTML += `<div class="dex-ob-row bid" onclick="dexFillPrice(${p})">
-      <span class="price">${dexFmt(p)}</span><span>${dexFmt(q)}</span><span>${dexFmt(p*q)}</span>
+    const rawP = parseFloat(o.price) || 0;
+    const rawQ = parseFloat(o.quantity || o.remainingQuantity || o.amount || 0);
+    const humanP = rawP;
+    const humanQ = rawQ / Math.pow(10, bDec);
+    const humanTotal = humanP * humanQ;
+    const pct = (rawQ / maxQty) * 100;
+    bidHTML += `<div class="dex-ob-row bid" onclick="dexFillPrice(${humanP})">
+      <span class="price">${dexFmt(humanP)}</span><span>${dexFmt(humanQ)}</span><span>${dexFmt(humanTotal)}</span>
       <div class="dbar" style="width:${pct}%"></div></div>`;
   });
   bidC.innerHTML = bidHTML;
@@ -2370,16 +2386,20 @@ function dexRenderMyOrders(orders){
   if(!orders.length){ body.innerHTML = '<div class="dex-no-orders">No open orders</div>'; return; }
   let html = '';
   orders.forEach(o => {
-    const side = (o.side || o.direction || '').toLowerCase();
+    let side = (o.side || o.direction || '').toLowerCase().replace('side_','');
+    if(side !== 'buy' && side !== 'sell') side = side.includes('buy') ? 'buy' : 'sell';
     const sc = side === 'sell' ? 'sell' : 'buy';
-    const price = o.price || '--';
-    const qty = o.quantity || o.amount || '--';
+    const rawPrice = parseFloat(o.price) || 0;
+    const rawQty = parseFloat(o.quantity || o.remainingQuantity || o.amount || 0);
+    const humanPrice = rawPrice; // same decimals for both
+    const humanQty = rawQty / Math.pow(10, DEX_DECIMALS);
     const id = o.id || o.order_id || '';
+    const tokenName = dexTokenName(o.baseDenom || dexBaseDenom);
     html += `<div class="dex-order-row">
       <span class="dex-order-side ${sc}">${side}</span>
       <div class="dex-order-det">
-        <span class="dex-order-price">${dexFmt(parseFloat(price))} ${DEX_QUOTE_SYMBOL}</span>
-        <span class="dex-order-qty">Qty: ${dexFmt(parseFloat(qty))}</span>
+        <span class="dex-order-price">${dexFmt(humanPrice)} ${DEX_QUOTE_SYMBOL}/${tokenName}</span>
+        <span class="dex-order-qty">Qty: ${dexFmt(humanQty)} ${tokenName}</span>
       </div>
       <button class="dex-cancel-btn" onclick="dexCancelOrder('${id}')">Cancel</button>
     </div>`;
@@ -2544,6 +2564,20 @@ function dexFmt(n){
   if(n === 0) return '0';
   if(Math.abs(n) >= 1) return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 });
   return n.toPrecision(6);
+}
+
+// Convert chain smallest-unit amount to human-readable (divide by 10^decimals)
+function dexHuman(raw, decimals){
+  decimals = decimals || DEX_DECIMALS;
+  const n = parseFloat(raw) || 0;
+  return n / Math.pow(10, decimals);
+}
+
+// Extract token name from denom (e.g. "wonder-testcore1abc..." -> "WONDER")
+function dexTokenName(denom){
+  if(!denom) return '?';
+  const parts = denom.split('-');
+  return parts[0].toUpperCase();
 }
 
 /* Auto-populate DEX after token creation */

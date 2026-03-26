@@ -657,25 +657,29 @@ function extractRepeatedMessages(buf: Buffer, fieldNum: number): Buffer[] {
   return messages;
 }
 
-// Coreum DEX Order proto fields:
-// 1=creator, 2=type(enum), 3=id, 4=base_denom(string), 5=quote_denom(string),
-// 6=price(string), 7=quantity(uint64), 8=side(enum), 9=remaining_quantity(uint64),
-// 10=remaining_balance(uint64), 11=good_til, 12=time_in_force(enum)
+// Coreum DEX Order proto fields (from chain protobuf):
+// 1=creator(string), 2=type(enum), 3=id(string), 4=sequence(uint64),
+// 5=base_denom(string), 6=quote_denom(string), 7=price(string),
+// 8=quantity(string), 9=side(enum), 10=remaining_quantity(string),
+// 11=remaining_balance(string), 13=time_in_force(enum), 14=reserve(message)
 function protoToDexOrder(buf: Buffer): DexOrder {
   const f = decodeMessage(buf);
-  const sideVal = f[8] as number || 0;
+  const sideVal = f[9] as number || 0;
   const typeVal = f[2] as number || 0;
+  // Price from chain is in scientific notation like "1e1" = 10, "1e7" = 10000000
+  const rawPrice = (f[7] as string) || "0";
+  const price = String(parseFloat(rawPrice) || 0);
   return {
     creator: (f[1] as string) || "",
     type: typeVal === 1 ? "ORDER_TYPE_LIMIT" : typeVal === 2 ? "ORDER_TYPE_MARKET" : String(typeVal),
     id: (f[3] as string) || "",
     baseDenom: (f[5] as string) || "",
     quoteDenom: (f[6] as string) || "",
-    price: (f[7] as string) || "0",
-    quantity: String(f[8] || "0"),
-    side: sideVal === 1 ? "SIDE_BUY" : sideVal === 2 ? "SIDE_SELL" : String(sideVal),
-    remainingQuantity: String(f[10] || "0"),
-    remainingBalance: String(f[11] || "0"),
+    price,
+    quantity: (f[8] as string) || "0",
+    side: sideVal === 1 ? "buy" : sideVal === 2 ? "sell" : String(sideVal),
+    remainingQuantity: (f[10] as string) || "0",
+    remainingBalance: (f[11] as string) || "0",
   };
 }
 
@@ -734,7 +738,9 @@ function parseOrderFromProto(buf: Buffer): DexOrder {
   const id = (fieldMap[3]?.value as string) || "";
   const baseDenom = (fieldMap[5]?.value as string) || "";
   const quoteDenom = (fieldMap[6]?.value as string) || "";
-  const price = (fieldMap[7]?.value as string) || "0";
+  // Price from chain is in scientific notation like "1e1" = 10, "1e7" = 10000000
+  const rawPrice = (fieldMap[7]?.value as string) || "0";
+  const price = String(parseFloat(rawPrice) || 0);
   const quantity = (fieldMap[8]?.value as string) || "0";
   const side = (fieldMap[9]?.value as number) || 0;
   const remainingQuantity = (fieldMap[10]?.value as string) || "0";
@@ -742,13 +748,13 @@ function parseOrderFromProto(buf: Buffer): DexOrder {
 
   return {
     creator,
-    type: orderType === 1 ? "ORDER_TYPE_LIMIT" : orderType === 2 ? "ORDER_TYPE_MARKET" : String(orderType),
+    type: orderType === 1 ? "limit" : orderType === 2 ? "market" : String(orderType),
     id,
     baseDenom,
     quoteDenom,
     price,
     quantity,
-    side: side === 1 ? "SIDE_BUY" : side === 2 ? "SIDE_SELL" : String(side),
+    side: side === 1 ? "buy" : side === 2 ? "sell" : String(side),
     remainingQuantity,
     remainingBalance,
   };
