@@ -952,8 +952,20 @@ app.get("/api/dex/debug", async (_req, res) => {
     client = await TxClient.connectWithWallet(txWallet);
     steps.push(`5. Client connected: ${client.address.slice(0, 16)}...`);
 
-    steps.push("6. All steps passed — client is ready for transactions");
-    res.json({ steps, success: true });
+    // Test actual placeOrder with a tiny sell order
+    steps.push("6. Calling placeOrder...");
+    const result = await placeOrder(client, {
+      baseDenom: "txai-testcore15s5gdh74x5fwwyyt2wspahdqmhf0x5nzvlelcf",
+      quoteDenom: "utestcore",
+      side: 2,  // SELL
+      orderType: 1,  // LIMIT
+      price: "1.5e-3",
+      quantity: "1000000",
+      timeInForce: 1,  // GTC
+    } as any);
+    steps.push(`7. placeOrder returned: ${JSON.stringify(result).slice(0, 200)}`);
+
+    res.json({ steps, success: true, result });
   } catch (err) {
     steps.push(`ERROR: ${(err as Error).message}`);
     console.error("[dex/debug] Error at step:", steps.length, err);
