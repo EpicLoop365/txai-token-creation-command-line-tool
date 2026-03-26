@@ -956,10 +956,10 @@ footer{
 .wallet-choice-overlay{
   position:fixed;inset:0;z-index:9999;
   background:rgba(0,0,0,.7);backdrop-filter:blur(8px);
-  display:flex;align-items:center;justify-content:center;
-  opacity:0;pointer-events:none;transition:opacity .25s ease;
+  display:none;align-items:center;justify-content:center;
+  opacity:0;transition:opacity .2s ease;
 }
-.wallet-choice-overlay.show{opacity:1;pointer-events:auto}
+.wallet-choice-overlay.show{display:flex;opacity:1}
 .wallet-choice-modal{
   background:var(--bg2);border:1px solid var(--border-light);border-radius:var(--radius-lg);
   padding:36px 32px 28px;max-width:560px;width:90%;
@@ -2628,19 +2628,26 @@ function showWalletChoice(preset){
       </div>
       <button class="wallet-choice-dismiss" onclick="closeWalletChoice()">Cancel</button>
     `;
+    overlay.style.display = 'flex';
     overlay.classList.add('show');
     return;
   }
-  document.getElementById('walletChoiceOverlay').classList.add('show');
+  const ov = document.getElementById('walletChoiceOverlay');
+  ov.style.display = 'flex';
+  ov.classList.add('show');
 }
 function closeWalletChoice(){
-  document.getElementById('walletChoiceOverlay').classList.remove('show');
+  const overlay = document.getElementById('walletChoiceOverlay');
+  overlay.classList.remove('show');
+  overlay.style.display = 'none';
   _pendingPreset = null;
   demoRunning = false;
   document.getElementById('demoBtn').disabled = false;
 }
 async function chooseWalletMode(mode){
-  document.getElementById('walletChoiceOverlay').classList.remove('show');
+  const overlay = document.getElementById('walletChoiceOverlay');
+  overlay.classList.remove('show');
+  overlay.style.display = 'none';
   resetWalletChoiceModal();
   if(mode === 'agent'){
     // Temporarily switch to agent mode for this creation
@@ -2679,6 +2686,7 @@ async function connectWalletForChoice(){
   return new Promise((resolve) => {
     // Build a small picker overlay
     const overlay = document.getElementById('walletChoiceOverlay');
+    overlay.style.display = 'flex';
     overlay.classList.add('show');
     const modal = overlay.querySelector('.wallet-choice-modal');
     modal.innerHTML = `
@@ -2700,24 +2708,28 @@ async function connectWalletForChoice(){
     `;
     document.getElementById('wcCancel').onclick = () => {
       overlay.classList.remove('show');
+      overlay.style.display = 'none';
       resetWalletChoiceModal();
       resolve(false);
     };
     overlay.onclick = (e) => {
       if(e.target === overlay){
         overlay.classList.remove('show');
+        overlay.style.display = 'none';
         resetWalletChoiceModal();
         resolve(false);
       }
     };
     document.getElementById('wcKeplr').onclick = async () => {
       overlay.classList.remove('show');
+      overlay.style.display = 'none';
       await globalConnectWallet('keplr');
       resetWalletChoiceModal();
       resolve(walletMode !== 'agent' && !!connectedAddress);
     };
     document.getElementById('wcLeap').onclick = async () => {
       overlay.classList.remove('show');
+      overlay.style.display = 'none';
       await globalConnectWallet('leap');
       resetWalletChoiceModal();
       resolve(walletMode !== 'agent' && !!connectedAddress);
