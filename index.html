@@ -238,17 +238,6 @@ nav .gh-btn svg{width:16px;height:16px}
 .tc-feat.off{color:var(--text-muted);border-color:var(--border);background:transparent;opacity:.5}
 
 /* Allocation bar */
-.tc-alloc{margin-bottom:28px}
-.tc-alloc-title{font-family:var(--mono);font-size:.82rem;color:var(--text-dim);margin-bottom:12px}
-.alloc-bar{display:flex;height:28px;border-radius:var(--radius-sm);overflow:hidden;gap:2px}
-.alloc-seg{display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:.65rem;font-weight:700;color:#fff;transition:flex .6s ease}
-.alloc-seg.creator{background:var(--purple)}
-.alloc-seg.community{background:var(--green)}
-.alloc-seg.treasury{background:#f59e0b}
-.alloc-seg.liquidity{background:#3b82f6}
-.alloc-legend{display:flex;gap:20px;margin-top:10px;flex-wrap:wrap}
-.alloc-legend-item{display:flex;align-items:center;gap:6px;font-size:.78rem;color:var(--text-dim)}
-.alloc-legend-dot{width:10px;height:10px;border-radius:3px}
 
 /* CLI command */
 .tc-cli{
@@ -918,11 +907,6 @@ footer{
       <div class="tc-body">
         <div class="tc-stats" id="tcStats"></div>
         <div class="tc-features" id="tcFeatures"></div>
-        <div class="tc-alloc">
-          <div class="tc-alloc-title">Token Allocation</div>
-          <div class="alloc-bar" id="allocBar"></div>
-          <div class="alloc-legend" id="allocLegend"></div>
-        </div>
         <div class="tc-cli">
           <code id="tcCmd"></code>
           <button class="tc-copy" onclick="copyCmd()">Copy</button>
@@ -985,7 +969,7 @@ footer{
         <div class="step-num">02</div>
         <div class="step-icon">&#129302;</div>
         <h3>AI Parses</h3>
-        <p>Claude extracts token parameters, features, and allocations using tool_use.</p>
+        <p>Claude extracts token parameters and features using tool_use.</p>
         <div class="step-connector"></div>
       </div>
       <div class="step reveal">
@@ -1805,22 +1789,6 @@ function buildLiveTokenCard(data, desc){
     });
   }
 
-  // Allocation bar (same defaults)
-  const alloc = [
-    {cls:'creator',label:'Creator',pct:20,color:'var(--purple)'},
-    {cls:'community',label:'Community',pct:35,color:'var(--green)'},
-    {cls:'treasury',label:'Treasury',pct:25,color:'#f59e0b'},
-    {cls:'liquidity',label:'Liquidity',pct:20,color:'#3b82f6'},
-  ];
-  const bar = document.getElementById('allocBar'); bar.innerHTML = '';
-  const legend = document.getElementById('allocLegend'); legend.innerHTML = '';
-  alloc.forEach(a=>{
-    const seg = document.createElement('div'); seg.className = 'alloc-seg ' + a.cls;
-    seg.style.flex = '0 0 0%'; seg.textContent = a.pct + '%'; bar.appendChild(seg);
-    setTimeout(()=>{ seg.style.flex = '0 0 ' + a.pct + '%'; }, 50);
-    legend.innerHTML += '<div class="alloc-legend-item"><div class="alloc-legend-dot" style="background:' + a.color + '"></div>' + a.label + ' ' + a.pct + '%</div>';
-  });
-
   // CLI command
   const cmd = 'npx txai-create "' + desc + '"';
   document.getElementById('tcCmd').textContent = cmd;
@@ -1900,7 +1868,7 @@ async function runDemo(preset){
     '  > Decimals: '+cfg.decimals,
     'Detecting requested features...',
     ...Object.entries(cfg.features).filter(([,v])=>v).map(([k])=>'  > '+k+': enabled'),
-    'Generating allocation strategy...',
+    'Finalizing token configuration...',
     '  > Creator: 20% | Community: 35% | Treasury: 25% | Liquidity: 20%',
     'Building transaction payload...',
     'Submitting to TX blockchain...',
@@ -1964,28 +1932,12 @@ function buildTokenCard(cfg,desc){
     feats.appendChild(s);
   });
 
-  const alloc=[
-    {cls:'creator',label:'Creator',pct:20,color:'var(--purple)'},
-    {cls:'community',label:'Community',pct:35,color:'var(--green)'},
-    {cls:'treasury',label:'Treasury',pct:25,color:'#f59e0b'},
-    {cls:'liquidity',label:'Liquidity',pct:20,color:'#3b82f6'},
-  ];
-  const bar=document.getElementById('allocBar');bar.innerHTML='';
-  const legend=document.getElementById('allocLegend');legend.innerHTML='';
-  alloc.forEach(a=>{
-    const seg=document.createElement('div');seg.className='alloc-seg '+a.cls;
-    seg.style.flex='0 0 0%';seg.textContent=a.pct+'%';bar.appendChild(seg);
-    setTimeout(()=>{seg.style.flex='0 0 '+a.pct+'%'},50);
-    legend.innerHTML+='<div class="alloc-legend-item"><div class="alloc-legend-dot" style="background:'+a.color+'"></div>'+a.label+' '+a.pct+'%</div>';
-  });
-
   const cmd='npx txai-create "'+desc+'"';
   document.getElementById('tcCmd').textContent=cmd;
 
   const json={
     token:{name:cfg.name,symbol:cfg.symbol,initialSupply:String(cfg.supply),decimals:cfg.decimals,network:'coreum-mainnet-1'},
     features:cfg.features,
-    allocation:{creator:'20%',community:'35%',treasury:'25%',liquidity:'20%'},
     cli:'txai create "'+desc+'"'
   };
   document.getElementById('tcJson').innerHTML=syntaxHL(JSON.stringify(json,null,2));
