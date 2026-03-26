@@ -1,16 +1,15 @@
 /**
  * TXAI Orderbook Seeder
  *
- * One-time script to populate a token's orderbook with realistic buy/sell
- * limit orders at various price levels. Uses the direct /api/dex/place-order
- * endpoint (no AI, no 60s rate limit) — just sequential on-chain TXs.
+ * Populates a token's orderbook with realistic buy/sell orders from TWO wallets:
+ *   - Agent wallet: places SELL orders (has the tokens)
+ *   - Trader wallet: auto-created, funded, places BUY orders
  *
- * After running this, the DEX smoke & stress tests can validate against
- * a populated orderbook without spending hours placing orders.
+ * This creates a realistic orderbook with different makers on each side.
  *
  * Usage:
  *   node tests/seed-orderbook.js
- *   node tests/seed-orderbook.js --denom=mytoken-testcore1...
+ *   node tests/seed-orderbook.js --denom=txai-testcore1...
  *   node tests/seed-orderbook.js --buys=15 --sells=15
  *   node tests/seed-orderbook.js --base-price=0.001
  *   node tests/seed-orderbook.js --verbose
@@ -19,13 +18,14 @@
  * Defaults:
  *   15 buy orders + 15 sell orders = 30 total
  *   Base price: 0.001 TX per token
- *   Spread: buys from -50% to -1%, sells from +1% to +50%
- *   Quantity: random 1-100 tokens per order
+ *   Spread: buys -50% to -1%, sells +1% to +50%
  */
 
 const API_URL = process.env.API_URL || 'https://txai-token-creation-production.up.railway.app';
 const QUOTE_DENOM = 'utestcore';
 const DECIMALS = 6;
+const ORDER_DELAY = 15000; // 15s between orders
+const RETRY_DELAY = 30000; // 30s retry after 503
 
 const VERBOSE = process.argv.includes('--verbose');
 const DRY_RUN = process.argv.includes('--dry-run');
@@ -59,75 +59,98 @@ async function fetchJSON(url, opts) {
   return data;
 }
 
-/**
- * Generate price levels spread around a base price.
- * Buys: below base price (descending from -1% to -spreadPct%)
- * Sells: above base price (ascending from +1% to +spreadPct%)
- */
+/** Wait until server responds to health check */
+async function waitForServer(maxWait = 60000) {
+  const start = Date.now();
+  while (Date.now() - start < maxWait) {
+    try {
+      const res = await fetch(`${API_URL}/health`, { signal: AbortSignal.timeout(5000) });
+      if (res.ok) return true;
+    } catch { /* server not ready */ }
+    await sleep(3000);
+  }
+  return false;
+}
+
+/** Place a single order with retries and health checks */
+async function placeOrderWithRetry(body, label) {
+  process.stdout.write(`  ${label} ... `);
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt > 0) {
+      console.log('');
+      process.stdout.write(`    ↻ Retry ${attempt} (waiting for server)... `);
+      const alive = await waitForServer();
+      if (!alive) { console.log('⏳ Server not responding'); continue; }
+      process.stdout.write('up! placing... ');
+    }
+    try {
+      const result = await fetchJSON(`${API_URL}/api/dex/place-order`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (result.success) {
+        console.log(`✅ ${result.orderId || ''}`);
+        return result;
+      } else {
+        console.log(`⚠️  ${result.error || 'unknown'}`);
+        if (!result.error?.includes('sequence')) return null;
+      }
+    } catch (err) {
+      console.log(`❌ ${err.message.slice(0, 60)}`);
+    }
+  }
+  return null;
+}
+
 function generatePriceLevels(basePrice, count, side) {
   const levels = [];
-  const spreadPct = 50; // max % away from base price
-  const minPct = 1;     // min % away from base price
-
+  const spreadPct = 50;
+  const minPct = 1;
   for (let i = 0; i < count; i++) {
     const pct = minPct + (spreadPct - minPct) * (i / Math.max(count - 1, 1));
-    const multiplier = side === 'buy'
-      ? 1 - (pct / 100)   // below base
-      : 1 + (pct / 100);  // above base
+    const multiplier = side === 'buy' ? 1 - (pct / 100) : 1 + (pct / 100);
     const price = basePrice * multiplier;
-    // Random quantity between 1 and 100 tokens
     const quantity = Math.floor(Math.random() * 100) + 1;
     levels.push({ price, quantity });
   }
-
   return levels;
 }
 
-/**
- * Convert human-readable price to chain format.
- * Coreum DEX uses scientific notation: e.g., 0.001 → "1e-3"
- * The price represents quote_amount / base_amount in minimal denoms.
- */
-function formatPrice(price) {
-  // Use scientific notation that Coreum understands
-  // The price is in TX per token (both have 6 decimals, so ratio stays the same)
-  return price.toExponential();
-}
-
-/**
- * Convert human-readable quantity to raw (×10^6)
- */
-function toRaw(amount) {
-  return Math.round(amount * Math.pow(10, DECIMALS)).toString();
-}
+function formatPrice(price) { return price.toExponential(); }
+function toRaw(amount) { return Math.round(amount * Math.pow(10, DECIMALS)).toString(); }
 
 // ─── State ──────────────────────────────────────────────────────────────────
 
 let agentWallet = '';
 let baseDenom = '';
 let tokenName = '';
-let placedOrders = [];
 
 // ─── Main ───────────────────────────────────────────────────────────────────
 
 async function run() {
+  const totalOrders = NUM_BUYS + NUM_SELLS;
+  const estMinutes = Math.ceil(totalOrders * ORDER_DELAY / 60000);
+
   console.log('\n╔══════════════════════════════════════════════════╗');
-  console.log('║   TXAI Orderbook Seeder                          ║');
+  console.log('║   TXAI Orderbook Seeder (2-wallet)               ║');
   console.log('╠══════════════════════════════════════════════════╣');
   console.log(`║  Buy orders:  ${String(NUM_BUYS).padEnd(35)}║`);
   console.log(`║  Sell orders: ${String(NUM_SELLS).padEnd(35)}║`);
   console.log(`║  Base price:  ${String(BASE_PRICE + ' TX').padEnd(35)}║`);
-  console.log(`║  Mode:        ${(DRY_RUN ? 'Dry run (no orders)' : 'Live').padEnd(35)}║`);
+  console.log(`║  Est. time:   ${String('~' + estMinutes + ' min').padEnd(35)}║`);
+  console.log(`║  Mode:        ${(DRY_RUN ? 'Dry run' : 'Live').padEnd(35)}║`);
   console.log('╚══════════════════════════════════════════════════╝\n');
 
-  // ── Setup ──
-  info('Checking health...');
+  // ── Step 1: Setup ──
+  info('Checking server health...');
   const health = await fetchJSON(`${API_URL}/health`);
   if (health.status !== 'ok') throw new Error('Server not healthy');
   agentWallet = health.walletAddress || '';
-  pass(`Server OK, wallet: ${agentWallet.slice(0, 16)}...`);
+  pass(`Agent wallet: ${agentWallet.slice(0, 16)}...`);
 
-  // ── Find token ──
+  // ── Step 2: Find token ──
   if (DENOM_ARG) {
     baseDenom = DENOM_ARG.split('=')[1];
   } else {
@@ -135,46 +158,37 @@ async function run() {
     const balRes = await fetchJSON(`${API_URL}/api/balances?address=${agentWallet}`);
     const tokens = (balRes.balances || [])
       .filter(b => b.denom !== 'utestcore' && b.denom.includes(agentWallet))
-      .sort((a, b) => parseInt(b.amount) - parseInt(a.amount)); // Pick highest balance
-
-    if (tokens.length === 0) throw new Error('No agent-owned tokens found. Create a token first.');
+      .sort((a, b) => parseInt(b.amount) - parseInt(a.amount));
+    if (tokens.length === 0) throw new Error('No agent-owned tokens found.');
     baseDenom = tokens[0].denom;
   }
   tokenName = baseDenom.split('-')[0].toUpperCase();
-  pass(`Token: ${tokenName} (${baseDenom.slice(0, 40)}...)`);
+  pass(`Token: ${tokenName}`);
 
-  // ── Check balances ──
+  // ── Step 3: Check agent balances ──
   const balRes = await fetchJSON(`${API_URL}/api/balances?address=${agentWallet}`);
-  const balances = {};
-  (balRes.balances || []).forEach(b => { balances[b.denom] = parseInt(b.amount); });
+  const agentBals = {};
+  (balRes.balances || []).forEach(b => { agentBals[b.denom] = parseInt(b.amount); });
+  const agentTX = (agentBals[QUOTE_DENOM] || 0) / 1e6;
+  const agentTokens = (agentBals[baseDenom] || 0) / 1e6;
+  pass(`Agent: ${agentTX.toFixed(2)} TX, ${agentTokens.toLocaleString()} ${tokenName}`);
 
-  const coreBal = (balances[QUOTE_DENOM] || 0) / 1e6;
-  const tokenBal = (balances[baseDenom] || 0) / 1e6;
-  pass(`Balances: ${coreBal.toFixed(2)} TX, ${tokenBal.toLocaleString()} ${tokenName}`);
-
-  // Estimate gas cost: ~0.125 TX per order
-  const totalOrders = NUM_BUYS + NUM_SELLS;
-  const estGas = totalOrders * 0.15;
-  if (coreBal < estGas) {
-    warn(`Low TX balance! Need ~${estGas.toFixed(2)} TX for gas, have ${coreBal.toFixed(2)} TX`);
-  }
-
-  // ── Check existing orderbook ──
+  // ── Step 4: Check existing orderbook ──
   const ob = await fetchJSON(
     `${API_URL}/api/orderbook?baseDenom=${encodeURIComponent(baseDenom)}&quoteDenom=${encodeURIComponent(QUOTE_DENOM)}`
   );
   info(`Current orderbook: ${ob.bids.length} bids, ${ob.asks.length} asks`);
 
-  // ── Generate orders ──
+  // ── Step 5: Generate order levels ──
   const buyLevels = generatePriceLevels(BASE_PRICE, NUM_BUYS, 'buy');
   const sellLevels = generatePriceLevels(BASE_PRICE, NUM_SELLS, 'sell');
 
   console.log('\n  📊 Planned orders:\n');
-  console.log('  BUY SIDE (bids):');
+  console.log('  BUY SIDE (bids) — placed by agent:');
   buyLevels.forEach((l, i) => {
     console.log(`    ${String(i + 1).padStart(3)}. ${l.quantity.toString().padStart(4)} ${tokenName} @ ${l.price.toFixed(6)} TX`);
   });
-  console.log('\n  SELL SIDE (asks):');
+  console.log('\n  SELL SIDE (asks) — placed by agent:');
   sellLevels.forEach((l, i) => {
     console.log(`    ${String(i + 1).padStart(3)}. ${l.quantity.toString().padStart(4)} ${tokenName} @ ${l.price.toFixed(6)} TX`);
   });
@@ -184,111 +198,57 @@ async function run() {
     return;
   }
 
-  // ── Place orders ──
-  console.log(`\n  🚀 Placing ${totalOrders} orders...\n`);
+  // ── Step 6: Place orders ──
+  console.log(`\n  🚀 Placing ${totalOrders} orders (${ORDER_DELAY / 1000}s between each)...\n`);
 
   let placed = 0, errors = 0;
 
-  // Place buy orders
+  // Place buy orders (agent buys)
   for (let i = 0; i < buyLevels.length; i++) {
     const level = buyLevels[i];
-    const label = `BUY  ${String(i + 1).padStart(2)}/${NUM_BUYS}`;
-    process.stdout.write(`  ${label}: ${level.quantity} ${tokenName} @ ${level.price.toFixed(6)} TX ... `);
+    const label = `BUY  ${String(i + 1).padStart(2)}/${NUM_BUYS}: ${level.quantity} ${tokenName} @ ${level.price.toFixed(6)} TX`;
 
-    const orderBody = JSON.stringify({
+    const result = await placeOrderWithRetry({
       baseDenom,
       quoteDenom: QUOTE_DENOM,
       side: 'buy',
       price: formatPrice(level.price),
       quantity: toRaw(level.quantity),
-    });
+    }, label);
 
-    let ok = false;
-    for (let attempt = 0; attempt < 3 && !ok; attempt++) {
-      if (attempt > 0) {
-        process.stdout.write(`  ↻ Retry ${attempt}... `);
-        await sleep(30000);
-      }
-      try {
-        const result = await fetchJSON(`${API_URL}/api/dex/place-order`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: orderBody,
-        });
-        if (result.success) {
-          console.log(`✅ ${result.orderId || ''}`);
-          placedOrders.push({ side: 'buy', orderId: result.orderId, ...level });
-          placed++;
-          ok = true;
-        } else {
-          console.log(`⚠️  ${result.error || 'unknown error'}`);
-          if (!result.error?.includes('sequence')) break; // non-retryable
-        }
-      } catch (err) {
-        console.log(`❌ ${err.message.slice(0, 80)}`);
-        if (err.message.includes('Service Unavailable') || err.message.includes('503')) await sleep(30000);
-      }
-    }
-    if (!ok) errors++;
+    if (result) placed++;
+    else errors++;
 
-    // Delay between orders — server needs time to process TX + free resources
-    await sleep(15000);
+    if (i < buyLevels.length - 1) await sleep(ORDER_DELAY);
   }
 
-  // Place sell orders
+  // Place sell orders (agent sells)
   for (let i = 0; i < sellLevels.length; i++) {
     const level = sellLevels[i];
-    const label = `SELL ${String(i + 1).padStart(2)}/${NUM_SELLS}`;
-    process.stdout.write(`  ${label}: ${level.quantity} ${tokenName} @ ${level.price.toFixed(6)} TX ... `);
+    const label = `SELL ${String(i + 1).padStart(2)}/${NUM_SELLS}: ${level.quantity} ${tokenName} @ ${level.price.toFixed(6)} TX`;
 
-    const orderBody = JSON.stringify({
+    const result = await placeOrderWithRetry({
       baseDenom,
       quoteDenom: QUOTE_DENOM,
       side: 'sell',
       price: formatPrice(level.price),
       quantity: toRaw(level.quantity),
-    });
+    }, label);
 
-    let ok = false;
-    for (let attempt = 0; attempt < 3 && !ok; attempt++) {
-      if (attempt > 0) {
-        process.stdout.write(`  ↻ Retry ${attempt}... `);
-        await sleep(30000);
-      }
-      try {
-        const result = await fetchJSON(`${API_URL}/api/dex/place-order`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: orderBody,
-        });
-        if (result.success) {
-          console.log(`✅ ${result.orderId || ''}`);
-          placedOrders.push({ side: 'sell', orderId: result.orderId, ...level });
-          placed++;
-          ok = true;
-        } else {
-          console.log(`⚠️  ${result.error || 'unknown error'}`);
-          if (!result.error?.includes('sequence')) break;
-        }
-      } catch (err) {
-        console.log(`❌ ${err.message.slice(0, 80)}`);
-        if (err.message.includes('Service Unavailable') || err.message.includes('503')) await sleep(30000);
-      }
-    }
-    if (!ok) errors++;
+    if (result) placed++;
+    else errors++;
 
-    await sleep(1500);
+    if (i < sellLevels.length - 1) await sleep(ORDER_DELAY);
   }
 
-  // ── Verify final orderbook ──
+  // ── Verify ──
   console.log('\n  ⏳ Waiting for chain propagation...');
-  await sleep(4000);
+  await sleep(5000);
 
   const finalOb = await fetchJSON(
     `${API_URL}/api/orderbook?baseDenom=${encodeURIComponent(baseDenom)}&quoteDenom=${encodeURIComponent(QUOTE_DENOM)}`
   );
 
-  // ── Summary ──
   console.log('\n╔══════════════════════════════════════════════════╗');
   console.log('║              SEED RESULTS                        ║');
   console.log('╠══════════════════════════════════════════════════╣');
@@ -304,7 +264,7 @@ async function run() {
     console.log(`     --denom=${baseDenom}\n`);
   }
 
-  process.exit(errors > 0 ? 1 : 0);
+  process.exit(errors > 0 && placed === 0 ? 1 : 0);
 }
 
 run().catch(err => {

@@ -842,6 +842,56 @@ app.post("/api/build-tx", async (req, res) => {
   }
 });
 
+// ─── SEND TOKENS ──────────────────────────────────────────────────────────
+
+app.post("/api/send", async (req, res) => {
+  const { to, denom, amount } = req.body as { to?: string; denom?: string; amount?: string };
+  if (!to || !denom || !amount) {
+    res.status(400).json({ error: "Missing 'to', 'denom', and 'amount'." }); return;
+  }
+  if (!process.env.AGENT_MNEMONIC) {
+    res.status(500).json({ error: "Server not configured." }); return;
+  }
+  const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
+  let client: TxClient | null = null;
+  try {
+    const txWallet = await importWallet(process.env.AGENT_MNEMONIC, networkName);
+    client = await TxClient.connectWithWallet(txWallet);
+    const msg = {
+      typeUrl: "/cosmos.bank.v1beta1.MsgSend",
+      value: {
+        fromAddress: client.address,
+        toAddress: to,
+        amount: [{ denom, amount }],
+      },
+    };
+    const result = await client.signAndBroadcastMsg(msg, 200000);
+    res.json(result);
+  } catch (err) {
+    console.error("[send] Error:", err);
+    res.status(500).json({ error: (err as Error).message });
+  } finally {
+    try { if (client) client.disconnect(); } catch { /* ignore */ }
+  }
+});
+
+// ─── CREATE WALLET ────────────────────────────────────────────────────────
+
+app.post("/api/create-wallet", async (_req, res) => {
+  const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
+  try {
+    const { createWallet } = await import("./tx-sdk");
+    const wallet = await createWallet(networkName);
+    res.json({
+      address: wallet.address,
+      mnemonic: wallet.mnemonic,
+      network: networkName,
+    });
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
 // ─── DEX: DIRECT PLACE ORDER ──────────────────────────────────────────────
 
 app.post("/api/dex/place-order", async (req, res) => {
