@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/styles.css?v=3">
+<link rel="stylesheet" href="css/styles.css?v=4">
 </head>
 <body>
 
@@ -320,6 +320,7 @@
         <span class="dex-pair-or">or</span>
         <input type="text" class="dex-pair-manual" id="dexBaseDenom" placeholder="Paste denom (e.g. mytoken-testcore1...)">
         <button class="dex-pair-load" onclick="dexLoadOrderbook()">Load</button>
+        <button class="dex-demo-btn" onclick="dexStartDemo()" title="Launch AI Agent Swarm Demo">🤖 Live Demo</button>
 
         <div class="dex-stats-strip">
           <div class="dex-stat"><span class="dex-stat-label">Last Price</span><span class="dex-stat-value" id="dexStatLast">--</span></div>
@@ -339,6 +340,68 @@
           <div class="dex-proc-title">Processing Order...</div>
         </div>
         <div class="dex-proc-stream" id="dexProcStream"></div>
+      </div>
+
+      <!-- Live Demo Overlay -->
+      <div class="dex-demo-overlay" id="dexDemoOverlay" style="display:none">
+        <div class="dex-demo-panel">
+          <div class="dex-demo-header">
+            <h3>🤖 AI Agent Swarm — Live DEX Demo</h3>
+            <div class="dex-demo-header-right">
+              <span class="dex-demo-timer" id="dexDemoTimer">00:00</span>
+              <button class="dex-demo-close" onclick="dexStopDemo()">✕</button>
+            </div>
+          </div>
+
+          <!-- Agent Cards -->
+          <div class="dex-demo-agents">
+            <div class="dex-demo-agent-card agent-buyer" id="dexDemoAgentA">
+              <div class="agent-role">🟢 Market Maker A</div>
+              <div class="agent-label">BUYER</div>
+              <div class="agent-addr" id="demoAddrA">Creating wallet...</div>
+              <div class="agent-stats">
+                <span>Balance: <b id="demoBalA">--</b></span>
+                <span>Orders: <b id="demoOrdersA">0</b></span>
+              </div>
+            </div>
+            <div class="dex-demo-agent-card agent-seller" id="dexDemoAgentB">
+              <div class="agent-role">🔴 Market Maker B</div>
+              <div class="agent-label">SELLER</div>
+              <div class="agent-addr" id="demoAddrB">Creating wallet...</div>
+              <div class="agent-stats">
+                <span>Balance: <b id="demoBalB">--</b></span>
+                <span>Orders: <b id="demoOrdersB">0</b></span>
+              </div>
+            </div>
+            <div class="dex-demo-agent-card agent-taker" id="dexDemoAgentTaker">
+              <div class="agent-role">🟣 Taker Bot</div>
+              <div class="agent-label">MARKET TAKER</div>
+              <div class="agent-addr" id="demoAddrTaker">Creating wallet...</div>
+              <div class="agent-stats">
+                <span>Balance: <b id="demoBalTaker">--</b></span>
+                <span>Orders: <b id="demoOrdersTaker">0</b></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Progress & Timeline -->
+          <div class="dex-demo-progress">
+            <div class="dex-demo-phase" id="dexDemoPhase">Initializing...</div>
+            <div class="dex-demo-bar-wrap">
+              <div class="dex-demo-bar" id="dexDemoBar" style="width:0%"></div>
+            </div>
+          </div>
+
+          <div class="dex-demo-timeline" id="dexDemoTimeline">
+            <div class="demo-log-entry info">Demo starting — 3 AI agents will create a full orderbook...</div>
+          </div>
+
+          <!-- Summary (shown at end) -->
+          <div class="dex-demo-summary" id="dexDemoSummary" style="display:none">
+            <div class="demo-summary-title">Demo Complete!</div>
+            <div class="demo-summary-grid" id="demoSummaryGrid"></div>
+          </div>
+        </div>
       </div>
 
       <!-- Terminal Grid -->
@@ -838,14 +901,14 @@
 
 
 <!-- Modular JavaScript -->
-<script src="js/config.js?v=3"></script>
-<script src="js/wallet.js?v=3"></script>
-<script src="js/chat.js?v=3"></script>
-<script src="js/create-token.js?v=3"></script>
-<script src="js/create-nft.js?v=3"></script>
-<script src="js/dex.js?v=3"></script>
-<script src="js/manage.js?v=3"></script>
-<script src="js/auth.js?v=3"></script>
+<script src="js/config.js?v=4"></script>
+<script src="js/wallet.js?v=4"></script>
+<script src="js/chat.js?v=4"></script>
+<script src="js/create-token.js?v=4"></script>
+<script src="js/create-nft.js?v=4"></script>
+<script src="js/dex.js?v=4"></script>
+<script src="js/manage.js?v=4"></script>
+<script src="js/auth.js?v=4"></script>
 
 </body>
 </html>

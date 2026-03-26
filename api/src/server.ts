@@ -1161,6 +1161,50 @@ app.post("/api/dex-chat", async (req, res) => {
   }
 });
 
+// ─── DEX: LIVE DEMO (SSE) ────────────────────────────────────────────────────
+
+import { runDexDemo, isDemoRunning } from "./dex-demo";
+
+app.post("/api/dex/live-demo", async (req, res) => {
+  // Only one demo at a time
+  if (isDemoRunning()) {
+    res.status(429).json({ error: "A demo is already running. Please wait." });
+    return;
+  }
+
+  const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
+
+  // SSE headers
+  res.writeHead(200, {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+    Connection: "keep-alive",
+    "Access-Control-Allow-Origin": "*",
+  });
+
+  const sendEvent = (event: string, data: Record<string, unknown>) => {
+    try {
+      res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+    } catch { /* connection closed */ }
+  };
+
+  // Abort controller for cleanup
+  const abortController = new AbortController();
+  req.on("close", () => abortController.abort());
+
+  try {
+    await runDexDemo({
+      networkName,
+      onEvent: sendEvent,
+      abortSignal: abortController.signal,
+    });
+  } catch (err) {
+    sendEvent("error", { message: (err as Error).message });
+  }
+
+  try { res.end(); } catch { /* ignore */ }
+});
+
 // ─── START ───────────────────────────────────────────────────────────────────
 
 app.listen(PORT, () => {

@@ -1298,3 +1298,115 @@ footer{
   .nft-batch-bar{flex-direction:column;align-items:flex-start}
   .nft-grid{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}
 }
+
+/* ===== DEX LIVE DEMO ===== */
+
+.dex-demo-btn{
+  background:linear-gradient(135deg,#7c3aed,#2563eb);
+  color:#fff;border:none;border-radius:6px;padding:6px 14px;
+  font-size:0.82rem;font-weight:600;cursor:pointer;
+  white-space:nowrap;transition:all .2s;
+  animation:demoPulse 2s ease-in-out infinite;
+}
+.dex-demo-btn:hover{transform:scale(1.05);box-shadow:0 0 20px rgba(124,58,237,.4)}
+@keyframes demoPulse{0%,100%{box-shadow:0 0 5px rgba(124,58,237,.3)}50%{box-shadow:0 0 15px rgba(124,58,237,.6)}}
+
+.dex-demo-overlay{
+  position:fixed;top:0;left:0;right:0;bottom:0;
+  background:rgba(0,0,0,.85);z-index:1000;
+  display:flex;align-items:center;justify-content:center;
+  padding:20px;
+}
+.dex-demo-panel{
+  background:#0d1117;border:1px solid #30363d;border-radius:12px;
+  width:100%;max-width:900px;max-height:90vh;
+  display:flex;flex-direction:column;overflow:hidden;
+}
+.dex-demo-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 20px;border-bottom:1px solid #30363d;
+  background:linear-gradient(135deg,rgba(124,58,237,.15),rgba(37,99,235,.15));
+}
+.dex-demo-header h3{margin:0;font-size:1.1rem;color:#e6edf3}
+.dex-demo-header-right{display:flex;align-items:center;gap:12px}
+.dex-demo-timer{
+  font-family:'JetBrains Mono',monospace;font-size:1rem;
+  color:#7c3aed;font-weight:600;
+}
+.dex-demo-close{
+  background:none;border:1px solid #30363d;color:#8b949e;
+  width:30px;height:30px;border-radius:6px;cursor:pointer;
+  font-size:1.1rem;display:flex;align-items:center;justify-content:center;
+}
+.dex-demo-close:hover{background:#21262d;color:#e6edf3}
+
+/* Agent Cards */
+.dex-demo-agents{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:12px;
+  padding:16px 20px;
+}
+.dex-demo-agent-card{
+  background:#161b22;border:1px solid #30363d;border-radius:8px;
+  padding:12px;position:relative;overflow:hidden;
+}
+.dex-demo-agent-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:3px;
+}
+.agent-buyer::before{background:linear-gradient(90deg,#22c55e,#16a34a)}
+.agent-seller::before{background:linear-gradient(90deg,#ef4444,#dc2626)}
+.agent-taker::before{background:linear-gradient(90deg,#a855f7,#7c3aed)}
+.agent-role{font-size:0.85rem;font-weight:600;color:#e6edf3;margin-bottom:2px}
+.agent-label{font-size:0.7rem;color:#8b949e;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
+.agent-addr{font-family:'JetBrains Mono',monospace;font-size:0.72rem;color:#7d8590;margin-bottom:8px}
+.agent-stats{display:flex;gap:12px;font-size:0.78rem;color:#8b949e}
+.agent-stats b{color:#e6edf3}
+
+/* Progress */
+.dex-demo-progress{padding:12px 20px}
+.dex-demo-phase{font-size:0.85rem;color:#8b949e;margin-bottom:8px}
+.dex-demo-bar-wrap{
+  height:6px;background:#21262d;border-radius:3px;overflow:hidden;
+}
+.dex-demo-bar{
+  height:100%;background:linear-gradient(90deg,#7c3aed,#2563eb);
+  border-radius:3px;transition:width .5s ease;
+}
+
+/* Timeline */
+.dex-demo-timeline{
+  flex:1;overflow-y:auto;padding:12px 20px;
+  max-height:300px;min-height:150px;
+  font-family:'JetBrains Mono',monospace;font-size:0.75rem;
+  border-top:1px solid #21262d;
+}
+.demo-log-entry{padding:3px 0;color:#8b949e;border-bottom:1px solid #161b22}
+.demo-log-entry.info{color:#8b949e}
+.demo-log-entry.success{color:#22c55e}
+.demo-log-entry.error{color:#ef4444}
+.demo-log-entry.warn{color:#f59e0b}
+.demo-log-entry.order{color:#e6edf3}
+.demo-log-entry.fill{color:#a855f7;font-weight:600;background:rgba(168,85,247,.08);padding:4px 6px;border-radius:4px}
+.demo-log-entry.taker{color:#2563eb}
+.demo-log-time{color:#484f58;margin-right:8px}
+
+/* Summary */
+.dex-demo-summary{
+  padding:16px 20px;border-top:1px solid #30363d;
+  background:rgba(34,197,94,.05);
+}
+.demo-summary-title{font-size:1rem;font-weight:600;color:#22c55e;margin-bottom:12px}
+.demo-summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.demo-stat{
+  background:#161b22;border:1px solid #21262d;border-radius:6px;
+  padding:10px;text-align:center;
+}
+.demo-stat-label{display:block;font-size:0.72rem;color:#8b949e;margin-bottom:4px}
+.demo-stat-value{font-size:1.1rem;font-weight:700;color:#e6edf3}
+.demo-stat-value.green{color:#22c55e}
+.demo-stat-value.red{color:#ef4444}
+
+@media(max-width:768px){
+  .dex-demo-agents{grid-template-columns:1fr}
+  .demo-summary-grid{grid-template-columns:repeat(2,1fr)}
+  .dex-demo-panel{max-height:95vh}
+}

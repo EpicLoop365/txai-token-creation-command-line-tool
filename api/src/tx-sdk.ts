@@ -187,6 +187,7 @@ const globalTxMutex = new TxMutex();
 export class TxClient {
   private signingClient: SigningStargateClient;
   private queryClient: StargateClient;
+  private txMutex: TxMutex;
   public readonly address: string;
   public readonly network: NetworkConfig;
   public readonly networkName: NetworkName;
@@ -196,16 +197,21 @@ export class TxClient {
     queryClient: StargateClient,
     address: string,
     network: NetworkConfig,
-    networkName: NetworkName
+    networkName: NetworkName,
+    txMutex: TxMutex = globalTxMutex
   ) {
     this.signingClient = signingClient;
     this.queryClient = queryClient;
     this.address = address;
     this.network = network;
     this.networkName = networkName;
+    this.txMutex = txMutex;
   }
 
-  static async connectWithWallet(txWallet: TxWallet): Promise<TxClient> {
+  static async connectWithWallet(
+    txWallet: TxWallet,
+    options?: { isolatedMutex?: boolean }
+  ): Promise<TxClient> {
     const { network, networkName, wallet, address } = txWallet;
     const gasPrice = GasPrice.fromString(`0.25${network.denom}`);
 
@@ -219,7 +225,8 @@ export class TxClient {
       { gasPrice, registry: getTxRegistry() }
     );
     const queryClient = await StargateClient.create(tmClient);
-    return new TxClient(signingClient, queryClient, address, network, networkName);
+    const mutex = options?.isolatedMutex ? new TxMutex() : globalTxMutex;
+    return new TxClient(signingClient, queryClient, address, network, networkName, mutex);
   }
 
   async getBalances(address: string): Promise<TokenBalance[]> {
@@ -247,7 +254,7 @@ export class TxClient {
   ): Promise<TransactionResult> {
     // Acquire the global mutex so only one transaction is in-flight at a time.
     // This prevents sequence number conflicts when multiple users share one wallet.
-    await globalTxMutex.acquire();
+    await this.txMutex.acquire();
 
     try {
       const fee = calculateFee(
@@ -289,7 +296,7 @@ export class TxClient {
       throw lastErr!;
     } finally {
       // Always release the mutex so the next queued transaction can proceed
-      globalTxMutex.release();
+      this.txMutex.release();
     }
   }
 

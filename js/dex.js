@@ -965,3 +965,247 @@ window.addEventListener('resize', () => {
   if(dexLastOrderbook) dexDrawDepthChart();
 });
 
+/* ===== LIVE DEX DEMO — AI Agent Swarm ===== */
+
+let dexDemoEventSource = null;
+let dexDemoStartTime = null;
+let dexDemoTimerInterval = null;
+let dexDemoOrderCounts = { A: 0, B: 0, Taker: 0 };
+
+function dexStartDemo() {
+  const overlay = document.getElementById('dexDemoOverlay');
+  if (!overlay) return;
+
+  // Reset UI
+  overlay.style.display = 'flex';
+  document.getElementById('dexDemoTimeline').innerHTML =
+    '<div class="demo-log-entry info">Launching AI Agent Swarm...</div>';
+  document.getElementById('dexDemoSummary').style.display = 'none';
+  document.getElementById('dexDemoPhase').textContent = 'Initializing...';
+  document.getElementById('dexDemoBar').style.width = '0%';
+  document.getElementById('demoAddrA').textContent = 'Creating wallet...';
+  document.getElementById('demoAddrB').textContent = 'Creating wallet...';
+  document.getElementById('demoAddrTaker').textContent = 'Creating wallet...';
+  document.getElementById('demoBalA').textContent = '--';
+  document.getElementById('demoBalB').textContent = '--';
+  document.getElementById('demoBalTaker').textContent = '--';
+  document.getElementById('demoOrdersA').textContent = '0';
+  document.getElementById('demoOrdersB').textContent = '0';
+  document.getElementById('demoOrdersTaker').textContent = '0';
+  dexDemoOrderCounts = { A: 0, B: 0, Taker: 0 };
+
+  // Start timer
+  dexDemoStartTime = Date.now();
+  dexDemoTimerInterval = setInterval(() => {
+    const elapsed = Math.floor((Date.now() - dexDemoStartTime) / 1000);
+    const m = String(Math.floor(elapsed / 60)).padStart(2, '0');
+    const s = String(elapsed % 60).padStart(2, '0');
+    document.getElementById('dexDemoTimer').textContent = `${m}:${s}`;
+  }, 1000);
+
+  // Start SSE connection
+  dexDemoEventSource = new EventSource(`${API_URL}/api/dex/live-demo`);
+
+  // Note: EventSource only supports GET. We need POST for this.
+  // Use fetch with ReadableStream instead.
+  if (dexDemoEventSource) {
+    dexDemoEventSource.close();
+    dexDemoEventSource = null;
+  }
+
+  // Use fetch-based SSE
+  dexDemoFetchSSE();
+}
+
+async function dexDemoFetchSSE() {
+  try {
+    const res = await fetch(`${API_URL}/api/dex/live-demo`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Unknown error' }));
+      dexDemoLog('error', err.error || `HTTP ${res.status}`);
+      return;
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+
+      // Parse SSE events from buffer
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || ''; // keep incomplete line
+
+      let currentEvent = '';
+      let currentData = '';
+
+      for (const line of lines) {
+        if (line.startsWith('event: ')) {
+          currentEvent = line.slice(7).trim();
+        } else if (line.startsWith('data: ')) {
+          currentData = line.slice(6).trim();
+        } else if (line === '' && currentEvent && currentData) {
+          // End of event
+          try {
+            const data = JSON.parse(currentData);
+            dexDemoProcessEvent(currentEvent, data);
+          } catch { /* ignore parse errors */ }
+          currentEvent = '';
+          currentData = '';
+        }
+      }
+    }
+  } catch (err) {
+    dexDemoLog('error', `Connection error: ${err.message}`);
+  }
+}
+
+function dexDemoProcessEvent(event, data) {
+  const phases = {
+    wallets: 5, funding: 15, connecting: 20, token: 25,
+    transfer: 30, orders: 40, fills: 70, taker: 85, summary: 95,
+  };
+
+  switch (event) {
+    case 'phase':
+      document.getElementById('dexDemoPhase').textContent = data.message;
+      if (phases[data.phase]) {
+        document.getElementById('dexDemoBar').style.width = phases[data.phase] + '%';
+      }
+      dexDemoLog('info', data.message);
+      break;
+
+    case 'wallet':
+      dexDemoLog('success', `${data.agent}: ${data.address.slice(0, 20)}...`);
+      if (data.agent.includes('Maker A')) {
+        document.getElementById('demoAddrA').textContent = data.address.slice(0, 16) + '...';
+      } else if (data.agent.includes('Maker B')) {
+        document.getElementById('demoAddrB').textContent = data.address.slice(0, 16) + '...';
+      } else if (data.agent.includes('Taker')) {
+        document.getElementById('demoAddrTaker').textContent = data.address.slice(0, 16) + '...';
+      }
+      break;
+
+    case 'funding':
+      const icon = data.success ? '💰' : '⚠️';
+      dexDemoLog(data.success ? 'info' : 'warn',
+        `${icon} ${data.agent} faucet ${data.request}/${data.total}: ${data.success ? 'funded' : data.message}`);
+      break;
+
+    case 'balance':
+      dexDemoLog('success', `${data.agent}: ${data.display}`);
+      if (data.agent.includes('Maker A')) {
+        document.getElementById('demoBalA').textContent = data.display;
+      } else if (data.agent.includes('Maker B')) {
+        document.getElementById('demoBalB').textContent = data.display;
+      } else if (data.agent.includes('Taker')) {
+        document.getElementById('demoBalTaker').textContent = data.display;
+      }
+      break;
+
+    case 'token':
+      dexDemoLog('success', `Token created: ${data.symbol} (${data.supply.toLocaleString()} supply)`);
+      break;
+
+    case 'transfer':
+      dexDemoLog('info', `Sent ${data.amount.toLocaleString()} ${data.symbol} from ${data.from} to ${data.to}`);
+      break;
+
+    case 'order': {
+      const sideIcon = data.side === 'buy' ? '🟢' : '🔴';
+      const statusIcon = data.status === 'placed' ? '✅' : data.status === 'error' ? '❌' : '⚠️';
+      const overlap = data.overlap ? ' [OVERLAP]' : '';
+      dexDemoLog(data.status === 'error' ? 'error' : 'order',
+        `${sideIcon} ${statusIcon} ${data.agent?.split(' ')[0] || '?'}: ${data.side?.toUpperCase()} ${data.quantity || '?'} @ ${data.priceDisplay || data.price}${overlap}`);
+
+      // Update order count
+      if (data.agent?.includes('Maker A')) {
+        dexDemoOrderCounts.A++;
+        document.getElementById('demoOrdersA').textContent = dexDemoOrderCounts.A;
+      } else if (data.agent?.includes('Maker B')) {
+        dexDemoOrderCounts.B++;
+        document.getElementById('demoOrdersB').textContent = dexDemoOrderCounts.B;
+      }
+
+      // Update progress bar incrementally
+      const totalOrders = 23; // 12 buy + 11 sell
+      const totalPlaced = dexDemoOrderCounts.A + dexDemoOrderCounts.B;
+      const orderProgress = 40 + (totalPlaced / totalOrders) * 45;
+      document.getElementById('dexDemoBar').style.width = Math.min(orderProgress, 85) + '%';
+      break;
+    }
+
+    case 'fill':
+      dexDemoLog('fill', `⚡ FILL: ${data.quantity} ${data.symbol} @ ${data.priceDisplay} — ${data.buyer} ↔ ${data.seller}`);
+      break;
+
+    case 'taker':
+      const takerIcon = data.action === 'buy' ? '🟢' : '🔴';
+      dexDemoLog('taker', `${takerIcon} Taker ${data.action?.toUpperCase()}: ${data.quantity || '?'} @ ${data.price}`);
+      dexDemoOrderCounts.Taker++;
+      document.getElementById('demoOrdersTaker').textContent = dexDemoOrderCounts.Taker;
+      break;
+
+    case 'summary':
+      document.getElementById('dexDemoBar').style.width = '100%';
+      document.getElementById('dexDemoPhase').textContent = 'Demo complete!';
+      document.getElementById('dexDemoSummary').style.display = 'block';
+      document.getElementById('demoSummaryGrid').innerHTML = `
+        <div class="demo-stat"><span class="demo-stat-label">Token</span><span class="demo-stat-value">${data.token?.symbol || '?'}</span></div>
+        <div class="demo-stat"><span class="demo-stat-label">Orders Placed</span><span class="demo-stat-value">${data.totals?.placed || 0}</span></div>
+        <div class="demo-stat"><span class="demo-stat-label">Fills</span><span class="demo-stat-value">${data.totals?.fills || 0}</span></div>
+        <div class="demo-stat"><span class="demo-stat-label">Errors</span><span class="demo-stat-value">${data.totals?.errors || 0}</span></div>
+        <div class="demo-stat"><span class="demo-stat-label">Final Bids</span><span class="demo-stat-value green">${data.orderbook?.bids || 0}</span></div>
+        <div class="demo-stat"><span class="demo-stat-label">Final Asks</span><span class="demo-stat-value red">${data.orderbook?.asks || 0}</span></div>
+      `;
+
+      // Load the demo token's orderbook in the main DEX view
+      if (data.token?.denom) {
+        document.getElementById('dexBaseDenom').value = data.token.denom;
+        dexLoadOrderbook();
+      }
+      break;
+
+    case 'done':
+      dexDemoLog('success', '🏁 Demo complete! The orderbook is now populated.');
+      if (dexDemoTimerInterval) clearInterval(dexDemoTimerInterval);
+      break;
+
+    case 'error':
+      dexDemoLog('error', `💀 ${data.message}`);
+      if (dexDemoTimerInterval) clearInterval(dexDemoTimerInterval);
+      break;
+  }
+}
+
+function dexDemoLog(type, message) {
+  const timeline = document.getElementById('dexDemoTimeline');
+  if (!timeline) return;
+  const entry = document.createElement('div');
+  entry.className = `demo-log-entry ${type}`;
+  const time = new Date().toLocaleTimeString();
+  entry.innerHTML = `<span class="demo-log-time">${time}</span> ${message}`;
+  timeline.appendChild(entry);
+  timeline.scrollTop = timeline.scrollHeight;
+}
+
+function dexStopDemo() {
+  const overlay = document.getElementById('dexDemoOverlay');
+  if (overlay) overlay.style.display = 'none';
+  if (dexDemoTimerInterval) {
+    clearInterval(dexDemoTimerInterval);
+    dexDemoTimerInterval = null;
+  }
+  // Note: the fetch-based SSE doesn't have a clean abort mechanism
+  // The server will detect the closed connection via req.on('close')
+}
+
