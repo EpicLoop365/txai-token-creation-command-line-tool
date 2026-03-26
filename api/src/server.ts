@@ -399,10 +399,10 @@ app.post("/api/create-token", async (req, res) => {
 // ─── DEX: GET ORDERBOOK ──────────────────────────────────────────────────────
 
 app.get("/api/orderbook", async (req, res) => {
-  const baseDenom = req.query.base as string;
+  const baseDenom = (req.query.baseDenom as string) || (req.query.base as string);
   const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
-  const quoteDenom = (req.query.quote as string) || NETWORKS[networkName].denom;
-  if (!baseDenom) { res.status(400).json({ error: "Missing 'base' query parameter." }); return; }
+  const quoteDenom = (req.query.quoteDenom as string) || (req.query.quote as string) || NETWORKS[networkName].denom;
+  if (!baseDenom) { res.status(400).json({ error: "Missing 'baseDenom' query parameter." }); return; }
   try {
     const book = await queryOrderbook(baseDenom, quoteDenom, networkName);
     res.json(book);
@@ -412,12 +412,21 @@ app.get("/api/orderbook", async (req, res) => {
 // ─── DEX: GET ORDERS ─────────────────────────────────────────────────────────
 
 app.get("/api/orders", async (req, res) => {
-  const creator = req.query.creator as string;
   const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
+  let creator = req.query.creator as string;
+
+  // If no creator specified, use the agent wallet
+  if (!creator && process.env.AGENT_MNEMONIC) {
+    try {
+      const txWallet = await importWallet(process.env.AGENT_MNEMONIC, networkName);
+      creator = txWallet.address;
+    } catch { /* fall through */ }
+  }
   if (!creator) { res.status(400).json({ error: "Missing 'creator' query parameter." }); return; }
+
   try {
     const orders = await queryOrdersByCreator(creator, networkName);
-    res.json({ orders });
+    res.json({ wallet: creator, orders });
   } catch (err) { res.status(500).json({ error: (err as Error).message }); }
 });
 

@@ -554,7 +554,7 @@ export async function cancelOrder(
   return client.signAndBroadcastMsg(msg, 150000);
 }
 
-// ─── DEX QUERIES (REST) ─────────────────────────────────────────────────────
+// ─── DEX QUERIES (ABCI + REST) ──────────────────────────────────────────────
 
 export interface DexOrder {
   id: string;
@@ -574,23 +574,241 @@ export interface OrderbookData {
   asks: DexOrder[];
 }
 
+// ── Minimal protobuf helpers (no external deps) ─────────────────────────────
+
+function encodeString(fieldNum: number, value: string): Buffer {
+  const tag = Buffer.from([(fieldNum << 3) | 2]);
+  const strBuf = Buffer.from(value, "utf-8");
+  const lenBuf = encodeVarint(strBuf.length);
+  return Buffer.concat([tag, lenBuf, strBuf]);
+}
+
+function encodeVarint(value: number): Buffer {
+  const bytes: number[] = [];
+  while (value > 0x7f) { bytes.push((value & 0x7f) | 0x80); value >>>= 7; }
+  bytes.push(value & 0x7f);
+  return Buffer.from(bytes);
+}
+
+function decodeVarint(buf: Buffer, pos: number): [number, number] {
+  let result = 0, shift = 0;
+  while (pos < buf.length) {
+    const b = buf[pos++];
+    result |= (b & 0x7f) << shift;
+    shift += 7;
+    if (!(b & 0x80)) break;
+  }
+  return [result, pos];
+}
+
+interface ProtoFields { [fieldNum: number]: string | number | Buffer }
+
+function decodeMessage(buf: Buffer): ProtoFields {
+  const fields: ProtoFields = {};
+  let pos = 0;
+  while (pos < buf.length) {
+    const [tag, newPos] = decodeVarint(buf, pos);
+    pos = newPos;
+    const fieldNum = tag >>> 3;
+    const wireType = tag & 0x07;
+    if (wireType === 2) { // length-delimited
+      const [len, lenPos] = decodeVarint(buf, pos);
+      pos = lenPos;
+      const data = buf.subarray(pos, pos + len);
+      pos += len;
+      // Try to decode as UTF-8 string
+      try { fields[fieldNum] = data.toString("utf-8"); } catch { fields[fieldNum] = data; }
+    } else if (wireType === 0) { // varint
+      const [val, valPos] = decodeVarint(buf, pos);
+      pos = valPos;
+      fields[fieldNum] = val;
+    } else if (wireType === 5) { // 32-bit
+      pos += 4;
+    } else if (wireType === 1) { // 64-bit
+      pos += 8;
+    } else {
+      break;
+    }
+  }
+  return fields;
+}
+
+function extractRepeatedMessages(buf: Buffer, fieldNum: number): Buffer[] {
+  const messages: Buffer[] = [];
+  let pos = 0;
+  while (pos < buf.length) {
+    const [tag, newPos] = decodeVarint(buf, pos);
+    pos = newPos;
+    const fNum = tag >>> 3;
+    const wireType = tag & 0x07;
+    if (wireType === 2) {
+      const [len, lenPos] = decodeVarint(buf, pos);
+      pos = lenPos;
+      const data = buf.subarray(pos, pos + len);
+      pos += len;
+      if (fNum === fieldNum) messages.push(data);
+    } else if (wireType === 0) {
+      const [, valPos] = decodeVarint(buf, pos);
+      pos = valPos;
+    } else if (wireType === 5) { pos += 4; }
+    else if (wireType === 1) { pos += 8; }
+    else { break; }
+  }
+  return messages;
+}
+
+// Coreum DEX Order proto fields:
+// 1=creator, 2=type(enum), 3=id, 4=base_denom(string), 5=quote_denom(string),
+// 6=price(string), 7=quantity(uint64), 8=side(enum), 9=remaining_quantity(uint64),
+// 10=remaining_balance(uint64), 11=good_til, 12=time_in_force(enum)
+function protoToDexOrder(buf: Buffer): DexOrder {
+  const f = decodeMessage(buf);
+  const sideVal = f[8] as number || 0;
+  const typeVal = f[2] as number || 0;
+  return {
+    creator: (f[1] as string) || "",
+    type: typeVal === 1 ? "ORDER_TYPE_LIMIT" : typeVal === 2 ? "ORDER_TYPE_MARKET" : String(typeVal),
+    id: (f[3] as string) || "",
+    baseDenom: (f[5] as string) || "",
+    quoteDenom: (f[6] as string) || "",
+    price: (f[7] as string) || "0",
+    quantity: String(f[8] || "0"),
+    side: sideVal === 1 ? "SIDE_BUY" : sideVal === 2 ? "SIDE_SELL" : String(sideVal),
+    remainingQuantity: String(f[10] || "0"),
+    remainingBalance: String(f[11] || "0"),
+  };
+}
+
+// Hmm, the field numbering needs to match the actual proto. Let me use a more robust approach
+// by extracting fields and mapping by position based on what we know works.
+function parseOrderFromProto(buf: Buffer): DexOrder {
+  // Extract all string and varint fields in order
+  const strings: string[] = [];
+  const varints: number[] = [];
+  let pos = 0;
+  const fieldMap: { [key: number]: { type: string; value: string | number } } = {};
+
+  while (pos < buf.length) {
+    const [tag, newPos] = decodeVarint(buf, pos);
+    pos = newPos;
+    const fieldNum = tag >>> 3;
+    const wireType = tag & 0x07;
+    if (wireType === 2) {
+      const [len, lenPos] = decodeVarint(buf, pos);
+      pos = lenPos;
+      const data = buf.subarray(pos, pos + len);
+      pos += len;
+      const str = data.toString("utf-8");
+      fieldMap[fieldNum] = { type: "string", value: str };
+      strings.push(str);
+    } else if (wireType === 0) {
+      const [val, valPos] = decodeVarint(buf, pos);
+      pos = valPos;
+      fieldMap[fieldNum] = { type: "varint", value: val };
+      varints.push(val);
+    } else if (wireType === 5) { pos += 4; }
+    else if (wireType === 1) { pos += 8; }
+    else { break; }
+  }
+
+  // Based on the coreum proto definition:
+  // message Order {
+  //   string creator = 1;
+  //   OrderType type = 2;  (enum/varint)
+  //   string id = 3;
+  //   uint32 sequence = 4; (varint)
+  //   string base_denom = 5;
+  //   string quote_denom = 6;
+  //   string price = 7;
+  //   string quantity = 8;
+  //   Side side = 9; (enum/varint)
+  //   string remaining_quantity = 10;
+  //   string remaining_balance = 11;
+  //   GoodTil good_til = 12;
+  //   TimeInForce time_in_force = 13;
+  //   cosmos.base.v1beta1.Coin reserve = 14; (message)
+  // }
+
+  const creator = (fieldMap[1]?.value as string) || "";
+  const orderType = (fieldMap[2]?.value as number) || 0;
+  const id = (fieldMap[3]?.value as string) || "";
+  const baseDenom = (fieldMap[5]?.value as string) || "";
+  const quoteDenom = (fieldMap[6]?.value as string) || "";
+  const price = (fieldMap[7]?.value as string) || "0";
+  const quantity = (fieldMap[8]?.value as string) || "0";
+  const side = (fieldMap[9]?.value as number) || 0;
+  const remainingQuantity = (fieldMap[10]?.value as string) || "0";
+  const remainingBalance = (fieldMap[11]?.value as string) || "0";
+
+  return {
+    creator,
+    type: orderType === 1 ? "ORDER_TYPE_LIMIT" : orderType === 2 ? "ORDER_TYPE_MARKET" : String(orderType),
+    id,
+    baseDenom,
+    quoteDenom,
+    price,
+    quantity,
+    side: side === 1 ? "SIDE_BUY" : side === 2 ? "SIDE_SELL" : String(side),
+    remainingQuantity,
+    remainingBalance,
+  };
+}
+
+async function abciQuery(rpcEndpoint: string, path: string, data: Buffer): Promise<Buffer | null> {
+  const hexData = data.toString("hex");
+  const url = `${rpcEndpoint}/abci_query?path=%22${encodeURIComponent(path)}%22&data=0x${hexData}`;
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) return null;
+    const json = await resp.json() as { result?: { response?: { value?: string; code?: number } } };
+    const value = json.result?.response?.value;
+    if (!value || json.result?.response?.code) return null;
+    return Buffer.from(value, "base64");
+  } catch { return null; }
+}
+
 export async function queryOrderbook(
   baseDenom: string,
   quoteDenom: string,
   networkName: NetworkName = "testnet"
 ): Promise<OrderbookData> {
   const network = NETWORKS[networkName];
-  const baseUrl = `${network.restEndpoint}/coreum/dex/v1/order-book-orders`;
-  const [bidsResp, asksResp] = await Promise.all([
-    fetch(`${baseUrl}?base_denom=${encodeURIComponent(baseDenom)}&quote_denom=${encodeURIComponent(quoteDenom)}&side=SIDE_BUY`),
-    fetch(`${baseUrl}?base_denom=${encodeURIComponent(baseDenom)}&quote_denom=${encodeURIComponent(quoteDenom)}&side=SIDE_SELL`),
-  ]);
-  const parseSide = async (resp: Response): Promise<DexOrder[]> => {
-    if (!resp.ok) return [];
-    const data = await resp.json() as { orders?: DexOrder[] };
-    return data.orders ?? [];
-  };
-  const [bids, asks] = await Promise.all([parseSide(bidsResp), parseSide(asksResp)]);
+
+  // Try REST first (in case it gets implemented)
+  try {
+    const baseUrl = `${network.restEndpoint}/coreum/dex/v1/order-book-orders`;
+    const resp = await fetch(`${baseUrl}?base_denom=${encodeURIComponent(baseDenom)}&quote_denom=${encodeURIComponent(quoteDenom)}&side=SIDE_BUY`);
+    if (resp.ok) {
+      const data = await resp.json() as { orders?: DexOrder[] };
+      if (data.orders && data.orders.length >= 0) {
+        const asksResp = await fetch(`${baseUrl}?base_denom=${encodeURIComponent(baseDenom)}&quote_denom=${encodeURIComponent(quoteDenom)}&side=SIDE_SELL`);
+        const asksData = asksResp.ok ? (await asksResp.json() as { orders?: DexOrder[] }) : { orders: [] };
+        return { bids: data.orders ?? [], asks: asksData.orders ?? [] };
+      }
+    }
+  } catch { /* REST not available, fall through to ABCI */ }
+
+  // Use ABCI query: /coreum.dex.v1.Query/OrderBookOrders
+  // QueryOrderBookOrdersRequest: base_denom(1), quote_denom(2), side(3=enum), pagination(4)
+  const bids: DexOrder[] = [];
+  const asks: DexOrder[] = [];
+
+  for (const [sideEnum, list] of [[1, bids], [2, asks]] as [number, DexOrder[]][]) {
+    const reqData = Buffer.concat([
+      encodeString(1, baseDenom),
+      encodeString(2, quoteDenom),
+      Buffer.from([0x18, sideEnum]), // field 3, varint, side enum
+    ]);
+    const result = await abciQuery(network.rpcEndpoint, "/coreum.dex.v1.Query/OrderBookOrders", reqData);
+    if (result) {
+      const orderBufs = extractRepeatedMessages(result, 1); // field 1 = repeated Order
+      for (const ob of orderBufs) {
+        const order = parseOrderFromProto(ob);
+        list.push(order);
+      }
+    }
+  }
+
   return { bids, asks };
 }
 
@@ -599,12 +817,24 @@ export async function queryOrdersByCreator(
   networkName: NetworkName = "testnet"
 ): Promise<DexOrder[]> {
   const network = NETWORKS[networkName];
+
+  // Try REST first
   try {
     const resp = await fetch(`${network.restEndpoint}/coreum/dex/v1/orders?creator=${encodeURIComponent(creator)}`);
-    if (!resp.ok) return [];
-    const data = await resp.json() as { orders?: DexOrder[] };
-    return data.orders ?? [];
-  } catch { return []; }
+    if (resp.ok) {
+      const data = await resp.json() as { orders?: DexOrder[] };
+      if (data.orders) return data.orders;
+    }
+  } catch { /* fall through */ }
+
+  // ABCI query: /coreum.dex.v1.Query/Orders
+  // QueryOrdersRequest: creator(1=string)
+  const reqData = encodeString(1, creator);
+  const result = await abciQuery(network.rpcEndpoint, "/coreum.dex.v1.Query/Orders", reqData);
+  if (!result) return [];
+
+  const orderBufs = extractRepeatedMessages(result, 1); // field 1 = repeated Order
+  return orderBufs.map(parseOrderFromProto);
 }
 
 export async function queryOrderBooks(
@@ -614,7 +844,11 @@ export async function queryOrderBooks(
   try {
     const resp = await fetch(`${network.restEndpoint}/coreum/dex/v1/order-books`);
     if (!resp.ok) return [];
-    const data = await resp.json() as { orderBooks?: Array<{ baseDenom: string; quoteDenom: string }> };
-    return data.orderBooks ?? [];
+    const data = await resp.json() as { order_books?: Array<{ base_denom: string; quote_denom: string }> };
+    // Chain returns snake_case
+    return (data.order_books ?? []).map(ob => ({
+      baseDenom: ob.base_denom,
+      quoteDenom: ob.quote_denom,
+    }));
   } catch { return []; }
 }
