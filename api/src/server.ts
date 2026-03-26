@@ -1206,9 +1206,14 @@ app.post("/api/dex/live-demo", async (req, res) => {
     try { res.write(`:keepalive\n\n`); } catch { /* ignore */ }
   }, 10000);
 
-  // Abort controller for cleanup
+  // Abort controller for cleanup — use res.on("close"), NOT req.on("close")
+  // req "close" fires when the POST body stream ends (immediately after parsing),
+  // but res "close" fires when the actual client TCP connection drops.
   const abortController = new AbortController();
-  req.on("close", () => abortController.abort());
+  res.on("close", () => {
+    console.log("[live-demo] res.close fired — client disconnected");
+    abortController.abort();
+  });
 
   try {
     await runDexDemo({

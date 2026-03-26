@@ -161,8 +161,10 @@ export async function runDexDemo(config: DemoConfig): Promise<void> {
     ];
 
     for (const def of walletDefs) {
+      console.log(`[dex-demo] Creating wallet: ${def.name}, aborted=${abortSignal?.aborted}`);
       if (abortSignal?.aborted) throw new Error("Demo aborted");
       const w = await createWallet(networkName);
+      console.log(`[dex-demo] Wallet created: ${def.name} → ${w.address}`);
       agents.push({
         name: def.name,
         role: def.role,
