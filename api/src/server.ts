@@ -45,6 +45,11 @@ import {
   queryNFTClass,
   queryNFTsByClass,
   queryNFTsByOwner,
+  placeOrder,
+  cancelOrder,
+  DexSide,
+  DexOrderType,
+  DexTimeInForce,
 } from "./tx-sdk";
 import { defaultRegistryTypes } from "@cosmjs/stargate";
 import { Registry, GeneratedType } from "@cosmjs/proto-signing";
@@ -836,6 +841,61 @@ app.post("/api/build-tx", async (req, res) => {
     });
   } catch (err) {
     console.error("[build-tx] Error:", err);
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+// ─── DEX: DIRECT PLACE ORDER ──────────────────────────────────────────────
+
+app.post("/api/dex/place-order", async (req, res) => {
+  const { baseDenom, quoteDenom, side, price, quantity } = req.body as {
+    baseDenom?: string; quoteDenom?: string; side?: string; price?: string; quantity?: string;
+  };
+  if (!baseDenom || !quoteDenom || !side || !price || !quantity) {
+    res.status(400).json({ error: "Missing required fields: baseDenom, quoteDenom, side, price, quantity." });
+    return;
+  }
+  if (!process.env.AGENT_MNEMONIC) {
+    res.status(500).json({ error: "Server not configured." }); return;
+  }
+  const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
+  try {
+    const txWallet = await importWallet(process.env.AGENT_MNEMONIC, networkName);
+    const client = await TxClient.connectWithWallet(txWallet);
+    const result = await placeOrder(client, {
+      baseDenom,
+      quoteDenom,
+      side: side.toLowerCase() === "buy" ? DexSide.BUY : DexSide.SELL,
+      orderType: DexOrderType.LIMIT,
+      price,
+      quantity,
+      timeInForce: DexTimeInForce.GTC,
+    });
+    client.disconnect();
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+// ─── DEX: DIRECT CANCEL ORDER ─────────────────────────────────────────────
+
+app.post("/api/dex/cancel-order", async (req, res) => {
+  const { orderId } = req.body as { orderId?: string };
+  if (!orderId) {
+    res.status(400).json({ error: "Missing 'orderId'." }); return;
+  }
+  if (!process.env.AGENT_MNEMONIC) {
+    res.status(500).json({ error: "Server not configured." }); return;
+  }
+  const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
+  try {
+    const txWallet = await importWallet(process.env.AGENT_MNEMONIC, networkName);
+    const client = await TxClient.connectWithWallet(txWallet);
+    const result = await cancelOrder(client, orderId);
+    client.disconnect();
+    res.json(result);
+  } catch (err) {
     res.status(500).json({ error: (err as Error).message });
   }
 });
