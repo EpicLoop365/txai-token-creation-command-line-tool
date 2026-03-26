@@ -1284,8 +1284,8 @@ footer{
     <div class="chat-tab-bar reveal">
       <button class="chat-tab active" id="tabCreate" onclick="switchTab('create')">🚀 Create</button>
       <button class="chat-tab" id="tabChat" onclick="switchTab('chat')">💬 Chat Advisor</button>
-      <button class="chat-tab" id="tabDex" onclick="switchTab('dex')">📊 Order Book TXDEX</button>
-      <button class="chat-tab" id="tabManage" onclick="switchTab('manage')">⚙️ Manage Smart Tokens Post Creation</button>
+      <button class="chat-tab" id="tabDex" onclick="switchTab('dex')">📊 Order Book txDEX</button>
+      <button class="chat-tab" id="tabManage" onclick="switchTab('manage')">⚙️ Manage Smart Token</button>
     </div>
 
     <!-- Create Mode (existing) -->
@@ -4456,7 +4456,11 @@ async function manageLoadToken(){
     }).join('');
 
     // Check if current agent wallet is the issuer
-    const isIssuer = data.issuer && dexAgentWallet && data.issuer === dexAgentWallet;
+    // Check if either the agent wallet or the connected wallet is the issuer
+    const isIssuer = data.issuer && (
+      (dexAgentWallet && data.issuer === dexAgentWallet) ||
+      (connectedAddress && data.issuer === connectedAddress)
+    );
     document.getElementById('manageIssuerNotice').style.display = isIssuer ? 'none' : 'flex';
 
     // Show/hide action panels based on features and issuer status
