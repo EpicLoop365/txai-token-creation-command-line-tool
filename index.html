@@ -1092,16 +1092,24 @@ footer{
 }
 
 /* ===== CREATE TAB WALLET BAR ===== */
-.create-wallet-bar{
+/* Global Wallet Bar */
+.global-wallet-bar{
   display:flex;align-items:center;justify-content:space-between;
-  padding:12px 20px;margin-bottom:16px;
+  padding:10px 20px;margin-bottom:16px;
   background:var(--bg2);border:1px solid var(--border);border-radius:10px;
-  position:relative;z-index:50;
+  position:relative;z-index:50;gap:12px;
 }
-.create-wallet-info{display:flex;align-items:center;gap:12px}
-.create-wallet-mode{display:flex;align-items:center;gap:10px}
-.create-wallet-hint{
+.global-wallet-left{display:flex;align-items:center;gap:10px}
+.global-wallet-hint{
   font-family:var(--mono);font-size:.68rem;color:var(--text-muted);
+}
+.global-wallet-addr{
+  font-family:var(--mono);font-size:.72rem;color:var(--text-dim);
+  max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.global-wallet-right{display:flex;align-items:center;gap:8px}
+@media(max-width:700px){
+  .global-wallet-bar{flex-wrap:wrap;justify-content:center;gap:8px;padding:8px 14px}
 }
 
 /* ===== TOKEN MANAGER TAB ===== */
@@ -1311,6 +1319,43 @@ footer{
       <button class="chat-tab" id="tabManage" onclick="switchTab('manage')">⚙️ Manage Smart Token</button>
     </div>
 
+    <!-- Global Wallet Bar -->
+    <div class="global-wallet-bar reveal" id="globalWalletBar">
+      <div class="global-wallet-left">
+        <!-- Agent mode (default) -->
+        <div id="gwAgent">
+          <span class="dex-wallet-mode-badge agent">Demo Wallet</span>
+          <span class="global-wallet-hint">Try it free — no wallet needed</span>
+        </div>
+        <!-- Connected mode (hidden) -->
+        <div id="gwConnected" style="display:none">
+          <span class="dex-wallet-mode-badge connected" id="gwProviderBadge">Keplr</span>
+          <span class="global-wallet-addr" id="gwAddr"></span>
+          <span class="global-wallet-hint" id="gwHint">You are the token issuer</span>
+        </div>
+      </div>
+      <div class="global-wallet-right">
+        <!-- Disconnected: Connect button -->
+        <div id="gwActions">
+          <button class="dex-connect-btn" onclick="globalShowWalletOptions()">Connect Wallet</button>
+          <div class="dex-wallet-dropdown" id="gwDropdown">
+            <button class="dex-wallet-opt" onclick="globalConnectWallet('keplr')">
+              <img src="https://raw.githubusercontent.com/nicolaracco/kepler-ui/main/packages/icons/src/icons/keplr-logo.svg" alt="Keplr" onerror="this.style.display='none'">
+              Keplr Wallet
+            </button>
+            <button class="dex-wallet-opt" onclick="globalConnectWallet('leap')">
+              <img src="https://assets.leapwallet.io/logos/leap-cosmos-logo.svg" alt="Leap" onerror="this.style.display='none'">
+              Leap Wallet
+            </button>
+          </div>
+        </div>
+        <!-- Connected: Disconnect button -->
+        <div id="gwDisconnectWrap" style="display:none">
+          <button class="dex-disconnect-btn" onclick="globalDisconnectWallet()">Disconnect</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Create Mode (existing) -->
     <div id="createModeWrap">
     <div class="mode-toggle-wrap reveal">
@@ -1323,39 +1368,6 @@ footer{
     </div>
 
     <div class="demo-error" id="demoError"></div>
-
-    <!-- Create Tab Wallet Connection -->
-    <div class="create-wallet-bar reveal" id="createWalletBar">
-      <div class="create-wallet-info">
-        <div class="create-wallet-mode" id="createWalletMode">
-          <span class="dex-wallet-mode-badge agent">Agent Wallet</span>
-          <span class="create-wallet-hint">Token will be owned by the demo agent</span>
-        </div>
-      </div>
-      <div class="dex-wallet-area" id="createWalletArea">
-        <div id="createWalletDisconnected">
-          <button class="dex-connect-btn" onclick="createShowWalletOptions()">Connect Your Wallet</button>
-          <div class="dex-wallet-dropdown" id="createWalletDropdown">
-            <button class="dex-wallet-opt" onclick="createConnectWallet('keplr')">
-              <img src="https://raw.githubusercontent.com/nicolaracco/kepler-ui/main/packages/icons/src/icons/keplr-logo.svg" alt="Keplr" onerror="this.style.display='none'">
-              Keplr Wallet
-            </button>
-            <button class="dex-wallet-opt" onclick="createConnectWallet('leap')">
-              <img src="https://assets.leapwallet.io/logos/leap-cosmos-logo.svg" alt="Leap" onerror="this.style.display='none'">
-              Leap Wallet
-            </button>
-          </div>
-        </div>
-        <div id="createWalletConnected" style="display:none">
-          <div class="dex-connected-badge">
-            <span class="dot"></span>
-            <span class="provider" id="createWalletProvider">keplr</span>
-            <span class="addr" id="createConnectedAddr"></span>
-          </div>
-          <button class="dex-disconnect-btn" onclick="createDisconnectWallet()">Disconnect</button>
-        </div>
-      </div>
-    </div>
 
     <div class="demo-input-wrap reveal live-glow" id="demoInputWrap">
       <div class="demo-input-row">
@@ -1572,31 +1584,6 @@ footer{
           <div class="dex-live-badge"><span class="dex-live-dot" id="dexLiveDot"></span><span id="dexLiveText">Idle</span></div>
         </div>
 
-        <div class="dex-wallet-area" id="dexWalletArea">
-          <!-- Disconnected state -->
-          <div id="dexWalletDisconnected">
-            <button class="dex-connect-btn" onclick="dexShowWalletOptions()">Connect Wallet</button>
-            <div class="dex-wallet-dropdown" id="dexWalletDropdown">
-              <button class="dex-wallet-opt" onclick="dexConnectWallet('keplr')">
-                <img src="https://raw.githubusercontent.com/nicolaracco/kepler-ui/main/packages/icons/src/icons/keplr-logo.svg" alt="Keplr" onerror="this.style.display='none'">
-                Keplr Wallet
-              </button>
-              <button class="dex-wallet-opt" onclick="dexConnectWallet('leap')">
-                <img src="https://assets.leapwallet.io/logos/leap-cosmos-logo.svg" alt="Leap" onerror="this.style.display='none'">
-                Leap Wallet
-              </button>
-            </div>
-          </div>
-          <!-- Connected state (hidden by default) -->
-          <div id="dexWalletConnected" style="display:none">
-            <div class="dex-connected-badge">
-              <span class="dot"></span>
-              <span class="provider" id="dexWalletProvider">keplr</span>
-              <span class="addr" id="dexConnectedAddr"></span>
-            </div>
-            <button class="dex-disconnect-btn" onclick="dexDisconnectWallet()">Disconnect</button>
-          </div>
-        </div>
       </div>
 
       <!-- Processing Overlay -->
@@ -3059,12 +3046,12 @@ const COREUM_CHAIN_INFO = {
   features: [],
 };
 
-function dexShowWalletOptions(){
-  const dd = document.getElementById('dexWalletDropdown');
+/* ===== GLOBAL WALLET ===== */
+function globalShowWalletOptions(){
+  const dd = document.getElementById('gwDropdown');
   dd.classList.toggle('show');
-  // Close on outside click
   const handler = (e) => {
-    if(!document.getElementById('dexWalletArea').contains(e.target)){
+    if(!document.getElementById('globalWalletBar').contains(e.target)){
       dd.classList.remove('show');
       document.removeEventListener('click', handler);
     }
@@ -3072,9 +3059,8 @@ function dexShowWalletOptions(){
   setTimeout(() => document.addEventListener('click', handler), 10);
 }
 
-async function dexConnectWallet(provider){
-  const dd = document.getElementById('dexWalletDropdown');
-  dd.classList.remove('show');
+async function globalConnectWallet(provider){
+  document.getElementById('gwDropdown').classList.remove('show');
 
   const walletObj = provider === 'keplr' ? window.keplr : window.leap;
   if(!walletObj){
@@ -3085,51 +3071,21 @@ async function dexConnectWallet(provider){
   }
 
   try {
-    // Suggest chain (Coreum testnet may not be in default chain list)
-    if(walletObj.experimentalSuggestChain){
-      await walletObj.experimentalSuggestChain(COREUM_CHAIN_INFO);
-    }
+    if(walletObj.experimentalSuggestChain) await walletObj.experimentalSuggestChain(COREUM_CHAIN_INFO);
     await walletObj.enable(COREUM_CHAIN_ID);
 
     const signer = walletObj.getOfflineSigner
       ? walletObj.getOfflineSigner(COREUM_CHAIN_ID)
       : await walletObj.getOfflineSignerAuto(COREUM_CHAIN_ID);
     const accounts = await signer.getAccounts();
-
-    if(!accounts || accounts.length === 0){
-      alert('No accounts found in wallet.');
-      return;
-    }
+    if(!accounts || !accounts.length){ alert('No accounts found.'); return; }
 
     connectedAddress = accounts[0].address;
     connectedOfflineSigner = signer;
     walletMode = provider;
 
-    // Update UI
-    document.getElementById('dexWalletDisconnected').style.display = 'none';
-    document.getElementById('dexWalletConnected').style.display = 'flex';
-    document.getElementById('dexWalletProvider').textContent = provider;
-    document.getElementById('dexConnectedAddr').textContent =
-      connectedAddress.slice(0, 12) + '...' + connectedAddress.slice(-4);
-    document.getElementById('dexConnectedAddr').title = connectedAddress;
-
-    // Update order form info
-    document.getElementById('dexModeBadge').className = 'dex-wallet-mode-badge connected';
-    document.getElementById('dexModeBadge').textContent = provider === 'keplr' ? 'Keplr' : 'Leap';
-    document.getElementById('dexWalletAddr').textContent = connectedAddress;
-
-    // Fetch balances for connected wallet
-    dexFetchBalances(connectedAddress);
-
-    // If we have an active pair, refresh my orders
-    if(dexBaseDenom) dexFetchMyOrders();
-
-    // Listen for account changes
-    window.addEventListener('keplr_keystorechange', dexOnWalletAccountChange);
-
-    // Sync Create tab wallet UI
-    createUpdateWalletUI(true, provider);
-
+    updateGlobalWalletUI(true, provider);
+    window.addEventListener('keplr_keystorechange', globalOnAccountChange);
     console.log(`Connected ${provider} wallet: ${connectedAddress}`);
   } catch(err){
     console.error('Wallet connect error:', err);
@@ -3137,29 +3093,57 @@ async function dexConnectWallet(provider){
   }
 }
 
-function dexDisconnectWallet(){
+function globalDisconnectWallet(){
   walletMode = 'agent';
   connectedAddress = '';
   connectedOfflineSigner = null;
-
-  // Restore DEX UI
-  document.getElementById('dexWalletDisconnected').style.display = '';
-  document.getElementById('dexWalletConnected').style.display = 'none';
-  document.getElementById('dexModeBadge').className = 'dex-wallet-mode-badge agent';
-  document.getElementById('dexModeBadge').textContent = 'Agent';
-  document.getElementById('dexWalletAddr').textContent = dexAgentWallet || 'Loading...';
-
-  // Sync Create tab wallet UI
-  createUpdateWalletUI(false);
-
-  // Refetch agent balances
-  if(dexAgentWallet) dexFetchBalances(dexAgentWallet);
-  if(dexBaseDenom) dexFetchMyOrders();
-
-  window.removeEventListener('keplr_keystorechange', dexOnWalletAccountChange);
+  updateGlobalWalletUI(false);
+  window.removeEventListener('keplr_keystorechange', globalOnAccountChange);
 }
 
-async function dexOnWalletAccountChange(){
+function updateGlobalWalletUI(connected, provider){
+  // Global wallet bar
+  document.getElementById('gwAgent').style.display = connected ? 'none' : '';
+  document.getElementById('gwConnected').style.display = connected ? 'flex' : 'none';
+  document.getElementById('gwActions').style.display = connected ? 'none' : '';
+  document.getElementById('gwDisconnectWrap').style.display = connected ? '' : 'none';
+
+  if(connected){
+    const provName = provider === 'keplr' ? 'Keplr' : 'Leap';
+    document.getElementById('gwProviderBadge').textContent = provName;
+    document.getElementById('gwAddr').textContent = connectedAddress.slice(0, 12) + '...' + connectedAddress.slice(-4);
+    document.getElementById('gwAddr').title = connectedAddress;
+  }
+
+  // Update DEX order form info
+  const modeBadge = document.getElementById('dexModeBadge');
+  const walletAddr = document.getElementById('dexWalletAddr');
+  if(modeBadge){
+    if(connected){
+      modeBadge.className = 'dex-wallet-mode-badge connected';
+      modeBadge.textContent = provider === 'keplr' ? 'Keplr' : 'Leap';
+    } else {
+      modeBadge.className = 'dex-wallet-mode-badge agent';
+      modeBadge.textContent = 'Agent';
+    }
+  }
+  if(walletAddr){
+    walletAddr.textContent = connected ? connectedAddress : (dexAgentWallet || 'Loading...');
+  }
+
+  // Update Create tab button text
+  const demoBtn = document.getElementById('demoBtn');
+  if(demoBtn){
+    demoBtn.textContent = connected ? 'Create Token (Your Wallet)' : 'Deploy Token (Testnet)';
+  }
+
+  // Fetch balances for active address
+  const activeAddr = connected ? connectedAddress : dexAgentWallet;
+  if(activeAddr) dexFetchBalances(activeAddr);
+  if(dexBaseDenom) dexFetchMyOrders();
+}
+
+async function globalOnAccountChange(){
   if(walletMode === 'agent') return;
   try {
     const walletObj = walletMode === 'keplr' ? window.keplr : window.leap;
@@ -3170,11 +3154,7 @@ async function dexOnWalletAccountChange(){
     if(accounts[0].address !== connectedAddress){
       connectedAddress = accounts[0].address;
       connectedOfflineSigner = signer;
-      document.getElementById('dexConnectedAddr').textContent =
-        connectedAddress.slice(0, 12) + '...' + connectedAddress.slice(-4);
-      document.getElementById('dexWalletAddr').textContent = connectedAddress;
-      dexFetchBalances(connectedAddress);
-      if(dexBaseDenom) dexFetchMyOrders();
+      updateGlobalWalletUI(true, walletMode);
     }
   } catch(err){ console.error('Account change error:', err); }
 }
@@ -3411,104 +3391,7 @@ async function dexCancelOrderWallet(orderId){
 }
 
 /* ---- Create Tab Wallet Connection ---- */
-function createShowWalletOptions(){
-  const dd = document.getElementById('createWalletDropdown');
-  dd.classList.toggle('show');
-  const handler = (e) => {
-    if(!document.getElementById('createWalletArea').contains(e.target)){
-      dd.classList.remove('show');
-      document.removeEventListener('click', handler);
-    }
-  };
-  setTimeout(() => document.addEventListener('click', handler), 10);
-}
-
-async function createConnectWallet(provider){
-  document.getElementById('createWalletDropdown').classList.remove('show');
-
-  const walletObj = provider === 'keplr' ? window.keplr : window.leap;
-  if(!walletObj){
-    alert(`${provider === 'keplr' ? 'Keplr' : 'Leap'} wallet extension not found.\n\nPlease install it from:\n${
-      provider === 'keplr' ? 'https://www.keplr.app/download' : 'https://www.leapwallet.io/download'
-    }`);
-    return;
-  }
-
-  try {
-    if(walletObj.experimentalSuggestChain) await walletObj.experimentalSuggestChain(COREUM_CHAIN_INFO);
-    await walletObj.enable(COREUM_CHAIN_ID);
-
-    const signer = walletObj.getOfflineSigner
-      ? walletObj.getOfflineSigner(COREUM_CHAIN_ID)
-      : await walletObj.getOfflineSignerAuto(COREUM_CHAIN_ID);
-    const accounts = await signer.getAccounts();
-    if(!accounts || !accounts.length){ alert('No accounts found.'); return; }
-
-    // Update shared wallet state
-    connectedAddress = accounts[0].address;
-    connectedOfflineSigner = signer;
-    walletMode = provider;
-
-    // Update Create tab UI
-    createUpdateWalletUI(true, provider);
-
-    // Also update DEX tab if it was previously shown
-    document.getElementById('dexWalletDisconnected').style.display = 'none';
-    document.getElementById('dexWalletConnected').style.display = 'flex';
-    document.getElementById('dexWalletProvider').textContent = provider;
-    document.getElementById('dexConnectedAddr').textContent =
-      connectedAddress.slice(0, 12) + '...' + connectedAddress.slice(-4);
-    document.getElementById('dexModeBadge').className = 'dex-wallet-mode-badge connected';
-    document.getElementById('dexModeBadge').textContent = provider === 'keplr' ? 'Keplr' : 'Leap';
-    document.getElementById('dexWalletAddr').textContent = connectedAddress;
-
-    window.addEventListener('keplr_keystorechange', dexOnWalletAccountChange);
-    console.log(`Connected ${provider} wallet (Create tab): ${connectedAddress}`);
-  } catch(err){
-    console.error('Wallet connect error:', err);
-    alert('Failed to connect wallet: ' + (err.message || err));
-  }
-}
-
-function createDisconnectWallet(){
-  walletMode = 'agent';
-  connectedAddress = '';
-  connectedOfflineSigner = null;
-
-  // Update Create tab UI
-  createUpdateWalletUI(false);
-
-  // Also update DEX tab
-  document.getElementById('dexWalletDisconnected').style.display = '';
-  document.getElementById('dexWalletConnected').style.display = 'none';
-  document.getElementById('dexModeBadge').className = 'dex-wallet-mode-badge agent';
-  document.getElementById('dexModeBadge').textContent = 'Agent';
-  document.getElementById('dexWalletAddr').textContent = dexAgentWallet || 'Loading...';
-
-  window.removeEventListener('keplr_keystorechange', dexOnWalletAccountChange);
-}
-
-function createUpdateWalletUI(connected, provider){
-  if(connected){
-    document.getElementById('createWalletDisconnected').style.display = 'none';
-    document.getElementById('createWalletConnected').style.display = 'flex';
-    document.getElementById('createWalletProvider').textContent = provider;
-    document.getElementById('createConnectedAddr').textContent =
-      connectedAddress.slice(0, 12) + '...' + connectedAddress.slice(-4);
-    document.getElementById('createConnectedAddr').title = connectedAddress;
-    document.getElementById('createWalletMode').innerHTML =
-      '<span class="dex-wallet-mode-badge connected">' + (provider === 'keplr' ? 'Keplr' : 'Leap') + '</span>' +
-      '<span class="create-wallet-hint">You will be the token issuer</span>';
-    document.getElementById('demoBtn').textContent = 'Create Token (Your Wallet)';
-  } else {
-    document.getElementById('createWalletDisconnected').style.display = '';
-    document.getElementById('createWalletConnected').style.display = 'none';
-    document.getElementById('createWalletMode').innerHTML =
-      '<span class="dex-wallet-mode-badge agent">Agent Wallet</span>' +
-      '<span class="create-wallet-hint">Token will be owned by the demo agent</span>';
-    document.getElementById('demoBtn').textContent = 'Deploy Token (Testnet)';
-  }
-}
+/* Old per-tab wallet functions removed — now using globalConnectWallet/globalDisconnectWallet */
 
 /* ---- Build token config directly from the Customize Panel ---- */
 function getDirectTokenConfig(){
@@ -3792,13 +3675,21 @@ function dexFetchWallet(){
   fetch(API_URL + '/api/orders').then(r => r.json()).then(data => {
     if(data.wallet){
       dexAgentWallet = data.wallet;
-      document.getElementById('dexWalletAddr').textContent = dexAgentWallet;
-      dexFetchBalances(dexAgentWallet);
+      // Update DEX order form agent address (only if not connected)
+      if(walletMode === 'agent'){
+        const el = document.getElementById('dexWalletAddr');
+        if(el) el.textContent = dexAgentWallet;
+        dexFetchBalances(dexAgentWallet);
+      }
     }
   }).catch(() => {
-    document.getElementById('dexWalletAddr').textContent = 'Not connected';
+    const el = document.getElementById('dexWalletAddr');
+    if(el) el.textContent = 'Not connected';
   });
 }
+
+// Fetch agent wallet on page load so it's ready for all tabs
+setTimeout(dexFetchWallet, 500);
 
 async function dexFetchPairs(){
   try {
