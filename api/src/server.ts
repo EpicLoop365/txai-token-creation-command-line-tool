@@ -47,9 +47,6 @@ import {
   queryNFTsByOwner,
   placeOrder,
   cancelOrder,
-  DexSide,
-  DexOrderType,
-  DexTimeInForce,
 } from "./tx-sdk";
 import { defaultRegistryTypes } from "@cosmjs/stargate";
 import { Registry, GeneratedType } from "@cosmjs/proto-signing";
@@ -866,12 +863,12 @@ app.post("/api/dex/place-order", async (req, res) => {
     const result = await placeOrder(client, {
       baseDenom,
       quoteDenom,
-      side: side.toLowerCase() === "buy" ? DexSide.BUY : DexSide.SELL,
-      orderType: DexOrderType.LIMIT,
+      side: side.toLowerCase() === "buy" ? 1 : 2,  // 1=BUY, 2=SELL
+      orderType: 1,  // 1=LIMIT
       price,
       quantity,
-      timeInForce: DexTimeInForce.GTC,
-    });
+      timeInForce: 1,  // 1=GTC
+    } as any);
     res.json(result);
   } catch (err) {
     console.error("[dex/place-order] Error:", err);

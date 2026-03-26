@@ -207,7 +207,7 @@ async function run() {
     for (let attempt = 0; attempt < 3 && !ok; attempt++) {
       if (attempt > 0) {
         process.stdout.write(`  ↻ Retry ${attempt}... `);
-        await sleep(8000);
+        await sleep(30000);
       }
       try {
         const result = await fetchJSON(`${API_URL}/api/dex/place-order`, {
@@ -226,7 +226,7 @@ async function run() {
         }
       } catch (err) {
         console.log(`❌ ${err.message.slice(0, 80)}`);
-        if (err.message.includes('Service Unavailable')) await sleep(10000);
+        if (err.message.includes('Service Unavailable') || err.message.includes('503')) await sleep(30000);
       }
     }
     if (!ok) errors++;
@@ -253,7 +253,7 @@ async function run() {
     for (let attempt = 0; attempt < 3 && !ok; attempt++) {
       if (attempt > 0) {
         process.stdout.write(`  ↻ Retry ${attempt}... `);
-        await sleep(8000);
+        await sleep(30000);
       }
       try {
         const result = await fetchJSON(`${API_URL}/api/dex/place-order`, {
@@ -272,7 +272,7 @@ async function run() {
         }
       } catch (err) {
         console.log(`❌ ${err.message.slice(0, 80)}`);
-        if (err.message.includes('Service Unavailable')) await sleep(10000);
+        if (err.message.includes('Service Unavailable') || err.message.includes('503')) await sleep(30000);
       }
     }
     if (!ok) errors++;
