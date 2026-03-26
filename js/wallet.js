@@ -126,6 +126,9 @@ function updateGlobalWalletUI(connected, provider){
   const activeAddr = connected ? connectedAddress : dexAgentWallet;
   if(activeAddr) dexFetchBalances(activeAddr);
   if(dexBaseDenom) dexFetchMyOrders();
+
+  // Refresh DEX pairs to include connected wallet's tokens
+  if(typeof dexFetchPairs === 'function') dexFetchPairs();
 }
 
 async function globalOnAccountChange(){

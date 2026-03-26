@@ -23,12 +23,12 @@ async function dexPlaceOrderWallet(){
         sender: connectedAddress,
         type: dexOrderType === 'market' ? 2 : 1,
         id: orderId,
-        base_denom: dexBaseDenom,
-        quote_denom: DEX_QUOTE_DENOM,
+        baseDenom: dexBaseDenom,
+        quoteDenom: DEX_QUOTE_DENOM,
         price: price || '0',
         quantity: quantityRaw,
         side: dexSide === 'buy' ? 1 : 2,
-        time_in_force: 1,
+        timeInForce: 1,
       }
     };
 
@@ -219,15 +219,37 @@ setTimeout(dexFetchWallet, 500);
 
 async function dexFetchPairs(){
   try {
-    const res = await fetch(`${API_URL}/api/pairs`);
-    const data = await res.json();
+    const allDenoms = new Set();
+
+    // 1. Fetch agent wallet pairs from server
+    try {
+      const res = await fetch(`${API_URL}/api/pairs`);
+      const data = await res.json();
+      (data.pairs || []).forEach(p => {
+        if(p.baseDenom) allDenoms.add(p.baseDenom);
+      });
+    } catch(e){ console.warn('Agent pairs fetch:', e); }
+
+    // 2. If wallet connected, also fetch their tokens from chain
+    if(walletMode !== 'agent' && connectedAddress){
+      try {
+        const res = await fetch(`${COREUM_REST}/cosmos/bank/v1beta1/balances/${connectedAddress}`);
+        const data = await res.json();
+        (data.balances || []).forEach(b => {
+          // Skip native denom (utestcore) — it's the quote currency
+          if(b.denom !== 'utestcore' && b.denom !== DEX_QUOTE_DENOM){
+            allDenoms.add(b.denom);
+          }
+        });
+      } catch(e){ console.warn('Wallet balances fetch:', e); }
+    }
+
+    // 3. Build dropdown sorted alphabetically
     const sel = document.getElementById('dexPairSelect');
     sel.innerHTML = '<option value="">-- Select Pair --</option>';
-    // Sort pairs alphabetically by display name
-    const pairs = (data.pairs || []).map(p => {
-      const base = p.baseDenom || '';
-      return { base, name: dexTokenName(base) };
-    }).sort((a, b) => a.name.localeCompare(b.name));
+    const pairs = Array.from(allDenoms).map(d => ({
+      base: d, name: dexTokenName(d)
+    })).sort((a, b) => a.name.localeCompare(b.name));
     pairs.forEach(p => {
       const opt = document.createElement('option');
       opt.value = p.base;
