@@ -1325,28 +1325,61 @@ function dexStopDemo() {
 function dexUpdateAddWalletBtn() {
   const btn = document.getElementById('dexAddWalletBtn');
   if (!btn) return;
-  // Show only when a token is loaded AND a wallet is connected
-  btn.style.display = (dexBaseDenom && walletMode !== 'agent' && connectedAddress) ? '' : 'none';
+  // Show when a token is loaded (useful even without wallet — shows copy instructions)
+  btn.style.display = dexBaseDenom ? '' : 'none';
 }
 
 async function dexAddTokenToWallet() {
   if (!dexBaseDenom) { alert('Load a token first.'); return; }
-  if (walletMode === 'agent' || !connectedAddress) { alert('Connect a wallet first (Leap or Keplr).'); return; }
-
-  const btn = document.getElementById('dexAddWalletBtn');
-  const origText = btn.textContent;
-  btn.textContent = 'Adding...';
-  btn.disabled = true;
 
   const symbol = dexBaseDenom.split('-')[0].toUpperCase();
-  try {
-    await registerTokenWithWallet(dexBaseDenom, symbol, 6);
-    btn.textContent = '✅ Added!';
-    setTimeout(() => { btn.textContent = origText; btn.disabled = false; }, 3000);
-  } catch (err) {
-    btn.textContent = '❌ Failed';
-    console.error('Add to wallet failed:', err);
-    setTimeout(() => { btn.textContent = origText; btn.disabled = false; }, 3000);
+
+  // Try the programmatic approach first (may work on some wallet versions)
+  if (walletMode !== 'agent' && connectedAddress) {
+    try { await registerTokenWithWallet(dexBaseDenom, symbol, 6); } catch {}
   }
+
+  // Always show the helper modal with manual instructions + copy button
+  dexShowAddTokenModal(symbol);
+}
+
+function dexShowAddTokenModal(symbol) {
+  // Remove existing modal if any
+  const existing = document.getElementById('dexAddTokenModal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'dexAddTokenModal';
+  modal.className = 'dex-deposit-overlay';
+  modal.innerHTML = `
+    <div class="dex-deposit-panel">
+      <div class="dex-deposit-header">
+        <h3>➕ Add ${symbol} to Your Wallet</h3>
+        <button class="dex-demo-close" onclick="document.getElementById('dexAddTokenModal').remove()">✕</button>
+      </div>
+      <div class="dex-deposit-body">
+        <p class="dex-deposit-desc">
+          Custom tokens on Coreum need to be added manually in Leap/Keplr.
+        </p>
+        <p class="dex-deposit-instruction">
+          <b>In Leap:</b> Home → scroll down → click the ⚙️ filter icon next to "Your tokens" → search for your token or toggle it on.
+        </p>
+        <p class="dex-deposit-instruction" style="margin-top:8px">
+          <b>Token denom</b> (copy this):
+        </p>
+        <div class="dex-deposit-address-row">
+          <code id="dexAddTokenDenom">${dexBaseDenom}</code>
+          <button class="dex-deposit-copy" onclick="navigator.clipboard.writeText('${dexBaseDenom}').then(()=>{this.textContent='✅ Copied!';setTimeout(()=>this.textContent='📋 Copy',2000)})">📋 Copy</button>
+        </div>
+        <p class="dex-deposit-note">
+          Your ${symbol} tokens are on-chain and safe. This is just a wallet display issue — Leap doesn't auto-detect custom Coreum tokens yet.
+        </p>
+        <div class="dex-deposit-actions">
+          <button class="dex-deposit-check-btn" onclick="document.getElementById('dexAddTokenModal').remove()" style="background:linear-gradient(135deg,#22c55e,#16a34a)">Got it</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
 }
 
