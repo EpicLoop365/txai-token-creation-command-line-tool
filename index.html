@@ -3266,7 +3266,7 @@ async function dexPlaceOrderWallet(){
     });
     dexRenderSessionHistory();
 
-    const result = await dexBuildAndSignTx([msg], 300000);
+    const result = await dexBuildAndSignTx([msg], 500000);
 
     // Success!
     const txHash = result.txhash || result.hash || '';
@@ -3330,7 +3330,7 @@ async function dexCancelOrderWallet(orderId){
     });
     dexRenderSessionHistory();
 
-    const result = await dexBuildAndSignTx([msg], 200000);
+    const result = await dexBuildAndSignTx([msg], 500000);
 
     dexSessionLog[0].status = 'cancelled';
     dexRenderSessionHistory();
@@ -3494,11 +3494,62 @@ async function runWalletTokenCreation(inputText){
     const burnRate = toChainRate(tokenConfig.burnRate);
     const sendCommissionRate = toChainRate(tokenConfig.sendCommissionRate);
 
-    // Show what we're sending
+    // Show parsed config for review
     const enabledFeatures = Object.entries(tokenConfig.features || {}).filter(([,v]) => v).map(([k]) => k);
-    if(enabledFeatures.length) addStreamLine('  Features: ' + enabledFeatures.join(', '), 'tool');
-    if(tokenConfig.burnRate && tokenConfig.burnRate !== '0') addStreamLine('  Burn Rate: ' + (parseFloat(tokenConfig.burnRate)*100).toFixed(1) + '%', 'tool');
-    if(tokenConfig.sendCommissionRate && tokenConfig.sendCommissionRate !== '0') addStreamLine('  Transfer Fee: ' + (parseFloat(tokenConfig.sendCommissionRate)*100).toFixed(1) + '%', 'tool');
+
+    // Step 3: Show confirmation preview — wait for user to approve before signing
+    proc.classList.remove('show');
+    const confirmDiv = document.createElement('div');
+    confirmDiv.id = 'tokenConfirmPreview';
+    confirmDiv.style.cssText = 'background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:24px;margin:16px auto;max-width:600px;';
+    let confirmHtml = `
+      <h3 style="color:var(--green);margin:0 0 16px 0;font-size:1.1rem;">📋 Review Token Configuration</h3>
+      <table style="width:100%;border-collapse:collapse;font-size:.85rem;">
+        <tr><td style="padding:6px 12px;color:var(--text-muted);">Name</td><td style="padding:6px 12px;color:var(--text);">${escapeHtml(tokenConfig.name || tokenConfig.subunit || 'Token')}</td></tr>
+        <tr><td style="padding:6px 12px;color:var(--text-muted);">Symbol</td><td style="padding:6px 12px;color:var(--text);">${escapeHtml((tokenConfig.subunit || 'token').toUpperCase())}</td></tr>
+        <tr><td style="padding:6px 12px;color:var(--text-muted);">Supply</td><td style="padding:6px 12px;color:var(--text);">${escapeHtml(Number(tokenConfig.initialAmount || 1000000).toLocaleString())}</td></tr>
+        <tr><td style="padding:6px 12px;color:var(--text-muted);">Decimals</td><td style="padding:6px 12px;color:var(--text);">${precision}</td></tr>`;
+    if(enabledFeatures.length) confirmHtml += `
+        <tr><td style="padding:6px 12px;color:var(--text-muted);">Features</td><td style="padding:6px 12px;color:var(--green);">${enabledFeatures.join(', ')}</td></tr>`;
+    if(tokenConfig.burnRate && tokenConfig.burnRate !== '0') confirmHtml += `
+        <tr><td style="padding:6px 12px;color:var(--text-muted);">Burn Rate</td><td style="padding:6px 12px;color:var(--text);">${(parseFloat(tokenConfig.burnRate)*100).toFixed(1)}%</td></tr>`;
+    if(tokenConfig.sendCommissionRate && tokenConfig.sendCommissionRate !== '0') confirmHtml += `
+        <tr><td style="padding:6px 12px;color:var(--text-muted);">Transfer Fee</td><td style="padding:6px 12px;color:var(--text);">${(parseFloat(tokenConfig.sendCommissionRate)*100).toFixed(1)}%</td></tr>`;
+    if(tokenConfig.uri) confirmHtml += `
+        <tr><td style="padding:6px 12px;color:var(--text-muted);">Logo URI</td><td style="padding:6px 12px;color:var(--text);word-break:break-all;font-size:.75rem;">${escapeHtml(tokenConfig.uri)}</td></tr>`;
+    confirmHtml += `
+      </table>
+      <div style="display:flex;gap:12px;margin-top:20px;justify-content:center;">
+        <button id="confirmSignBtn" style="background:var(--green);color:#000;border:none;border-radius:8px;padding:10px 28px;font-weight:700;cursor:pointer;font-size:.9rem;">Confirm & Sign</button>
+        <button id="confirmCancelBtn" style="background:transparent;color:var(--text-muted);border:1px solid var(--border);border-radius:8px;padding:10px 20px;cursor:pointer;font-size:.9rem;">Cancel</button>
+      </div>
+    `;
+    confirmDiv.innerHTML = confirmHtml;
+
+    // Insert after the create form
+    const createForm = document.getElementById('demoInputWrap');
+    createForm.parentNode.insertBefore(confirmDiv, createForm.nextSibling);
+
+    // Wait for user to confirm or cancel
+    const userConfirmed = await new Promise((resolve) => {
+      document.getElementById('confirmSignBtn').onclick = () => resolve(true);
+      document.getElementById('confirmCancelBtn').onclick = () => resolve(false);
+    });
+
+    confirmDiv.remove();
+
+    if(!userConfirmed){
+      btn.textContent = walletMode !== 'agent' && connectedAddress ? 'Create Token (Your Wallet)' : 'Deploy Token (Testnet)';
+      btn.disabled = false;
+      demoRunning = false;
+      return;
+    }
+
+    // Step 4: User confirmed — now build and sign
+    proc.classList.add('show');
+    stream.innerHTML = '';
+    addStatus('Building transaction...');
+    btn.textContent = 'Sign in Wallet...';
 
     const msg = {
       typeUrl: '/coreum.asset.ft.v1.MsgIssue',
@@ -3517,12 +3568,9 @@ async function runWalletTokenCreation(inputText){
       }
     };
 
-    addStreamLine('  Raw Amount: ' + rawAmount, 'text');
-    addStreamLine('  Features (numeric): [' + features.join(', ') + ']', 'text');
-    addStatus('Requesting wallet signature...');
-    addStreamLine('  Issuer: ' + connectedAddress, 'text');
+    addStatus('Waiting for wallet signature...');
 
-    // Step 3: Sign with Keplr/Leap
+    // Sign with Keplr/Leap
     const result = await dexBuildAndSignTx([msg], 500000);
 
     const txHash = result.txhash || result.hash || '';
