@@ -895,6 +895,7 @@ app.post("/api/create-wallet", async (_req, res) => {
 // ─── DEX: DIRECT PLACE ORDER ──────────────────────────────────────────────
 
 app.post("/api/dex/place-order", async (req, res) => {
+  console.log("[dex/place-order] Request received:", JSON.stringify(req.body).slice(0, 200));
   const { baseDenom, quoteDenom, side, price, quantity } = req.body as {
     baseDenom?: string; quoteDenom?: string; side?: string; price?: string; quantity?: string;
   };
@@ -908,8 +909,11 @@ app.post("/api/dex/place-order", async (req, res) => {
   const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
   let client: TxClient | null = null;
   try {
+    console.log("[dex/place-order] Step 1: importing wallet...");
     const txWallet = await importWallet(process.env.AGENT_MNEMONIC, networkName);
+    console.log("[dex/place-order] Step 2: connecting client...");
     client = await TxClient.connectWithWallet(txWallet);
+    console.log("[dex/place-order] Step 3: placing order...");
     const result = await placeOrder(client, {
       baseDenom,
       quoteDenom,
@@ -919,12 +923,43 @@ app.post("/api/dex/place-order", async (req, res) => {
       quantity,
       timeInForce: 1,  // 1=GTC
     } as any);
-    res.json(result);
+    console.log("[dex/place-order] Step 4: success!", result.orderId);
+    res.json({ success: true, ...result });
   } catch (err) {
-    console.error("[dex/place-order] Error:", err);
-    res.status(500).json({ error: (err as Error).message });
+    console.error("[dex/place-order] Error:", (err as Error).message);
+    console.error("[dex/place-order] Stack:", (err as Error).stack);
+    res.status(500).json({ success: false, error: (err as Error).message });
   } finally {
     try { if (client) client.disconnect(); } catch { /* ignore disconnect errors */ }
+  }
+});
+
+// ─── DEX: DIAGNOSTIC ────────────────────────────────────────────────────────
+
+app.get("/api/dex/debug", async (_req, res) => {
+  const steps: string[] = [];
+  const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
+  let client: TxClient | null = null;
+  try {
+    steps.push("1. Starting...");
+    if (!process.env.AGENT_MNEMONIC) { res.json({ steps, error: "No mnemonic" }); return; }
+
+    steps.push("2. Importing wallet...");
+    const txWallet = await importWallet(process.env.AGENT_MNEMONIC, networkName);
+    steps.push(`3. Wallet imported: ${txWallet.address?.slice(0, 16)}...`);
+
+    steps.push("4. Connecting client...");
+    client = await TxClient.connectWithWallet(txWallet);
+    steps.push(`5. Client connected: ${client.address.slice(0, 16)}...`);
+
+    steps.push("6. All steps passed — client is ready for transactions");
+    res.json({ steps, success: true });
+  } catch (err) {
+    steps.push(`ERROR: ${(err as Error).message}`);
+    console.error("[dex/debug] Error at step:", steps.length, err);
+    res.json({ steps, error: (err as Error).message });
+  } finally {
+    try { if (client) client.disconnect(); } catch {}
   }
 });
 
