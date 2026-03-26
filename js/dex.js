@@ -287,6 +287,8 @@ function dexAutoSelectToken(denom){
   // Set the base denom input too
   document.getElementById('dexBaseDenom').value = denom;
   dexBaseDenom = denom;
+  // Auto-load the orderbook so the user doesn't have to click Load
+  dexLoadOrderbook();
 }
 
 async function dexFetchBalances(address){
