@@ -328,7 +328,7 @@ const FEATURE_MAP: Record<keyof SmartTokenFeatures, number> = {
   freezing: 2,
   whitelisting: 3,
   ibcEnabled: 4,
-  clawback: 5,
+  clawback: 6,
 };
 
 // ─── SMART TOKEN OPERATIONS ──────────────────────────────────────────────────
@@ -554,7 +554,7 @@ export async function getTokenInfo(
 ): Promise<SmartTokenInfo> {
   try {
     const network = NETWORKS[networkName];
-    const url = `${network.restEndpoint}/coreum/assetft/v1/tokens/${denom}`;
+    const url = `${network.restEndpoint}/coreum/asset/ft/v1/tokens/${denom}`;
     const response = await fetch(url);
 
     if (!response.ok) {

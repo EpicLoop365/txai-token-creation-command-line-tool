@@ -674,6 +674,29 @@ footer{
 
 .cp-hint{font-size:.7rem;color:var(--text-muted);margin-top:4px;line-height:1.4;font-style:italic}
 
+/* Logo Upload */
+.logo-upload-btn{
+  display:inline-flex;align-items:center;justify-content:center;
+  padding:8px 16px;border-radius:8px;cursor:pointer;
+  background:var(--purple);color:#fff;font-size:.8rem;font-weight:600;
+  transition:all .2s;white-space:nowrap;
+}
+.logo-upload-btn:hover{opacity:.85}
+.logo-preview-wrap{
+  margin-top:8px;position:relative;display:inline-block;
+}
+.logo-preview-img{
+  width:64px;height:64px;border-radius:12px;object-fit:cover;
+  border:2px solid var(--border);
+}
+.logo-remove-btn{
+  position:absolute;top:-6px;right:-6px;width:20px;height:20px;
+  border-radius:50%;background:#ef4444;color:#fff;border:none;
+  font-size:14px;line-height:1;cursor:pointer;display:flex;
+  align-items:center;justify-content:center;
+}
+.logo-uploading{opacity:.5;pointer-events:none}
+
 /* ===== DEX TAB ===== */
 .dex-wrap{display:none;animation:fadeUp .3s ease}
 .dex-wrap.show{display:block}
@@ -1448,11 +1471,21 @@ footer{
           <div class="cp-section-title"><em class="icon">🖼️</em> Metadata</div>
           <div class="cp-row">
             <div class="cp-field" style="grid-column:1/-1">
-              <label class="cp-label">Logo / Metadata URL</label>
-              <input class="cp-input" id="cpUri" placeholder="https://yoursite.com/logo.png or metadata.json">
+              <label class="cp-label">Token Logo</label>
+              <div style="display:flex;gap:8px;align-items:center">
+                <input class="cp-input" id="cpUri" placeholder="https://yoursite.com/logo.png" style="flex:1">
+                <label class="logo-upload-btn" id="logoUploadBtn">
+                  <input type="file" accept="image/*" id="logoFileInput" onchange="handleLogoUpload(event)" style="display:none">
+                  Upload
+                </label>
+              </div>
+              <div class="logo-preview-wrap" id="logoPreviewWrap" style="display:none">
+                <img id="logoPreview" class="logo-preview-img" alt="Token logo preview">
+                <button class="logo-remove-btn" onclick="removeLogoUpload()" title="Remove logo">&times;</button>
+              </div>
             </div>
           </div>
-          <div class="cp-hint">Link to token logo, project page, or JSON metadata file. Hash is auto-computed for integrity.</div>
+          <div class="cp-hint">Upload an image or paste a URL for your token logo. Uploaded images are hosted via imgbb (free).</div>
         </div>
 
       </div>
@@ -2254,6 +2287,77 @@ function toggleFeature(el){
 function updateSlider(sliderId, valId){
   const val = document.getElementById(sliderId).value;
   document.getElementById(valId).textContent = val + '%';
+}
+
+/* ---- Logo Upload ---- */
+let uploadedLogoUrl = '';
+
+async function handleLogoUpload(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  if(!file.type.startsWith('image/')){
+    alert('Please select an image file (PNG, JPG, GIF, SVG).');
+    return;
+  }
+  if(file.size > 5 * 1024 * 1024){
+    alert('Image too large. Maximum 5MB.');
+    return;
+  }
+
+  const btn = document.getElementById('logoUploadBtn');
+  btn.classList.add('logo-uploading');
+  btn.querySelector('input').disabled = true;
+
+  // Show local preview immediately
+  const reader = new FileReader();
+  reader.onload = function(e){
+    const preview = document.getElementById('logoPreview');
+    preview.src = e.target.result;
+    document.getElementById('logoPreviewWrap').style.display = 'inline-block';
+  };
+  reader.readAsDataURL(file);
+
+  try {
+    // Upload to imgbb (free image hosting, no API key needed for anonymous uploads)
+    const formData = new FormData();
+    formData.append('image', file);
+
+    // Use the free imgbb API (anonymous upload)
+    const resp = await fetch('https://api.imgbb.com/1/upload?key=7a1bc214d39a9e7bfa6e904741350673', {
+      method: 'POST',
+      body: formData,
+    });
+
+    if(!resp.ok) throw new Error('Upload failed');
+    const data = await resp.json();
+
+    if(data.success && data.data && data.data.url){
+      uploadedLogoUrl = data.data.url;
+      document.getElementById('cpUri').value = uploadedLogoUrl;
+    } else {
+      throw new Error('Upload response invalid');
+    }
+  } catch(err){
+    console.error('Logo upload error:', err);
+    // Fallback: use data URL directly (large but works)
+    const dataUrl = document.getElementById('logoPreview').src;
+    if(dataUrl && dataUrl.startsWith('data:')){
+      uploadedLogoUrl = '';
+      // Can't use data URL for on-chain URI, inform user
+      alert('Image hosting unavailable. Please enter a URL manually, or host your image at imgur.com, imgbb.com, etc.');
+    }
+  } finally {
+    btn.classList.remove('logo-uploading');
+    btn.querySelector('input').disabled = false;
+  }
+}
+
+function removeLogoUpload(){
+  uploadedLogoUrl = '';
+  document.getElementById('cpUri').value = '';
+  document.getElementById('logoPreviewWrap').style.display = 'none';
+  document.getElementById('logoPreview').src = '';
+  document.getElementById('logoFileInput').value = '';
 }
 
 function getCustomizeConfig(){
@@ -3460,6 +3564,40 @@ function createUpdateWalletUI(connected, provider){
   }
 }
 
+/* ---- Build token config directly from the Customize Panel ---- */
+function getDirectTokenConfig(){
+  const cpConfig = getCustomizeConfig();
+  // If the customize panel has at least a name or symbol, use it directly
+  if(!cpConfig.name && !cpConfig.symbol && !cpConfig.supply) return null;
+
+  const name = cpConfig.name || cpConfig.symbol || 'Token';
+  const symbol = cpConfig.symbol || cpConfig.name || 'TOKEN';
+  const subunit = symbol.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+  // Build features object from the feature names list
+  const featObj = {};
+  if(cpConfig.features){
+    cpConfig.features.forEach(f => { featObj[f] = true; });
+  }
+
+  // Burn rate: slider is 0-20 (percent), chain wants decimal fraction
+  const burnRate = cpConfig.burnRate ? String(parseFloat(cpConfig.burnRate) / 100) : '0';
+  // Fee rate: slider is 0-20 (percent), chain wants decimal fraction
+  const feeRate = cpConfig.feeRate ? String(parseFloat(cpConfig.feeRate) / 100) : '0';
+
+  return {
+    name: name,
+    subunit: subunit.length >= 3 ? subunit : subunit + 'token',
+    initialAmount: cpConfig.supply || '1000000',
+    precision: cpConfig.decimals ? parseInt(cpConfig.decimals) : 6,
+    description: cpConfig.description || '',
+    features: featObj,
+    burnRate: burnRate,
+    sendCommissionRate: feeRate,
+    uri: cpConfig.uri || '',
+  };
+}
+
 /* ---- Wallet-Signed Token Creation ---- */
 async function runWalletTokenCreation(inputText){
   const proc = document.getElementById('demoProcessing');
@@ -3494,27 +3632,35 @@ async function runWalletTokenCreation(inputText){
   }
 
   try {
-    // Step 1: Ask AI to parse token config (without issuing)
-    addStatus('Sending to Claude AI for parsing...');
+    // Step 1: Try to get config directly from the Customize Panel first
+    let tokenConfig = getDirectTokenConfig();
 
-    const parseRes = await fetch(API_URL + '/api/parse-token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ description: inputText })
-    });
+    if(tokenConfig){
+      addStatus('Using your customize panel settings directly...');
+    } else {
+      // Fallback: Ask AI to parse token config from text
+      addStatus('Sending to Claude AI for parsing...');
 
-    if(!parseRes.ok){
-      if(parseRes.status === 429) throw new Error('RATE_LIMIT');
-      throw new Error('HTTP_' + parseRes.status);
+      const parseRes = await fetch(API_URL + '/api/parse-token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description: inputText })
+      });
+
+      if(!parseRes.ok){
+        if(parseRes.status === 429) throw new Error('RATE_LIMIT');
+        throw new Error('HTTP_' + parseRes.status);
+      }
+
+      const parsed = await parseRes.json();
+      if(parsed.error) throw new Error('SERVER_ERROR:' + parsed.error);
+
+      tokenConfig = parsed.config;
+      addStatus('AI parsed token configuration');
     }
 
-    const parsed = await parseRes.json();
-    if(parsed.error) throw new Error('SERVER_ERROR:' + parsed.error);
-
-    const tokenConfig = parsed.config;
-    addStatus('AI parsed token configuration');
     addStreamLine('  Name: ' + (tokenConfig.name || 'N/A'), 'tool');
-    addStreamLine('  Symbol: ' + (tokenConfig.subunit || 'N/A'), 'tool');
+    addStreamLine('  Symbol: ' + (tokenConfig.subunit || 'N/A').toUpperCase(), 'tool');
     addStreamLine('  Supply: ' + (tokenConfig.initialAmount || 'N/A'), 'tool');
 
     // Step 2: Build MsgIssue for user signing
@@ -3524,8 +3670,9 @@ async function runWalletTokenCreation(inputText){
     const precision = tokenConfig.precision || 6;
     const rawAmount = (BigInt(Math.round(parseFloat(tokenConfig.initialAmount || '1000000'))) * BigInt(Math.pow(10, precision))).toString();
 
-    // Build features array (numeric indices like the chain expects)
-    const featureMap = { minting: 0, burning: 1, freezing: 2, whitelisting: 3, ibcEnabled: 4, clawback: 5 };
+    // Build features array (numeric indices matching Coreum proto Feature enum)
+    // minting=0, burning=1, freezing=2, whitelisting=3, ibc=4, block_smart_contracts=5, clawback=6
+    const featureMap = { minting: 0, burning: 1, freezing: 2, whitelisting: 3, ibcEnabled: 4, ibc: 4, clawback: 6 };
     const features = [];
     if(tokenConfig.features){
       for(const [key, val] of Object.entries(tokenConfig.features)){
@@ -3533,9 +3680,22 @@ async function runWalletTokenCreation(inputText){
       }
     }
 
-    // Convert burn rate and commission rate to chain format (string decimal)
-    const burnRate = tokenConfig.burnRate ? String(parseFloat(tokenConfig.burnRate)) : '0';
-    const sendCommissionRate = tokenConfig.sendCommissionRate ? String(parseFloat(tokenConfig.sendCommissionRate)) : '0';
+    // Convert burn rate and commission rate to chain format (value * 10^18)
+    // e.g. 5% = "0.05" => "50000000000000000"
+    function toChainRate(rate){
+      if(!rate || rate === '0') return '0';
+      const num = parseFloat(rate);
+      if(isNaN(num) || num <= 0 || num > 1) return '0';
+      return Math.round(num * 1e18).toString();
+    }
+    const burnRate = toChainRate(tokenConfig.burnRate);
+    const sendCommissionRate = toChainRate(tokenConfig.sendCommissionRate);
+
+    // Show what we're sending
+    const enabledFeatures = Object.entries(tokenConfig.features || {}).filter(([,v]) => v).map(([k]) => k);
+    if(enabledFeatures.length) addStreamLine('  Features: ' + enabledFeatures.join(', '), 'tool');
+    if(tokenConfig.burnRate && tokenConfig.burnRate !== '0') addStreamLine('  Burn Rate: ' + (parseFloat(tokenConfig.burnRate)*100).toFixed(1) + '%', 'tool');
+    if(tokenConfig.sendCommissionRate && tokenConfig.sendCommissionRate !== '0') addStreamLine('  Transfer Fee: ' + (parseFloat(tokenConfig.sendCommissionRate)*100).toFixed(1) + '%', 'tool');
 
     const msg = {
       typeUrl: '/coreum.asset.ft.v1.MsgIssue',
@@ -3544,16 +3704,18 @@ async function runWalletTokenCreation(inputText){
         symbol: (tokenConfig.subunit || 'token').toUpperCase(),
         subunit: (tokenConfig.subunit || 'token').toLowerCase(),
         precision: precision,
-        initial_amount: rawAmount,
+        initialAmount: rawAmount,
         description: tokenConfig.description || inputText,
         features: features,
-        burn_rate: burnRate,
-        send_commission_rate: sendCommissionRate,
+        burnRate: burnRate,
+        sendCommissionRate: sendCommissionRate,
         uri: tokenConfig.uri || '',
-        uri_hash: tokenConfig.uriHash || '',
+        uriHash: tokenConfig.uriHash || '',
       }
     };
 
+    addStreamLine('  Raw Amount: ' + rawAmount, 'text');
+    addStreamLine('  Features (numeric): [' + features.join(', ') + ']', 'text');
     addStatus('Requesting wallet signature...');
     addStreamLine('  Issuer: ' + connectedAddress, 'text');
 
@@ -3587,6 +3749,9 @@ async function runWalletTokenCreation(inputText){
 
     // Auto-populate manage tab
     populateManageFromToken(denom);
+
+    // Auto-select in DEX dropdown
+    dexAutoSelectToken(denom);
 
   } catch(err){
     proc.classList.remove('show');
@@ -3695,12 +3860,15 @@ async function dexFetchPairs(){
     const data = await res.json();
     const sel = document.getElementById('dexPairSelect');
     sel.innerHTML = '<option value="">-- Select Pair --</option>';
-    (data.pairs || []).forEach(p => {
+    // Sort pairs alphabetically by display name
+    const pairs = (data.pairs || []).map(p => {
       const base = p.baseDenom || '';
-      const name = dexTokenName(base);
+      return { base, name: dexTokenName(base) };
+    }).sort((a, b) => a.name.localeCompare(b.name));
+    pairs.forEach(p => {
       const opt = document.createElement('option');
-      opt.value = base;
-      opt.textContent = `${name} / ${DEX_QUOTE_SYMBOL}`;
+      opt.value = p.base;
+      opt.textContent = `${p.name} / ${DEX_QUOTE_SYMBOL}`;
       sel.appendChild(opt);
     });
   } catch(err){ console.error('DEX pairs fetch error:', err); }
@@ -3712,6 +3880,28 @@ function dexOnPairSelect(){
     document.getElementById('dexBaseDenom').value = val;
     dexLoadOrderbook();
   }
+}
+
+/* Auto-select a newly created token in the DEX dropdown */
+function dexAutoSelectToken(denom){
+  const sel = document.getElementById('dexPairSelect');
+  // Check if already in dropdown
+  let found = false;
+  for(let i = 0; i < sel.options.length; i++){
+    if(sel.options[i].value === denom){ sel.selectedIndex = i; found = true; break; }
+  }
+  // If not found, add it to the dropdown
+  if(!found){
+    const name = dexTokenName(denom);
+    const opt = document.createElement('option');
+    opt.value = denom;
+    opt.textContent = `${name} / ${DEX_QUOTE_SYMBOL}`;
+    sel.appendChild(opt);
+    sel.value = denom;
+  }
+  // Set the base denom input too
+  document.getElementById('dexBaseDenom').value = denom;
+  dexBaseDenom = denom;
 }
 
 async function dexFetchBalances(address){
@@ -4381,7 +4571,7 @@ function dexTokenName(denom){
 /* Auto-populate DEX after token creation */
 function populateDexFromToken(denom){
   if(denom){
-    document.getElementById('dexBaseDenom').value = denom;
+    dexAutoSelectToken(denom);
   }
 }
 
@@ -4409,12 +4599,16 @@ async function manageLoadToken(){
 
     manageTokenData = data;
     manageTokenData.denom = denom;
+    // Fallback: extract issuer from denom (format is subunit-issuerAddress)
+    if(!manageTokenData.issuer && denom.includes('-')){
+      manageTokenData.issuer = denom.substring(denom.indexOf('-') + 1);
+    }
 
     // Populate info header
     const symbol = data.symbol || data.subunit || denom.split('-')[0] || denom;
     document.getElementById('manageTokenName').textContent = symbol.toUpperCase();
     document.getElementById('manageTokenDenomDisplay').textContent = denom;
-    document.getElementById('manageIssuer').textContent = `Issuer: ${data.issuer || 'unknown'}`;
+    document.getElementById('manageIssuer').textContent = `Issuer: ${manageTokenData.issuer || 'unknown'}`;
 
     // Populate stats
     const precision = data.precision || 6;
