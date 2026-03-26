@@ -924,7 +924,7 @@ app.post("/api/dex/place-order", async (req, res) => {
       timeInForce: 1,  // 1=GTC
     } as any);
     console.log("[dex/place-order] Step 4: success!", result.orderId);
-    res.json({ success: true, ...result });
+    res.json(result);
   } catch (err) {
     console.error("[dex/place-order] Error:", (err as Error).message);
     console.error("[dex/place-order] Stack:", (err as Error).stack);
