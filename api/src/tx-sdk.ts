@@ -243,7 +243,7 @@ export class TxClient {
 
   async signAndBroadcastMsg(
     msg: { typeUrl: string; value: unknown },
-    gasLimit = 150000
+    gasLimit = 500000
   ): Promise<TransactionResult> {
     // Acquire the global mutex so only one transaction is in-flight at a time.
     // This prevents sequence number conflicts when multiple users share one wallet.
@@ -429,7 +429,7 @@ export async function mintTokens(
       recipient: recipient ?? client.address,
     },
   };
-  return client.signAndBroadcastMsg(msg, 200000);
+  return client.signAndBroadcastMsg(msg, 500000);
 }
 
 export async function burnTokens(
@@ -444,7 +444,7 @@ export async function burnTokens(
       coin: { denom, amount },
     },
   };
-  return client.signAndBroadcastMsg(msg, 200000);
+  return client.signAndBroadcastMsg(msg, 500000);
 }
 
 export async function freezeAccount(
@@ -461,7 +461,7 @@ export async function freezeAccount(
       coin: { denom, amount },
     },
   };
-  return client.signAndBroadcastMsg(msg, 200000);
+  return client.signAndBroadcastMsg(msg, 500000);
 }
 
 export async function unfreezeAccount(
@@ -478,7 +478,7 @@ export async function unfreezeAccount(
       coin: { denom, amount },
     },
   };
-  return client.signAndBroadcastMsg(msg, 200000);
+  return client.signAndBroadcastMsg(msg, 500000);
 }
 
 export async function globallyFreezeToken(
@@ -489,7 +489,7 @@ export async function globallyFreezeToken(
     typeUrl: "/coreum.asset.ft.v1.MsgGloballyFreeze",
     value: { sender: client.address, denom },
   };
-  return client.signAndBroadcastMsg(msg, 200000);
+  return client.signAndBroadcastMsg(msg, 500000);
 }
 
 export async function globallyUnfreezeToken(
@@ -500,7 +500,7 @@ export async function globallyUnfreezeToken(
     typeUrl: "/coreum.asset.ft.v1.MsgGloballyUnfreeze",
     value: { sender: client.address, denom },
   };
-  return client.signAndBroadcastMsg(msg, 200000);
+  return client.signAndBroadcastMsg(msg, 500000);
 }
 
 export async function clawbackTokens(
@@ -517,7 +517,7 @@ export async function clawbackTokens(
       coin: { denom, amount },
     },
   };
-  return client.signAndBroadcastMsg(msg, 200000);
+  return client.signAndBroadcastMsg(msg, 500000);
 }
 
 export async function setWhitelistedLimit(
@@ -534,7 +534,7 @@ export async function setWhitelistedLimit(
       coin: { denom, amount },
     },
   };
-  return client.signAndBroadcastMsg(msg, 200000);
+  return client.signAndBroadcastMsg(msg, 500000);
 }
 
 export interface SmartTokenInfo {
@@ -644,7 +644,7 @@ export async function placeOrder(
     },
   };
   console.log(`[placeOrder] ${DexSide[params.side]} order: ${orderId}`);
-  const result = await client.signAndBroadcastMsg(msg, 300000);
+  const result = await client.signAndBroadcastMsg(msg, 500000);
   return { ...result, orderId };
 }
 
@@ -656,7 +656,7 @@ export async function cancelOrder(
     typeUrl: "/coreum.dex.v1.MsgCancelOrder",
     value: { sender: client.address, id: orderId },
   };
-  return client.signAndBroadcastMsg(msg, 150000);
+  return client.signAndBroadcastMsg(msg, 500000);
 }
 
 // ─── DEX QUERIES (ABCI + REST) ──────────────────────────────────────────────
