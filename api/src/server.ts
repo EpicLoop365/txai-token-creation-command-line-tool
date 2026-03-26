@@ -28,6 +28,9 @@ import {
   queryOrdersByCreator,
   queryOrderBooks,
 } from "./tx-sdk";
+import { defaultRegistryTypes } from "@cosmjs/stargate";
+import { Registry, GeneratedType } from "@cosmjs/proto-signing";
+import { coreumRegistry } from "coreum-js-nightly";
 
 // ─── RATE LIMITER ────────────────────────────────────────────────────────────
 
@@ -492,6 +495,90 @@ app.post("/api/trade", async (req, res) => {
 
   res.write("data: [DONE]\n\n");
   res.end();
+});
+
+// ─── DEX: BUILD UNSIGNED TX (for Keplr/Leap wallet signing) ─────────────
+
+app.post("/api/build-tx", async (req, res) => {
+  const { signerAddress, messages, gasLimit } = req.body as {
+    signerAddress?: string;
+    messages?: Array<{ typeUrl: string; value: Record<string, unknown> }>;
+    gasLimit?: number;
+  };
+
+  if (!signerAddress || !messages || !Array.isArray(messages) || messages.length === 0) {
+    res.status(400).json({ error: "Missing signerAddress or messages." });
+    return;
+  }
+
+  const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
+  const network = NETWORKS[networkName];
+  const gas = gasLimit || 300000;
+
+  try {
+    const registry = new Registry([
+      ...defaultRegistryTypes,
+      ...(coreumRegistry as ReadonlyArray<[string, GeneratedType]>),
+    ]);
+
+    // Encode each message using the Coreum registry
+    const encodedMsgs = messages.map((m) => ({
+      typeUrl: m.typeUrl,
+      value: registry.encode({ typeUrl: m.typeUrl, value: m.value }),
+    }));
+
+    // Build TxBody
+    const { TxBody, AuthInfo, Fee, SignDoc } = await import("cosmjs-types/cosmos/tx/v1beta1/tx");
+    const { Any } = await import("cosmjs-types/google/protobuf/any");
+
+    const bodyBytes = TxBody.encode(
+      TxBody.fromPartial({
+        messages: encodedMsgs.map((m) =>
+          Any.fromPartial({ typeUrl: m.typeUrl, value: m.value })
+        ),
+        memo: "",
+      })
+    ).finish();
+
+    // Fetch account info for sequence and account number
+    const accountRes = await fetch(
+      `${network.restEndpoint}/cosmos/auth/v1beta1/accounts/${signerAddress}`
+    );
+    const accountData = (await accountRes.json()) as {
+      account: { account_number: string; sequence: string; pub_key?: { key: string } };
+    };
+    const accountNumber = parseInt(accountData.account.account_number || "0", 10);
+    const sequence = parseInt(accountData.account.sequence || "0", 10);
+
+    // Build fee
+    const feeAmount = Math.ceil(gas * 0.0625).toString();
+
+    const authInfoBytes = AuthInfo.encode(
+      AuthInfo.fromPartial({
+        signerInfos: [], // Keplr fills this
+        fee: Fee.fromPartial({
+          amount: [{ denom: network.denom, amount: feeAmount }],
+          gasLimit: BigInt(gas),
+        }),
+      })
+    ).finish();
+
+    // Return hex-encoded bytes + account info
+    res.json({
+      bodyBytes: Buffer.from(bodyBytes).toString("hex"),
+      authInfoBytes: Buffer.from(authInfoBytes).toString("hex"),
+      chainId: network.chainId,
+      accountNumber,
+      sequence,
+      fee: {
+        amount: [{ denom: network.denom, amount: feeAmount }],
+        gas: gas.toString(),
+      },
+    });
+  } catch (err) {
+    console.error("[build-tx] Error:", err);
+    res.status(500).json({ error: (err as Error).message });
+  }
 });
 
 // ─── DEX: CHAT (Trading Advisor) ────────────────────────────────────────────
