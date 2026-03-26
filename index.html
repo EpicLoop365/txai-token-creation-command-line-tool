@@ -321,6 +321,7 @@
         <input type="text" class="dex-pair-manual" id="dexBaseDenom" placeholder="Paste denom (e.g. mytoken-testcore1...)">
         <button class="dex-pair-load" onclick="dexLoadOrderbook()">Load</button>
         <button class="dex-demo-btn" onclick="dexStartDemo()" title="Populate this token's orderbook with AI agents">🤖 Populate Orderbook</button>
+        <button class="dex-add-wallet-btn" id="dexAddWalletBtn" onclick="dexAddTokenToWallet()" title="Add this token to your Leap/Keplr wallet" style="display:none">➕ Add to Wallet</button>
 
         <div class="dex-stats-strip">
           <div class="dex-stat"><span class="dex-stat-label">Last Price</span><span class="dex-stat-value" id="dexStatLast">--</span></div>

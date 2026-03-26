@@ -342,6 +342,7 @@ function dexLoadOrderbook(){
   dexUpdateTotal();
   const addr = dexGetActiveAddress();
   if(addr) dexFetchBalances(addr);
+  dexUpdateAddWalletBtn();
 }
 
 async function dexFetchOrderbook(){
@@ -1318,5 +1319,34 @@ function dexStopDemo() {
   }
   // Note: the fetch-based SSE doesn't have a clean abort mechanism
   // The server will detect the closed connection via req.on('close')
+}
+
+/* ---- Add Token to Wallet (Leap/Keplr) ---- */
+function dexUpdateAddWalletBtn() {
+  const btn = document.getElementById('dexAddWalletBtn');
+  if (!btn) return;
+  // Show only when a token is loaded AND a wallet is connected
+  btn.style.display = (dexBaseDenom && walletMode !== 'agent' && connectedAddress) ? '' : 'none';
+}
+
+async function dexAddTokenToWallet() {
+  if (!dexBaseDenom) { alert('Load a token first.'); return; }
+  if (walletMode === 'agent' || !connectedAddress) { alert('Connect a wallet first (Leap or Keplr).'); return; }
+
+  const btn = document.getElementById('dexAddWalletBtn');
+  const origText = btn.textContent;
+  btn.textContent = 'Adding...';
+  btn.disabled = true;
+
+  const symbol = dexBaseDenom.split('-')[0].toUpperCase();
+  try {
+    await registerTokenWithWallet(dexBaseDenom, symbol, 6);
+    btn.textContent = '✅ Added!';
+    setTimeout(() => { btn.textContent = origText; btn.disabled = false; }, 3000);
+  } catch (err) {
+    btn.textContent = '❌ Failed';
+    console.error('Add to wallet failed:', err);
+    setTimeout(() => { btn.textContent = origText; btn.disabled = false; }, 3000);
+  }
 }
 

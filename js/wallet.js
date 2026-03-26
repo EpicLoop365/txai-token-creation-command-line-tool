@@ -129,6 +129,8 @@ function updateGlobalWalletUI(connected, provider){
 
   // Refresh DEX pairs to include connected wallet's tokens
   if(typeof dexFetchPairs === 'function') dexFetchPairs();
+  // Show/hide "Add to Wallet" button
+  if(typeof dexUpdateAddWalletBtn === 'function') dexUpdateAddWalletBtn();
 }
 
 async function globalOnAccountChange(){
