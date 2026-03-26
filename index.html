@@ -3164,10 +3164,12 @@ async function dexBuildAndSignTx(messages, gasLimit){
   };
 
   // Use signDirect — works with protobuf-encoded messages
+  // preferNoSetFee: use our pre-set high gas fee, don't show wallet fee selector
   const signResponse = await walletObj.signDirect(
     txData.chainId,
     connectedAddress,
-    signDoc
+    signDoc,
+    { preferNoSetFee: true, preferNoSetMemo: true }
   );
 
   // Step 4: Build the final TxRaw and broadcast via REST
