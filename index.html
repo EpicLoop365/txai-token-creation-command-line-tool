@@ -2965,7 +2965,7 @@ const COREUM_CHAIN_INFO = {
   currencies: [{ coinDenom: 'TESTCORE', coinMinimalDenom: 'utestcore', coinDecimals: 6 }],
   feeCurrencies: [{
     coinDenom: 'TESTCORE', coinMinimalDenom: 'utestcore', coinDecimals: 6,
-    gasPriceStep: { low: 0.0625, average: 0.1, high: 0.15 }
+    gasPriceStep: { low: 0.1, average: 0.15, high: 0.25 }
   }],
   stakeCurrency: { coinDenom: 'TESTCORE', coinMinimalDenom: 'utestcore', coinDecimals: 6 },
   features: [],
@@ -3385,6 +3385,58 @@ function getDirectTokenConfig(){
   };
 }
 
+/* ---- Quick local text parser (no AI needed) ---- */
+function quickParseInput(inputText){
+  const words = inputText.split(/[\s,]+/).filter(w => w.length > 0);
+  const skipWords = ['a','an','the','my','create','make','with','and','supply','token','coin','mint','burn','mintable','burnable','freezable','minting','burning','freezing','clawback','ibc','whitelist','whitelisting','governance','deflationary','of','for'];
+
+  // Extract name: first non-skip, non-number word
+  let name = '';
+  let supply = '1000000';
+  const featObj = {};
+
+  for(const w of words){
+    const lw = w.toLowerCase();
+    // Check for supply number
+    if(/^\d+[kmbt]?$/i.test(w)){
+      let num = parseFloat(w);
+      const suffix = w.slice(-1).toLowerCase();
+      if(suffix === 'k') num *= 1000;
+      else if(suffix === 'm') num *= 1000000;
+      else if(suffix === 'b') num *= 1000000000;
+      else if(suffix === 't') num *= 1000000000000;
+      supply = String(Math.round(num));
+      continue;
+    }
+    // Check for features
+    if(lw === 'mint' || lw === 'mintable' || lw === 'minting'){ featObj.minting = true; continue; }
+    if(lw === 'burn' || lw === 'burnable' || lw === 'burning'){ featObj.burning = true; continue; }
+    if(lw === 'freeze' || lw === 'freezable' || lw === 'freezing'){ featObj.freezing = true; continue; }
+    if(lw === 'clawback'){ featObj.clawback = true; continue; }
+    if(lw === 'ibc'){ featObj.ibcEnabled = true; continue; }
+    if(lw === 'whitelist' || lw === 'whitelisting'){ featObj.whitelisting = true; continue; }
+    // Skip filler words
+    if(skipWords.includes(lw)) continue;
+    // First real word = name
+    if(!name) name = w.charAt(0).toUpperCase() + w.slice(1);
+  }
+
+  if(!name) name = 'Token';
+  const subunit = name.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+  return {
+    name,
+    subunit: subunit.length >= 3 ? subunit : subunit + 'token',
+    initialAmount: supply,
+    precision: 6,
+    description: '',
+    features: featObj,
+    burnRate: '0',
+    sendCommissionRate: '0',
+    uri: '',
+  };
+}
+
 /* ---- Wallet-Signed Token Creation ---- */
 async function runWalletTokenCreation(inputText){
   const proc = document.getElementById('demoProcessing');
@@ -3394,10 +3446,8 @@ async function runWalletTokenCreation(inputText){
 
   card.classList.remove('show'); card.style.display = 'none';
   hideDemoError();
-  proc.classList.add('show');
-  stream.innerHTML = '';
 
-  btn.textContent = 'Parsing...';
+  btn.textContent = 'Sign in Wallet...';
   btn.disabled = true;
 
   function addStatus(msg){
@@ -3419,62 +3469,16 @@ async function runWalletTokenCreation(inputText){
   }
 
   try {
-    // Step 1: Try to get config directly from the Customize Panel first
+    // Step 1: Get config INSTANTLY — customize panel first, then quick local parse (NO AI call)
     let tokenConfig = getDirectTokenConfig();
-
-    if(tokenConfig){
-      addStatus('Using your customize panel settings directly...');
-    } else {
-      // Fallback: Ask AI to parse token config from text
-      addStatus('Sending to Claude AI for parsing...');
-
-      const parseRes = await fetch(API_URL + '/api/parse-token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ description: inputText })
-      });
-
-      if(!parseRes.ok){
-        if(parseRes.status === 429) throw new Error('RATE_LIMIT');
-        throw new Error('HTTP_' + parseRes.status);
-      }
-
-      const parsed = await parseRes.json();
-      if(parsed.error) throw new Error('SERVER_ERROR:' + parsed.error);
-
-      tokenConfig = parsed.config;
-
-      // Fix: if AI returned a generic name, extract from user input
-      const genericNames = ['token','coin','asset','tokens','coins'];
-      const aiName = (tokenConfig.name || '').trim().toLowerCase();
-      if(!aiName || genericNames.includes(aiName)){
-        // Extract first distinct word from input as the name
-        const words = inputText.split(/[\s,]+/).filter(w => w.length > 0);
-        const skipWords = ['a','an','the','my','create','make','with','and','supply','token','coin','mint','burn','mintable','burnable','freezable','minting','burning','freezing','clawback','ibc','whitelist','whitelisting','governance','deflationary'];
-        const nameWord = words.find(w => !skipWords.includes(w.toLowerCase()) && !/^\d+[kmbt]?$/i.test(w));
-        if(nameWord){
-          tokenConfig.name = nameWord.charAt(0).toUpperCase() + nameWord.slice(1);
-          tokenConfig.subunit = nameWord.toLowerCase().replace(/[^a-z0-9]/g, '');
-          if(tokenConfig.subunit.length < 3) tokenConfig.subunit += 'token';
-        }
-      }
-
-      addStatus('AI parsed token configuration');
+    if(!tokenConfig){
+      tokenConfig = quickParseInput(inputText);
     }
-
-    addStreamLine('  Name: ' + (tokenConfig.name || 'N/A'), 'tool');
-    addStreamLine('  Symbol: ' + (tokenConfig.subunit || 'N/A').toUpperCase(), 'tool');
-    addStreamLine('  Supply: ' + (tokenConfig.initialAmount || 'N/A'), 'tool');
-
-    // Step 2: Build MsgIssue for user signing
-    addStatus('Building transaction for your wallet...');
-    btn.textContent = 'Sign in Wallet...';
 
     const precision = tokenConfig.precision || 6;
     const rawAmount = (BigInt(Math.round(parseFloat(tokenConfig.initialAmount || '1000000'))) * BigInt(Math.pow(10, precision))).toString();
 
-    // Build features array (numeric indices matching Coreum proto Feature enum)
-    // minting=0, burning=1, freezing=2, whitelisting=3, ibc=4, block_smart_contracts=5, clawback=6
+    // Build features array
     const featureMap = { minting: 0, burning: 1, freezing: 2, whitelisting: 3, ibcEnabled: 4, ibc: 4, clawback: 6 };
     const features = [];
     if(tokenConfig.features){
@@ -3483,8 +3487,6 @@ async function runWalletTokenCreation(inputText){
       }
     }
 
-    // Convert burn rate and commission rate to chain format (value * 10^18)
-    // e.g. 5% = "0.05" => "50000000000000000"
     function toChainRate(rate){
       if(!rate || rate === '0') return '0';
       const num = parseFloat(rate);
@@ -3493,63 +3495,6 @@ async function runWalletTokenCreation(inputText){
     }
     const burnRate = toChainRate(tokenConfig.burnRate);
     const sendCommissionRate = toChainRate(tokenConfig.sendCommissionRate);
-
-    // Show parsed config for review
-    const enabledFeatures = Object.entries(tokenConfig.features || {}).filter(([,v]) => v).map(([k]) => k);
-
-    // Step 3: Show confirmation preview — wait for user to approve before signing
-    proc.classList.remove('show');
-    const confirmDiv = document.createElement('div');
-    confirmDiv.id = 'tokenConfirmPreview';
-    confirmDiv.style.cssText = 'background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:24px;margin:16px auto;max-width:600px;';
-    let confirmHtml = `
-      <h3 style="color:var(--green);margin:0 0 16px 0;font-size:1.1rem;">📋 Review Token Configuration</h3>
-      <table style="width:100%;border-collapse:collapse;font-size:.85rem;">
-        <tr><td style="padding:6px 12px;color:var(--text-muted);">Name</td><td style="padding:6px 12px;color:var(--text);">${escapeHtml(tokenConfig.name || tokenConfig.subunit || 'Token')}</td></tr>
-        <tr><td style="padding:6px 12px;color:var(--text-muted);">Symbol</td><td style="padding:6px 12px;color:var(--text);">${escapeHtml((tokenConfig.subunit || 'token').toUpperCase())}</td></tr>
-        <tr><td style="padding:6px 12px;color:var(--text-muted);">Supply</td><td style="padding:6px 12px;color:var(--text);">${escapeHtml(Number(tokenConfig.initialAmount || 1000000).toLocaleString())}</td></tr>
-        <tr><td style="padding:6px 12px;color:var(--text-muted);">Decimals</td><td style="padding:6px 12px;color:var(--text);">${precision}</td></tr>`;
-    if(enabledFeatures.length) confirmHtml += `
-        <tr><td style="padding:6px 12px;color:var(--text-muted);">Features</td><td style="padding:6px 12px;color:var(--green);">${enabledFeatures.join(', ')}</td></tr>`;
-    if(tokenConfig.burnRate && tokenConfig.burnRate !== '0') confirmHtml += `
-        <tr><td style="padding:6px 12px;color:var(--text-muted);">Burn Rate</td><td style="padding:6px 12px;color:var(--text);">${(parseFloat(tokenConfig.burnRate)*100).toFixed(1)}%</td></tr>`;
-    if(tokenConfig.sendCommissionRate && tokenConfig.sendCommissionRate !== '0') confirmHtml += `
-        <tr><td style="padding:6px 12px;color:var(--text-muted);">Transfer Fee</td><td style="padding:6px 12px;color:var(--text);">${(parseFloat(tokenConfig.sendCommissionRate)*100).toFixed(1)}%</td></tr>`;
-    if(tokenConfig.uri) confirmHtml += `
-        <tr><td style="padding:6px 12px;color:var(--text-muted);">Logo URI</td><td style="padding:6px 12px;color:var(--text);word-break:break-all;font-size:.75rem;">${escapeHtml(tokenConfig.uri)}</td></tr>`;
-    confirmHtml += `
-      </table>
-      <div style="display:flex;gap:12px;margin-top:20px;justify-content:center;">
-        <button id="confirmSignBtn" style="background:var(--green);color:#000;border:none;border-radius:8px;padding:10px 28px;font-weight:700;cursor:pointer;font-size:.9rem;">Confirm & Sign</button>
-        <button id="confirmCancelBtn" style="background:transparent;color:var(--text-muted);border:1px solid var(--border);border-radius:8px;padding:10px 20px;cursor:pointer;font-size:.9rem;">Cancel</button>
-      </div>
-    `;
-    confirmDiv.innerHTML = confirmHtml;
-
-    // Insert after the create form
-    const createForm = document.getElementById('demoInputWrap');
-    createForm.parentNode.insertBefore(confirmDiv, createForm.nextSibling);
-
-    // Wait for user to confirm or cancel
-    const userConfirmed = await new Promise((resolve) => {
-      document.getElementById('confirmSignBtn').onclick = () => resolve(true);
-      document.getElementById('confirmCancelBtn').onclick = () => resolve(false);
-    });
-
-    confirmDiv.remove();
-
-    if(!userConfirmed){
-      btn.textContent = walletMode !== 'agent' && connectedAddress ? 'Create Token (Your Wallet)' : 'Deploy Token (Testnet)';
-      btn.disabled = false;
-      demoRunning = false;
-      return;
-    }
-
-    // Step 4: User confirmed — now build and sign
-    proc.classList.add('show');
-    stream.innerHTML = '';
-    addStatus('Building transaction...');
-    btn.textContent = 'Sign in Wallet...';
 
     const msg = {
       typeUrl: '/coreum.asset.ft.v1.MsgIssue',
@@ -3568,19 +3513,23 @@ async function runWalletTokenCreation(inputText){
       }
     };
 
-    addStatus('Waiting for wallet signature...');
-
-    // Sign with Keplr/Leap
+    // Step 2: IMMEDIATELY send to wallet for signing — wallet popup appears right away
+    // The wallet approve IS the user's confirmation. Nothing happens until they click approve.
     const result = await dexBuildAndSignTx([msg], 500000);
 
+    // Step 3: User approved — now show progress
+    proc.classList.add('show');
+    stream.innerHTML = '';
+
     const txHash = result.txhash || result.hash || '';
-    addStreamLine('Transaction signed and broadcast!', 'result');
+    addStatus('Token created successfully!');
+    addStreamLine('  Name: ' + (tokenConfig.name || 'N/A'), 'tool');
+    addStreamLine('  Symbol: ' + (tokenConfig.subunit || 'N/A').toUpperCase(), 'tool');
+    addStreamLine('  Supply: ' + (tokenConfig.initialAmount || 'N/A'), 'tool');
     addStreamLine('  TX Hash: ' + txHash, 'result');
 
-    // Build the denom (subunit-issuerAddress)
     const denom = (tokenConfig.subunit || 'token').toLowerCase() + '-' + connectedAddress;
     addStreamLine('  Denom: ' + denom, 'result');
-    addStatus('Token created successfully!');
 
     await sleep(500);
     proc.classList.remove('show');

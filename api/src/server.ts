@@ -787,8 +787,8 @@ app.post("/api/build-tx", async (req, res) => {
     const sequence = parseInt(accountData.account.sequence || "0", 10);
 
     // Build fee
-    // Use generous gas price to avoid "insufficient fees" on testnet
-    const feeAmount = Math.ceil(gas * 0.1).toString();
+    // Use high gas price (0.25) to avoid "insufficient fees" on testnet
+    const feeAmount = Math.ceil(gas * 0.25).toString();
 
     // Decode the pubkey from hex
     const pubkeyBytes = Buffer.from(pubkeyHex, "hex");
