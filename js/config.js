@@ -78,8 +78,7 @@ function syntaxHL(json){
 function streamLine(el,text){
   let i=0;
   return new Promise(r=>{
-    const iv=setInterval(()=>{if(i<text.length){el.textContent+=text[i++]}else{clearInterval(iv);el.textContent+='
-';r()}},8);
+    const iv=setInterval(()=>{if(i<text.length){el.textContent+=text[i++]}else{clearInterval(iv);el.textContent+='\n';r()}},8);
   });
 }
 
