@@ -1348,38 +1348,77 @@ function dexShowAddTokenModal(symbol) {
   const existing = document.getElementById('dexAddTokenModal');
   if (existing) existing.remove();
 
+  const denom = dexBaseDenom;
   const modal = document.createElement('div');
   modal.id = 'dexAddTokenModal';
   modal.className = 'dex-deposit-overlay';
   modal.innerHTML = `
     <div class="dex-deposit-panel">
       <div class="dex-deposit-header">
-        <h3>➕ Add ${symbol} to Your Wallet</h3>
+        <h3>➕ Add ${symbol} to Leap Wallet</h3>
         <button class="dex-demo-close" onclick="document.getElementById('dexAddTokenModal').remove()">✕</button>
       </div>
       <div class="dex-deposit-body">
         <p class="dex-deposit-desc">
-          Custom tokens on Coreum need to be added manually in Leap/Keplr.
+          Leap requires custom tokens to be added manually. Fill in these fields on the Leap "Add Token" page:
         </p>
-        <p class="dex-deposit-instruction">
-          <b>In Leap:</b> Home → scroll down → click the ⚙️ filter icon next to "Your tokens" → search for your token or toggle it on.
-        </p>
-        <p class="dex-deposit-instruction" style="margin-top:8px">
-          <b>Token denom</b> (copy this):
-        </p>
-        <div class="dex-deposit-address-row">
-          <code id="dexAddTokenDenom">${dexBaseDenom}</code>
-          <button class="dex-deposit-copy" onclick="navigator.clipboard.writeText('${dexBaseDenom}').then(()=>{this.textContent='✅ Copied!';setTimeout(()=>this.textContent='📋 Copy',2000)})">📋 Copy</button>
+
+        <div class="add-token-fields">
+          <div class="add-token-field">
+            <label>Coin minimal denom</label>
+            <div class="dex-deposit-address-row">
+              <code>${denom}</code>
+              <button class="dex-deposit-copy" onclick="navigator.clipboard.writeText('${denom}').then(()=>{this.textContent='✅';setTimeout(()=>this.textContent='📋',1500)})">📋</button>
+            </div>
+          </div>
+          <div class="add-token-field">
+            <label>Coin denom</label>
+            <div class="dex-deposit-address-row">
+              <code>${symbol}</code>
+              <button class="dex-deposit-copy" onclick="navigator.clipboard.writeText('${symbol}').then(()=>{this.textContent='✅';setTimeout(()=>this.textContent='📋',1500)})">📋</button>
+            </div>
+          </div>
+          <div class="add-token-field">
+            <label>Coin decimals</label>
+            <div class="dex-deposit-address-row">
+              <code>6</code>
+              <button class="dex-deposit-copy" onclick="navigator.clipboard.writeText('6').then(()=>{this.textContent='✅';setTimeout(()=>this.textContent='📋',1500)})">📋</button>
+            </div>
+          </div>
+          <div class="add-token-field">
+            <label>Token name (optional)</label>
+            <div class="dex-deposit-address-row">
+              <code>${symbol}</code>
+              <button class="dex-deposit-copy" onclick="navigator.clipboard.writeText('${symbol}').then(()=>{this.textContent='✅';setTimeout(()=>this.textContent='📋',1500)})">📋</button>
+            </div>
+          </div>
         </div>
+
         <p class="dex-deposit-note">
-          Your ${symbol} tokens are on-chain and safe. This is just a wallet display issue — Leap doesn't auto-detect custom Coreum tokens yet.
+          In Leap: click ☰ menu → "Add Token" — then paste each field above. Your ${symbol} tokens are on-chain and safe.
         </p>
-        <div class="dex-deposit-actions">
-          <button class="dex-deposit-check-btn" onclick="document.getElementById('dexAddTokenModal').remove()" style="background:linear-gradient(135deg,#22c55e,#16a34a)">Got it</button>
+        <div class="dex-deposit-actions" style="display:flex;gap:10px;justify-content:center">
+          <button class="dex-deposit-check-btn" onclick="dexCopyAllTokenFields('${denom}','${symbol}')" style="background:linear-gradient(135deg,#7c3aed,#a855f7)">📋 Copy All Fields</button>
+          <button class="dex-deposit-check-btn" onclick="document.getElementById('dexAddTokenModal').remove()" style="background:linear-gradient(135deg,#22c55e,#16a34a)">Done</button>
         </div>
       </div>
     </div>
   `;
   document.body.appendChild(modal);
+}
+
+function dexCopyAllTokenFields(denom, symbol) {
+  const text = [
+    'Coin minimal denom: ' + denom,
+    'Coin denom: ' + symbol,
+    'Coin decimals: 6',
+    'Token name: ' + symbol,
+  ].join('\n');
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = event.target;
+    const orig = btn.textContent;
+    btn.textContent = '✅ All Copied!';
+    setTimeout(() => { btn.textContent = orig; }, 2000);
+  });
 }
 

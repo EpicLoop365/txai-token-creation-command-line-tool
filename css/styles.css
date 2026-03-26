@@ -1484,3 +1484,12 @@ footer{
 }
 .dex-deposit-status.error{color:#ef4444}
 .dex-deposit-status.success{color:#22c55e}
+
+/* Add Token Fields */
+.add-token-fields{display:flex;flex-direction:column;gap:10px;margin-bottom:14px}
+.add-token-field label{
+  display:block;font-size:.72rem;color:#8b949e;margin-bottom:4px;
+  font-weight:600;text-transform:uppercase;letter-spacing:.5px;
+}
+.add-token-field .dex-deposit-address-row{margin-bottom:0}
+.add-token-field .dex-deposit-address-row code{font-size:.74rem}
