@@ -678,61 +678,229 @@ footer{
 .dex-wrap{display:none;animation:fadeUp .3s ease}
 .dex-wrap.show{display:block}
 
+/* Pair Bar */
 .dex-pair-bar{
-  background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);
-  padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  background:var(--bg2);border-bottom:1px solid var(--border);
+  padding:10px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;
 }
-.dex-pair-bar label{font-family:var(--mono);font-size:.78rem;color:var(--text-dim);white-space:nowrap}
-.dex-pair-bar input{
-  flex:1;min-width:200px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);
-  padding:9px 12px;font-size:.82rem;font-family:var(--mono);color:var(--text);outline:none;transition:border-color .2s;
+.dex-pair-select-wrap{position:relative;min-width:200px}
+.dex-pair-select{
+  width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;
+  padding:8px 32px 8px 10px;font-size:.8rem;font-family:var(--mono);color:var(--text);
+  outline:none;cursor:pointer;-webkit-appearance:none;appearance:none;transition:border-color .2s;
 }
-.dex-pair-bar input::placeholder{color:var(--text-muted)}
-.dex-pair-bar input:focus{border-color:var(--purple)}
-.dex-pair-label{font-family:var(--mono);font-size:.82rem;color:var(--text-muted)}
-.dex-load-btn{
-  padding:9px 20px;border-radius:var(--radius-sm);border:none;
-  background:var(--purple);color:#fff;font-weight:700;font-size:.82rem;
+.dex-pair-select:focus{border-color:var(--purple)}
+.dex-pair-select-wrap::after{
+  content:'\25BC';position:absolute;right:10px;top:50%;transform:translateY(-50%);
+  font-size:.6rem;color:var(--text-muted);pointer-events:none;
+}
+.dex-pair-manual{
+  background:var(--bg3);border:1px solid var(--border);border-radius:6px;
+  padding:8px 10px;font-size:.78rem;font-family:var(--mono);color:var(--text);
+  outline:none;transition:border-color .2s;width:260px;
+}
+.dex-pair-manual::placeholder{color:var(--text-muted)}
+.dex-pair-manual:focus{border-color:var(--purple)}
+.dex-pair-or{font-family:var(--mono);font-size:.68rem;color:var(--text-muted);text-transform:uppercase}
+.dex-pair-load{
+  padding:7px 18px;border-radius:6px;border:none;
+  background:var(--purple);color:#fff;font-weight:700;font-size:.78rem;
   cursor:pointer;font-family:var(--mono);transition:all .25s;white-space:nowrap;
 }
-.dex-load-btn:hover{background:var(--purple-dim);transform:translateY(-1px)}
+.dex-pair-load:hover{background:var(--purple-dim);transform:translateY(-1px)}
 
-.dex-grid{display:grid;grid-template-columns:260px 1fr 260px;gap:14px;margin-bottom:20px}
-.dex-panel{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.dex-stats-strip{
+  display:flex;align-items:center;gap:16px;margin-left:auto;flex-wrap:wrap;
+}
+.dex-stat{display:flex;flex-direction:column;align-items:flex-end;gap:1px}
+.dex-stat-label{font-family:var(--mono);font-size:.58rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px}
+.dex-stat-value{font-family:var(--mono);font-size:.78rem;color:var(--text);font-weight:600}
+.dex-stat-value.green{color:var(--green)}
+.dex-stat-value.red{color:#ef4444}
+.dex-stat-value.purple{color:var(--purple)}
+
+.dex-live-badge{
+  display:inline-flex;align-items:center;gap:5px;
+  font-family:var(--mono);font-size:.68rem;color:var(--text-muted);
+}
+.dex-live-dot{width:6px;height:6px;border-radius:50%;background:var(--text-muted)}
+.dex-live-dot.on{background:var(--green);animation:pulse-dot 2s infinite}
+
+.dex-connect-btn{
+  padding:7px 14px;border-radius:6px;border:1px solid var(--border);
+  background:var(--bg3);color:var(--text-muted);font-family:var(--mono);font-size:.7rem;
+  cursor:not-allowed;position:relative;opacity:.6;
+}
+.dex-connect-btn:hover::after{
+  content:'Coming Soon';position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);
+  background:var(--bg4);color:var(--text-dim);padding:4px 10px;border-radius:4px;
+  font-size:.65rem;white-space:nowrap;border:1px solid var(--border);z-index:10;
+}
+
+/* Terminal Grid */
+.dex-terminal{
+  display:grid;
+  grid-template-columns:280px 1fr 300px;
+  grid-template-rows:auto 1fr;
+  grid-template-areas:
+    "orderbook center order-form"
+    "history orders orders";
+  gap:1px;
+  background:var(--border);
+  border:1px solid var(--border);
+  min-height:680px;
+}
+.dex-terminal-panel{
+  background:var(--bg2);overflow:hidden;display:flex;flex-direction:column;
+}
+.dex-terminal-panel.p-orderbook{grid-area:orderbook}
+.dex-terminal-panel.p-center{grid-area:center}
+.dex-terminal-panel.p-order-form{grid-area:order-form}
+.dex-terminal-panel.p-history{grid-area:history}
+.dex-terminal-panel.p-orders{grid-area:orders}
+
 .dex-panel-hdr{
-  padding:10px 14px;border-bottom:1px solid var(--border);
-  font-family:var(--mono);font-size:.76rem;font-weight:700;color:var(--text-dim);
-  text-transform:uppercase;letter-spacing:1px;display:flex;align-items:center;justify-content:space-between;
+  padding:8px 12px;border-bottom:1px solid var(--border);
+  font-family:var(--mono);font-size:.7rem;font-weight:700;color:var(--text-muted);
+  text-transform:uppercase;letter-spacing:.8px;display:flex;align-items:center;justify-content:space-between;
+  background:var(--bg3);flex-shrink:0;
 }
-.dex-panel-body{padding:14px}
+.dex-panel-body{padding:10px;flex:1;overflow-y:auto}
+.dex-panel-body::-webkit-scrollbar{width:4px}
+.dex-panel-body::-webkit-scrollbar-thumb{background:var(--border-light);border-radius:2px}
 
-.dex-side-tabs{display:flex;gap:0;margin-bottom:14px;border-radius:var(--radius-sm);overflow:hidden;border:1px solid var(--border)}
-.dex-side-tab{
-  flex:1;padding:9px;text-align:center;font-family:var(--mono);font-size:.78rem;font-weight:700;
-  cursor:pointer;transition:all .2s;border:none;background:var(--bg3);color:var(--text-dim);
+/* Orderbook */
+.dex-ob-hdr{
+  display:grid;grid-template-columns:1fr 1fr 1fr;padding:6px 10px;
+  font-family:var(--mono);font-size:.62rem;font-weight:600;color:var(--text-muted);
+  text-transform:uppercase;border-bottom:1px solid var(--border);background:var(--bg3);
+  letter-spacing:.3px;
 }
-.dex-side-tab.buy.active{background:rgba(0,255,136,.12);color:var(--green);box-shadow:inset 0 -2px 0 var(--green)}
+.dex-ob-hdr span:last-child{text-align:right}
+.dex-ob-hdr span:nth-child(2){text-align:right}
+.dex-ob-asks,.dex-ob-bids{overflow-y:auto}
+.dex-ob-asks{display:flex;flex-direction:column;justify-content:flex-end;min-height:120px;max-height:260px}
+.dex-ob-bids{min-height:120px;max-height:260px}
+.dex-ob-row{
+  display:grid;grid-template-columns:1fr 1fr 1fr;padding:2px 10px;
+  font-family:var(--mono);font-size:.72rem;position:relative;cursor:pointer;
+  transition:background .1s;line-height:1.6;
+}
+.dex-ob-row:hover{background:rgba(255,255,255,.04)}
+.dex-ob-row span{position:relative;z-index:1}
+.dex-ob-row span:last-child{text-align:right}
+.dex-ob-row span:nth-child(2){text-align:right;color:var(--text-dim)}
+.dex-ob-row .dbar{position:absolute;top:0;right:0;bottom:0;opacity:.1;pointer-events:none;transition:width .3s}
+.dex-ob-row.ask .price{color:#ef4444}
+.dex-ob-row.ask .dbar{background:#ef4444}
+.dex-ob-row.bid .price{color:var(--green)}
+.dex-ob-row.bid .dbar{background:var(--green)}
+.dex-ob-spread{
+  padding:6px 10px;display:flex;align-items:center;justify-content:center;gap:12px;
+  font-family:var(--mono);font-size:.68rem;color:var(--text-muted);
+  border-top:1px solid var(--border);border-bottom:1px solid var(--border);
+  background:rgba(13,15,20,.8);
+}
+.dex-ob-spread .sv{color:var(--purple);font-weight:700}
+.dex-ob-spread .sp{color:var(--text-muted);font-size:.62rem}
+.dex-ob-empty{padding:40px 14px;text-align:center;font-family:var(--mono);font-size:.76rem;color:var(--text-muted)}
+
+/* Center Panel Tabs */
+.dex-center-tabs{
+  display:flex;border-bottom:1px solid var(--border);background:var(--bg3);flex-shrink:0;
+}
+.dex-center-tab{
+  padding:7px 16px;font-family:var(--mono);font-size:.7rem;font-weight:600;
+  color:var(--text-muted);cursor:pointer;border:none;background:transparent;
+  border-bottom:2px solid transparent;transition:all .2s;
+}
+.dex-center-tab.active{color:var(--purple);border-bottom-color:var(--purple)}
+.dex-center-tab:hover{color:var(--text-dim)}
+.dex-center-content{flex:1;position:relative;overflow:hidden}
+.dex-center-pane{display:none;height:100%;flex-direction:column}
+.dex-center-pane.active{display:flex}
+
+/* Depth Chart */
+.dex-depth-canvas{width:100%;flex:1;display:block;min-height:200px}
+
+/* AI Advisor Chat */
+.dex-chat-messages{
+  flex:1;padding:10px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;
+  scroll-behavior:smooth;min-height:200px;
+}
+.dex-chat-msg{display:flex;gap:8px;max-width:90%;animation:fadeUp .2s ease}
+.dex-chat-msg.user{align-self:flex-end;flex-direction:row-reverse}
+.dex-chat-avatar{
+  width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:.6rem;font-weight:700;flex-shrink:0;
+}
+.dex-chat-avatar.ai{background:var(--green);color:var(--bg)}
+.dex-chat-avatar.user{background:var(--purple);color:#fff}
+.dex-chat-bubble{
+  padding:8px 12px;border-radius:10px;font-size:.82rem;line-height:1.5;
+}
+.dex-chat-bubble.ai{background:var(--bg4);color:var(--text);border-bottom-left-radius:3px}
+.dex-chat-bubble.user{background:var(--purple-dim);color:#fff;border-bottom-right-radius:3px}
+.dex-chat-input-row{
+  display:flex;gap:8px;padding:8px 10px;border-top:1px solid var(--border);background:var(--bg3);flex-shrink:0;
+}
+.dex-chat-input{
+  flex:1;background:var(--bg);border:1px solid var(--border);border-radius:6px;
+  padding:7px 10px;font-size:.82rem;font-family:var(--sans);color:var(--text);outline:none;
+}
+.dex-chat-input::placeholder{color:var(--text-muted)}
+.dex-chat-input:focus{border-color:var(--purple)}
+.dex-chat-send{
+  background:var(--green);color:var(--bg);border:none;border-radius:6px;
+  padding:7px 14px;font-family:var(--mono);font-weight:700;font-size:.72rem;cursor:pointer;
+  transition:all .2s;white-space:nowrap;
+}
+.dex-chat-send:hover{background:var(--green-dim)}
+.dex-chat-send:disabled{opacity:.5;cursor:not-allowed}
+
+/* Order Form */
+.dex-side-tabs{display:flex;gap:0;border-radius:6px;overflow:hidden;border:1px solid var(--border);margin-bottom:10px}
+.dex-side-tab{
+  flex:1;padding:8px;text-align:center;font-family:var(--mono);font-size:.74rem;font-weight:700;
+  cursor:pointer;transition:all .2s;border:none;background:var(--bg3);color:var(--text-muted);
+}
+.dex-side-tab.buy.active{background:rgba(6,214,160,.12);color:var(--green);box-shadow:inset 0 -2px 0 var(--green)}
 .dex-side-tab.sell.active{background:rgba(239,68,68,.12);color:#ef4444;box-shadow:inset 0 -2px 0 #ef4444}
 
-.dex-form-group{margin-bottom:10px}
-.dex-form-label{display:block;font-family:var(--mono);font-size:.68rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.dex-type-tabs{display:flex;gap:0;border-radius:4px;overflow:hidden;border:1px solid var(--border);margin-bottom:10px}
+.dex-type-tab{
+  flex:1;padding:5px;text-align:center;font-family:var(--mono);font-size:.65rem;font-weight:600;
+  cursor:pointer;border:none;background:var(--bg3);color:var(--text-muted);transition:all .2s;
+}
+.dex-type-tab.active{background:var(--bg4);color:var(--text)}
+
+.dex-form-group{margin-bottom:8px}
+.dex-form-label{display:block;font-family:var(--mono);font-size:.62rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
 .dex-form-input{
-  width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);
-  padding:9px 11px;font-size:.84rem;font-family:var(--mono);color:var(--text);outline:none;transition:border-color .2s;box-sizing:border-box;
+  width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;
+  padding:8px 10px;font-size:.8rem;font-family:var(--mono);color:var(--text);outline:none;transition:border-color .2s;box-sizing:border-box;
 }
 .dex-form-input::placeholder{color:var(--text-muted)}
 .dex-form-input:focus{border-color:var(--purple)}
 
+.dex-pct-btns{display:flex;gap:4px;margin-bottom:8px}
+.dex-pct-btn{
+  flex:1;padding:4px;text-align:center;font-family:var(--mono);font-size:.62rem;font-weight:600;
+  border:1px solid var(--border);border-radius:4px;background:var(--bg3);color:var(--text-muted);
+  cursor:pointer;transition:all .15s;
+}
+.dex-pct-btn:hover{border-color:var(--purple);color:var(--text)}
+
 .dex-total{
-  padding:8px 11px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);
-  font-family:var(--mono);font-size:.82rem;color:var(--text);margin-bottom:12px;
+  padding:6px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;
+  font-family:var(--mono);font-size:.78rem;color:var(--text);margin-bottom:10px;
   display:flex;justify-content:space-between;
 }
-.dex-total .lbl{color:var(--text-muted);font-size:.68rem;text-transform:uppercase}
+.dex-total .lbl{color:var(--text-muted);font-size:.62rem;text-transform:uppercase}
 
 .dex-place-btn{
-  width:100%;padding:11px;border:none;border-radius:var(--radius-sm);
-  font-family:var(--mono);font-weight:700;font-size:.85rem;cursor:pointer;transition:all .25s;
+  width:100%;padding:10px;border:none;border-radius:6px;
+  font-family:var(--mono);font-weight:700;font-size:.82rem;cursor:pointer;transition:all .25s;
 }
 .dex-place-btn.buy{background:var(--green);color:var(--bg)}
 .dex-place-btn.buy:hover{background:var(--green-dim)}
@@ -740,69 +908,84 @@ footer{
 .dex-place-btn.sell:hover{background:#dc2626}
 .dex-place-btn:disabled{opacity:.5;cursor:not-allowed}
 
+.dex-balance-info{
+  margin-top:8px;padding:6px 8px;background:var(--bg);border:1px solid var(--border);border-radius:4px;
+  font-family:var(--mono);font-size:.62rem;color:var(--text-muted);
+}
+.dex-balance-info .val{color:var(--green);font-weight:600}
+
 .dex-wallet-info{
-  margin-top:10px;padding:7px 9px;background:var(--bg);border:1px solid var(--border);border-radius:6px;
-  font-family:var(--mono);font-size:.65rem;color:var(--text-muted);word-break:break-all;
+  margin-top:6px;padding:5px 8px;background:var(--bg);border:1px solid var(--border);border-radius:4px;
+  font-family:var(--mono);font-size:.58rem;color:var(--text-muted);word-break:break-all;
 }
 .dex-wallet-info span{color:var(--purple)}
 
-/* Orderbook */
-.dex-ob-hdr{
-  display:grid;grid-template-columns:1fr 1fr 1fr;padding:7px 11px;
-  font-family:var(--mono);font-size:.68rem;font-weight:600;color:var(--text-muted);
-  text-transform:uppercase;border-bottom:1px solid var(--border);background:var(--bg3);
+/* Trade History */
+.dex-trade-row{
+  display:grid;grid-template-columns:1fr 1fr 1fr;padding:3px 10px;
+  font-family:var(--mono);font-size:.68rem;line-height:1.5;
 }
-.dex-ob-hdr span:last-child{text-align:right}
-.dex-ob-hdr span:nth-child(2){text-align:center}
-.dex-ob-row{
-  display:grid;grid-template-columns:1fr 1fr 1fr;padding:4px 11px;
-  font-family:var(--mono);font-size:.74rem;position:relative;cursor:pointer;transition:background .15s;
+.dex-trade-row.header{
+  font-size:.6rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;
+  border-bottom:1px solid var(--border);padding:5px 10px;letter-spacing:.3px;
 }
-.dex-ob-row:hover{background:rgba(255,255,255,.03)}
-.dex-ob-row span{position:relative;z-index:1}
-.dex-ob-row span:last-child{text-align:right}
-.dex-ob-row span:nth-child(2){text-align:center;color:var(--text-dim)}
-.dex-ob-row .dbar{position:absolute;top:0;right:0;bottom:0;opacity:.12;pointer-events:none;transition:width .3s}
-.dex-ob-row.ask .price{color:#ef4444}
-.dex-ob-row.ask .dbar{background:#ef4444}
-.dex-ob-row.bid .price{color:var(--green)}
-.dex-ob-row.bid .dbar{background:var(--green)}
-.dex-ob-spread{
-  padding:7px 11px;text-align:center;font-family:var(--mono);font-size:.7rem;color:var(--text-muted);
-  border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--bg);
+.dex-trade-row .t-time{text-align:right;color:var(--text-muted)}
+.dex-trade-row .t-amt{text-align:right;color:var(--text-dim)}
+.dex-trade-empty{
+  padding:30px 14px;text-align:center;font-family:var(--mono);font-size:.72rem;color:var(--text-muted);
 }
-.dex-ob-spread .sv{color:var(--purple);font-weight:600}
-.dex-ob-empty{padding:35px 14px;text-align:center;font-family:var(--mono);font-size:.78rem;color:var(--text-muted)}
 
-/* My Orders */
+/* Bottom Orders Panel Tabs */
+.dex-orders-tabs{
+  display:flex;border-bottom:1px solid var(--border);background:var(--bg3);flex-shrink:0;
+}
+.dex-orders-tab{
+  padding:7px 16px;font-family:var(--mono);font-size:.68rem;font-weight:600;
+  color:var(--text-muted);cursor:pointer;border:none;background:transparent;
+  border-bottom:2px solid transparent;transition:all .2s;
+}
+.dex-orders-tab.active{color:var(--text);border-bottom-color:var(--purple)}
+.dex-orders-tab:hover{color:var(--text-dim)}
+.dex-orders-pane{display:none}
+.dex-orders-pane.active{display:block}
+
 .dex-order-row{
-  display:flex;align-items:center;gap:7px;padding:9px 12px;border-bottom:1px solid var(--border);
-  font-family:var(--mono);font-size:.72rem;
+  display:flex;align-items:center;gap:6px;padding:7px 10px;border-bottom:1px solid var(--border);
+  font-family:var(--mono);font-size:.68rem;
 }
 .dex-order-row:last-child{border-bottom:none}
-.dex-order-side{padding:2px 7px;border-radius:4px;font-weight:700;font-size:.65rem;text-transform:uppercase}
-.dex-order-side.buy{color:var(--green);background:rgba(0,255,136,.1)}
+.dex-order-side{padding:2px 6px;border-radius:3px;font-weight:700;font-size:.6rem;text-transform:uppercase}
+.dex-order-side.buy{color:var(--green);background:rgba(6,214,160,.1)}
 .dex-order-side.sell{color:#ef4444;background:rgba(239,68,68,.1)}
 .dex-order-det{flex:1;display:flex;flex-direction:column;gap:1px}
 .dex-order-price{color:var(--text)}
-.dex-order-qty{color:var(--text-muted);font-size:.68rem}
+.dex-order-qty{color:var(--text-muted);font-size:.62rem}
 .dex-cancel-btn{
-  padding:3px 9px;border-radius:4px;border:1px solid var(--border);background:transparent;
-  color:var(--text-muted);font-family:var(--mono);font-size:.65rem;cursor:pointer;transition:all .2s;
+  padding:2px 8px;border-radius:3px;border:1px solid var(--border);background:transparent;
+  color:var(--text-muted);font-family:var(--mono);font-size:.6rem;cursor:pointer;transition:all .2s;
 }
 .dex-cancel-btn:hover{border-color:#ef4444;color:#ef4444}
-.dex-no-orders{padding:28px 14px;text-align:center;font-family:var(--mono);font-size:.76rem;color:var(--text-muted)}
+.dex-no-orders{padding:24px 12px;text-align:center;font-family:var(--mono);font-size:.72rem;color:var(--text-muted)}
 
-/* DEX Processing */
+.dex-session-row{
+  display:grid;grid-template-columns:auto 1fr 1fr 1fr auto;gap:8px;align-items:center;
+  padding:6px 10px;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:.66rem;
+}
+.dex-session-status{font-size:.6rem;font-weight:600;text-transform:uppercase}
+.dex-session-status.placed{color:var(--green)}
+.dex-session-status.cancelled{color:#ef4444}
+.dex-session-status.pending{color:var(--text-muted)}
+
+/* DEX Processing Overlay */
 .dex-proc{
-  background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);
-  padding:14px 18px;margin-bottom:14px;display:none;
+  background:var(--bg2);border:1px solid var(--border);border-radius:8px;
+  padding:12px 16px;margin-bottom:1px;display:none;
 }
 .dex-proc.show{display:block;animation:fadeUp .3s ease}
-.dex-proc-hdr{display:flex;align-items:center;gap:10px;margin-bottom:10px}
-.dex-proc-spinner{width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--purple);border-radius:50%;animation:spin .8s linear infinite}
-.dex-proc-title{font-family:var(--mono);font-size:.8rem;color:var(--purple);font-weight:700}
-.dex-proc-stream{font-family:var(--mono);font-size:.72rem;color:var(--text-dim);line-height:1.8;white-space:pre-wrap;max-height:180px;overflow-y:auto}
+.dex-proc-hdr{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.dex-proc-spinner{width:12px;height:12px;border:2px solid var(--border);border-top-color:var(--purple);border-radius:50%;animation:spin .8s linear infinite}
+.dex-proc-title{font-family:var(--mono);font-size:.76rem;color:var(--purple);font-weight:700}
+.dex-proc-stream{font-family:var(--mono);font-size:.68rem;color:var(--text-dim);line-height:1.7;white-space:pre-wrap;max-height:140px;overflow-y:auto}
 
 /* DEX Status */
 .dex-status-dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:4px}
@@ -810,11 +993,22 @@ footer{
 .dex-status-dot.idle{background:var(--text-muted)}
 
 /* ===== RESPONSIVE ===== */
+@media(max-width:1200px){
+  .dex-terminal{
+    grid-template-columns:240px 1fr 260px;
+    min-height:560px;
+  }
+}
 @media(max-width:1024px){
-  .dex-grid{grid-template-columns:1fr 1fr;gap:12px}
-  .dex-grid .dex-order-form{order:2}
-  .dex-grid .dex-ob-panel{order:1;grid-column:span 2}
-  .dex-grid .dex-my-orders{order:3;grid-column:span 2}
+  .dex-terminal{
+    grid-template-columns:1fr 1fr;
+    grid-template-areas:
+      "orderbook order-form"
+      "center center"
+      "history orders";
+    min-height:auto;
+  }
+  .dex-stats-strip{display:none}
 }
 @media(max-width:640px){
   .demo-input-row{flex-direction:column}
@@ -829,8 +1023,18 @@ footer{
   .cp-row.triple{grid-template-columns:1fr}
   .cp-slider-row{flex-direction:column;align-items:flex-start;gap:8px}
   .cp-slider-label{width:auto}
-  .dex-grid{grid-template-columns:1fr}
-  .dex-grid .dex-ob-panel,.dex-grid .dex-my-orders{grid-column:span 1}
+  .dex-terminal{
+    grid-template-columns:1fr;
+    grid-template-areas:
+      "orderbook"
+      "order-form"
+      "center"
+      "history"
+      "orders";
+  }
+  .dex-pair-bar{flex-direction:column;align-items:stretch}
+  .dex-pair-manual{width:100%}
+  .dex-pair-select-wrap{min-width:auto}
 }
 </style>
 </head>
@@ -1094,15 +1298,30 @@ footer{
     <!-- DEX Mode -->
     <div class="dex-wrap" id="dexWrap">
 
-      <!-- Pair Selector -->
+      <!-- Pair Bar -->
       <div class="dex-pair-bar">
-        <label>Trading Pair</label>
-        <input type="text" id="dexBaseDenom" placeholder="Enter token denom (e.g. mytoken-testcore1abc...)">
-        <span class="dex-pair-label">/ TX</span>
-        <button class="dex-load-btn" id="dexLoadBtn" onclick="dexLoadOrderbook()">Load Orderbook</button>
+        <div class="dex-pair-select-wrap">
+          <select class="dex-pair-select" id="dexPairSelect" onchange="dexOnPairSelect()">
+            <option value="">-- Select Pair --</option>
+          </select>
+        </div>
+        <span class="dex-pair-or">or</span>
+        <input type="text" class="dex-pair-manual" id="dexBaseDenom" placeholder="Paste denom (e.g. mytoken-testcore1...)">
+        <button class="dex-pair-load" onclick="dexLoadOrderbook()">Load</button>
+
+        <div class="dex-stats-strip">
+          <div class="dex-stat"><span class="dex-stat-label">Last Price</span><span class="dex-stat-value" id="dexStatLast">--</span></div>
+          <div class="dex-stat"><span class="dex-stat-label">Spread</span><span class="dex-stat-value purple" id="dexStatSpread">--</span></div>
+          <div class="dex-stat"><span class="dex-stat-label">Best Bid</span><span class="dex-stat-value green" id="dexStatBid">--</span></div>
+          <div class="dex-stat"><span class="dex-stat-label">Best Ask</span><span class="dex-stat-value red" id="dexStatAsk">--</span></div>
+          <div class="dex-stat"><span class="dex-stat-label">Orders</span><span class="dex-stat-value" id="dexStatCount">0</span></div>
+          <div class="dex-live-badge"><span class="dex-live-dot" id="dexLiveDot"></span><span id="dexLiveText">Idle</span></div>
+        </div>
+
+        <button class="dex-connect-btn">Connect Wallet</button>
       </div>
 
-      <!-- Processing -->
+      <!-- Processing Overlay -->
       <div class="dex-proc" id="dexProc">
         <div class="dex-proc-hdr">
           <div class="dex-proc-spinner"></div>
@@ -1111,11 +1330,61 @@ footer{
         <div class="dex-proc-stream" id="dexProcStream"></div>
       </div>
 
-      <!-- Trading Grid -->
-      <div class="dex-grid">
+      <!-- Terminal Grid -->
+      <div class="dex-terminal">
 
-        <!-- LEFT: Order Form -->
-        <div class="dex-panel dex-order-form">
+        <!-- LEFT: Orderbook -->
+        <div class="dex-terminal-panel p-orderbook">
+          <div class="dex-panel-hdr">
+            Orderbook
+            <span id="dexObStatus" style="font-size:.6rem;font-weight:500;text-transform:none;letter-spacing:0">
+              <span class="dex-status-dot idle"></span> Idle
+            </span>
+          </div>
+          <div style="padding:0;flex:1;display:flex;flex-direction:column;overflow:hidden">
+            <div class="dex-ob-hdr">
+              <span>Price</span>
+              <span>Amount</span>
+              <span>Total</span>
+            </div>
+            <div class="dex-ob-asks" id="dexAskRows"></div>
+            <div class="dex-ob-spread" id="dexSpreadRow" style="display:none">
+              <span>Spread:</span> <span class="sv" id="dexSpreadVal">--</span> <span class="sp" id="dexSpreadPct"></span>
+            </div>
+            <div class="dex-ob-bids" id="dexBidRows"></div>
+            <div class="dex-ob-empty" id="dexObEmpty">Select a pair or enter a denom to begin trading.</div>
+          </div>
+        </div>
+
+        <!-- CENTER: Depth / AI Advisor -->
+        <div class="dex-terminal-panel p-center">
+          <div class="dex-center-tabs">
+            <button class="dex-center-tab active" onclick="dexSetCenterTab('depth')">Depth</button>
+            <button class="dex-center-tab" onclick="dexSetCenterTab('advisor')">AI Advisor</button>
+          </div>
+          <div class="dex-center-content">
+            <!-- Depth Chart Pane -->
+            <div class="dex-center-pane active" id="dexDepthPane">
+              <canvas class="dex-depth-canvas" id="dexDepthCanvas"></canvas>
+            </div>
+            <!-- AI Advisor Pane -->
+            <div class="dex-center-pane" id="dexAdvisorPane">
+              <div class="dex-chat-messages" id="dexChatMessages">
+                <div class="dex-chat-msg">
+                  <div class="dex-chat-avatar ai">AI</div>
+                  <div class="dex-chat-bubble ai">I'm your AI trading advisor for the TX orderbook. Ask about strategies, or describe an order in natural language.</div>
+                </div>
+              </div>
+              <div class="dex-chat-input-row">
+                <input type="text" class="dex-chat-input" id="dexChatInput" placeholder="Ask about trading or describe an order..." onkeydown="if(event.key==='Enter')dexSendChat()">
+                <button class="dex-chat-send" id="dexChatSendBtn" onclick="dexSendChat()">Send</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT: Order Form -->
+        <div class="dex-terminal-panel p-order-form">
           <div class="dex-panel-hdr">Place Order</div>
           <div class="dex-panel-body">
             <div class="dex-side-tabs">
@@ -1123,14 +1392,26 @@ footer{
               <button class="dex-side-tab sell" onclick="dexSetSide('sell')">Sell</button>
             </div>
 
-            <div class="dex-form-group">
+            <div class="dex-type-tabs">
+              <button class="dex-type-tab active" onclick="dexSetOrderType('limit')">Limit</button>
+              <button class="dex-type-tab" onclick="dexSetOrderType('market')">Market</button>
+            </div>
+
+            <div class="dex-form-group" id="dexPriceGroup">
               <label class="dex-form-label">Price (TX)</label>
               <input type="number" class="dex-form-input" id="dexPrice" placeholder="0.00" step="any" oninput="dexUpdateTotal()">
             </div>
 
             <div class="dex-form-group">
-              <label class="dex-form-label">Quantity (Token)</label>
+              <label class="dex-form-label">Amount (Token)</label>
               <input type="number" class="dex-form-input" id="dexQty" placeholder="0.00" step="any" oninput="dexUpdateTotal()">
+            </div>
+
+            <div class="dex-pct-btns">
+              <button class="dex-pct-btn" onclick="dexSetPct(25)">25%</button>
+              <button class="dex-pct-btn" onclick="dexSetPct(50)">50%</button>
+              <button class="dex-pct-btn" onclick="dexSetPct(75)">75%</button>
+              <button class="dex-pct-btn" onclick="dexSetPct(100)">100%</button>
             </div>
 
             <div class="dex-total">
@@ -1142,65 +1423,50 @@ footer{
               Place Buy Order
             </button>
 
+            <div class="dex-balance-info">
+              Available: <span class="val" id="dexAvailBalance">--</span>
+            </div>
+
             <div class="dex-wallet-info">
               Agent Wallet: <span id="dexWalletAddr">Loading...</span>
             </div>
           </div>
         </div>
 
-        <!-- CENTER: Orderbook -->
-        <div class="dex-panel dex-ob-panel">
-          <div class="dex-panel-hdr">
-            Orderbook
-            <span id="dexObStatus" style="font-size:.65rem;font-weight:500;text-transform:none;letter-spacing:0">
-              <span class="dex-status-dot idle"></span> Idle
-            </span>
-          </div>
-          <div style="padding:0">
-            <div class="dex-ob-hdr">
-              <span>Price</span>
-              <span>Amount</span>
-              <span>Total</span>
+        <!-- BOTTOM-LEFT: Trade History -->
+        <div class="dex-terminal-panel p-history">
+          <div class="dex-panel-hdr">Trade History</div>
+          <div style="padding:0;flex:1;overflow-y:auto">
+            <div class="dex-trade-row header">
+              <span>Price</span><span class="t-amt">Amount</span><span class="t-time">Time</span>
             </div>
-            <div id="dexAskRows"></div>
-            <div class="dex-ob-spread" id="dexSpreadRow" style="display:none">
-              Spread: <span class="sv" id="dexSpreadVal">--</span>
+            <div id="dexTradeHistory">
+              <div class="dex-trade-empty">Monitoring for trades...</div>
             </div>
-            <div id="dexBidRows"></div>
-            <div class="dex-ob-empty" id="dexObEmpty">Enter a token denom and load the orderbook to begin trading.</div>
           </div>
         </div>
 
-        <!-- RIGHT: My Orders -->
-        <div class="dex-panel dex-my-orders">
-          <div class="dex-panel-hdr">My Orders</div>
-          <div id="dexMyOrdersBody" style="padding:0">
-            <div class="dex-no-orders">No open orders</div>
+        <!-- BOTTOM-RIGHT: Open Orders / Session History -->
+        <div class="dex-terminal-panel p-orders">
+          <div class="dex-orders-tabs">
+            <button class="dex-orders-tab active" onclick="dexSetOrdersTab('open')">Open Orders</button>
+            <button class="dex-orders-tab" onclick="dexSetOrdersTab('session')">Session History</button>
           </div>
-        </div>
-
-      </div>
-
-      <!-- DEX Chat -->
-      <div style="margin-top:16px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden">
-        <button style="display:flex;align-items:center;gap:8px;padding:12px 16px;background:transparent;border:none;width:100%;cursor:pointer;font-family:var(--mono);font-size:.82rem;font-weight:600;color:var(--text-dim);transition:color .2s" onclick="dexToggleChat()" id="dexChatToggle">
-          🤖 AI Trading Advisor <span style="margin-left:auto;font-size:.7rem;transition:transform .3s" id="dexChatArrow">▼</span>
-        </button>
-        <div id="dexChatContainer" style="display:none;flex-direction:column;max-height:400px">
-          <div id="dexChatMessages" style="flex:1;padding:14px;overflow-y:auto;max-height:300px;min-height:150px;display:flex;flex-direction:column;gap:10px;scroll-behavior:smooth">
-            <div class="chat-msg assistant">
-              <div class="chat-msg-avatar" style="background:var(--green);color:var(--bg);width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700">AI</div>
-              <div class="chat-msg-bubble" style="background:var(--bg4);border-bottom-left-radius:4px;padding:10px 14px;border-radius:var(--radius);font-size:.85rem;line-height:1.5">
-                <p>I'm your AI trading advisor for the TX orderbook. Ask about strategies, or tell me to place an order in natural language.</p>
+          <div style="flex:1;overflow-y:auto">
+            <div class="dex-orders-pane active" id="dexOpenOrdersPane">
+              <div id="dexMyOrdersBody">
+                <div class="dex-no-orders">No open orders</div>
+              </div>
+            </div>
+            <div class="dex-orders-pane" id="dexSessionPane">
+              <div id="dexSessionHistory">
+                <div class="dex-no-orders">No orders placed this session</div>
               </div>
             </div>
           </div>
-          <div style="display:flex;gap:10px;padding:12px 14px;border-top:1px solid var(--border);background:var(--bg3)">
-            <input type="text" class="dex-form-input" id="dexChatInput" placeholder="Ask about trading or describe an order..." style="flex:1;font-family:var(--sans);font-size:.85rem" onkeydown="if(event.key==='Enter')dexSendChat()">
-            <button onclick="dexSendChat()" id="dexChatSendBtn" style="background:var(--green);color:var(--bg);border:none;border-radius:var(--radius-sm);padding:8px 16px;font-family:var(--mono);font-weight:700;font-size:.78rem;cursor:pointer;transition:all .2s;white-space:nowrap">Send</button>
-          </div>
         </div>
-      </div>
+
+      </div><!-- end dex-terminal -->
 
     </div>
 
@@ -1348,6 +1614,8 @@ function switchTab(tab){
   createWrap.style.display = 'none';
   chatWrap.classList.remove('show');
   dexWrap.classList.remove('show');
+  // Reset container width when leaving DEX
+  dexWrap.closest('.container').style.maxWidth = '';
   chatMode = false;
 
   if(tab === 'chat'){
@@ -1358,8 +1626,12 @@ function switchTab(tab){
   } else if(tab === 'dex'){
     tabDex.classList.add('active');
     dexWrap.classList.add('show');
-    // Auto-fetch wallet on first load
+    // Expand container for trading terminal
+    dexWrap.closest('.container').style.maxWidth = '1440px';
+    // Auto-fetch wallet and pairs on first load
     if(!dexAgentWallet) dexFetchWallet();
+    if(!document.getElementById('dexPairSelect').options.length || document.getElementById('dexPairSelect').options.length <= 1) dexFetchPairs();
+    setTimeout(() => dexDrawDepthChart(), 100);
   } else {
     tabCreate.classList.add('active');
     createWrap.style.display = '';
@@ -2238,16 +2510,22 @@ document.getElementById('demoInput').addEventListener('keydown',e=>{if(e.key==='
 /* ===== DEX TAB ===== */
 const DEX_QUOTE_DENOM = 'utestcore';
 const DEX_QUOTE_SYMBOL = 'TX';
-const DEX_DECIMALS = 6; // Both quote (utestcore) and most tokens use 6 decimals
+const DEX_DECIMALS = 6;
 const DEX_REFRESH_MS = 10000;
 
 let dexSide = 'buy';
+let dexOrderType = 'limit';
 let dexBaseDenom = '';
 let dexRefreshTimer = null;
 let dexChatHistory = [];
 let dexAgentWallet = '';
-let dexChatOpen = false;
+let dexLastOrderbook = null;
+let dexPrevOrderbook = null;
+let dexTradeLog = [];
+let dexSessionLog = [];
+let dexBalances = {};
 
+/* ---- Side / Order Type / Tab Switching ---- */
 function dexSetSide(side){
   dexSide = side;
   document.querySelectorAll('.dex-side-tab').forEach(t => t.classList.remove('active'));
@@ -2256,13 +2534,65 @@ function dexSetSide(side){
   btn.className = `dex-place-btn ${side}`;
   btn.textContent = `Place ${side.charAt(0).toUpperCase() + side.slice(1)} Order`;
   dexUpdateTotal();
+  dexUpdateBalanceDisplay();
 }
 
+function dexSetOrderType(type){
+  dexOrderType = type;
+  document.querySelectorAll('.dex-type-tab').forEach(t => t.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('dexPriceGroup').style.display = type === 'market' ? 'none' : '';
+  dexUpdateTotal();
+}
+
+function dexSetCenterTab(tab){
+  document.querySelectorAll('.dex-center-tab').forEach(t => t.classList.remove('active'));
+  event.target.classList.add('active');
+  document.querySelectorAll('.dex-center-pane').forEach(p => p.classList.remove('active'));
+  if(tab === 'depth'){
+    document.getElementById('dexDepthPane').classList.add('active');
+    dexDrawDepthChart();
+  } else {
+    document.getElementById('dexAdvisorPane').classList.add('active');
+    document.getElementById('dexChatInput').focus();
+  }
+}
+
+function dexSetOrdersTab(tab){
+  document.querySelectorAll('.dex-orders-tab').forEach(t => t.classList.remove('active'));
+  event.target.classList.add('active');
+  document.querySelectorAll('.dex-orders-pane').forEach(p => p.classList.remove('active'));
+  if(tab === 'open') document.getElementById('dexOpenOrdersPane').classList.add('active');
+  else document.getElementById('dexSessionPane').classList.add('active');
+}
+
+function dexSetPct(pct){
+  const price = parseFloat(document.getElementById('dexPrice').value) || 0;
+  if(!price && dexOrderType === 'limit') return;
+  let avail = 0;
+  if(dexSide === 'buy'){
+    avail = parseFloat(dexBalances[DEX_QUOTE_DENOM]) || 0;
+    avail = dexHuman(avail);
+    if(price > 0){
+      const maxQty = avail / price;
+      document.getElementById('dexQty').value = (maxQty * pct / 100).toFixed(6);
+    }
+  } else {
+    avail = parseFloat(dexBalances[dexBaseDenom]) || 0;
+    avail = dexHuman(avail);
+    document.getElementById('dexQty').value = (avail * pct / 100).toFixed(6);
+  }
+  dexUpdateTotal();
+}
+
+/* ---- Core Data ---- */
 function dexUpdateTotal(){
   const price = parseFloat(document.getElementById('dexPrice').value) || 0;
   const qty = parseFloat(document.getElementById('dexQty').value) || 0;
-  document.getElementById('dexTotalDisplay').textContent = (price * qty).toFixed(6) + ' ' + DEX_QUOTE_SYMBOL;
-  document.getElementById('dexPlaceBtn').disabled = !(price > 0 && qty > 0 && dexBaseDenom);
+  const total = dexOrderType === 'market' ? qty : price * qty;
+  document.getElementById('dexTotalDisplay').textContent = total.toFixed(6) + ' ' + DEX_QUOTE_SYMBOL;
+  const canPlace = qty > 0 && dexBaseDenom && (dexOrderType === 'market' || price > 0);
+  document.getElementById('dexPlaceBtn').disabled = !canPlace;
 }
 
 function dexFetchWallet(){
@@ -2270,22 +2600,81 @@ function dexFetchWallet(){
     if(data.wallet){
       dexAgentWallet = data.wallet;
       document.getElementById('dexWalletAddr').textContent = dexAgentWallet;
+      dexFetchBalances(dexAgentWallet);
     }
   }).catch(() => {
     document.getElementById('dexWalletAddr').textContent = 'Not connected';
   });
 }
 
+async function dexFetchPairs(){
+  try {
+    const res = await fetch(`${API_URL}/api/pairs`);
+    const data = await res.json();
+    const sel = document.getElementById('dexPairSelect');
+    sel.innerHTML = '<option value="">-- Select Pair --</option>';
+    (data.pairs || []).forEach(p => {
+      const base = p.baseDenom || '';
+      const name = dexTokenName(base);
+      const opt = document.createElement('option');
+      opt.value = base;
+      opt.textContent = `${name} / ${DEX_QUOTE_SYMBOL}`;
+      sel.appendChild(opt);
+    });
+  } catch(err){ console.error('DEX pairs fetch error:', err); }
+}
+
+function dexOnPairSelect(){
+  const val = document.getElementById('dexPairSelect').value;
+  if(val){
+    document.getElementById('dexBaseDenom').value = val;
+    dexLoadOrderbook();
+  }
+}
+
+async function dexFetchBalances(address){
+  if(!address) return;
+  try {
+    const res = await fetch(`${API_URL}/api/balances?address=${encodeURIComponent(address)}`);
+    const data = await res.json();
+    dexBalances = {};
+    (data.balances || []).forEach(b => { dexBalances[b.denom] = b.amount; });
+    dexUpdateBalanceDisplay();
+  } catch(err){ console.error('DEX balance fetch error:', err); }
+}
+
+function dexUpdateBalanceDisplay(){
+  const el = document.getElementById('dexAvailBalance');
+  if(dexSide === 'buy'){
+    const raw = parseFloat(dexBalances[DEX_QUOTE_DENOM]) || 0;
+    el.textContent = dexFmt(dexHuman(raw)) + ' ' + DEX_QUOTE_SYMBOL;
+  } else {
+    const raw = parseFloat(dexBalances[dexBaseDenom]) || 0;
+    const name = dexTokenName(dexBaseDenom);
+    el.textContent = dexFmt(dexHuman(raw)) + ' ' + name;
+  }
+}
+
 function dexLoadOrderbook(){
   const denom = document.getElementById('dexBaseDenom').value.trim();
   if(!denom) return;
   dexBaseDenom = denom;
+  // sync the select if it has this value
+  const sel = document.getElementById('dexPairSelect');
+  if(sel.querySelector(`option[value="${denom}"]`)) sel.value = denom;
   dexFetchOrderbook();
   dexFetchMyOrders();
   if(dexRefreshTimer) clearInterval(dexRefreshTimer);
-  dexRefreshTimer = setInterval(() => { dexFetchOrderbook(); dexFetchMyOrders(); }, DEX_REFRESH_MS);
+  dexRefreshTimer = setInterval(() => {
+    dexFetchOrderbook();
+    dexFetchMyOrders();
+    if(dexAgentWallet) dexFetchBalances(dexAgentWallet);
+  }, DEX_REFRESH_MS);
   document.getElementById('dexObStatus').innerHTML = '<span class="dex-status-dot live"></span> Live';
+  document.getElementById('dexLiveDot').classList.add('on');
+  document.getElementById('dexLiveText').textContent = 'Live';
   dexUpdateTotal();
+  if(dexAgentWallet) dexFetchBalances(dexAgentWallet);
 }
 
 async function dexFetchOrderbook(){
@@ -2293,7 +2682,12 @@ async function dexFetchOrderbook(){
   try {
     const res = await fetch(`${API_URL}/api/orderbook?baseDenom=${encodeURIComponent(dexBaseDenom)}&quoteDenom=${encodeURIComponent(DEX_QUOTE_DENOM)}`);
     const data = await res.json();
+    dexPrevOrderbook = dexLastOrderbook;
+    dexLastOrderbook = data;
     dexRenderOrderbook(data);
+    dexUpdatePairStats(data);
+    dexDrawDepthChart();
+    dexDetectFills(data);
   } catch(err){ console.error('DEX orderbook fetch error:', err); }
 }
 
@@ -2314,26 +2708,40 @@ function dexRenderOrderbook(data){
     return;
   }
   emptyMsg.style.display = 'none';
-  spreadRow.style.display = 'block';
+  spreadRow.style.display = 'flex';
 
-  const allQtys = [...asks, ...bids].map(o => parseFloat(o.quantity || o.amount || 0));
-  const maxQty = Math.max(...allQtys, 1);
+  const bDec = DEX_DECIMALS;
 
-  // Convert chain values to human-readable
-  // Price from chain: raw utestcore per smallest base unit. Human price = rawPrice / 10^(quoteDecimals - baseDecimals)
-  // For same-decimal tokens (both 6): humanPrice = rawPrice (it's already the ratio)
-  // Quantity from chain: in smallest units. humanQty = rawQty / 10^baseDecimals
-  const qDec = DEX_DECIMALS; // quote decimals (utestcore = 6)
-  const bDec = DEX_DECIMALS; // base token decimals (assume 6, most tokens)
+  // Cumulative depth for asks (from lowest to highest for depth bars)
+  const asksSorted = [...asks].reverse(); // lowest price first
+  let askCumul = 0;
+  const askCumuls = asksSorted.map(o => {
+    askCumul += parseFloat(o.quantity || o.remainingQuantity || o.amount || 0);
+    return askCumul;
+  });
+  const maxAskCum = askCumul || 1;
 
+  // Cumulative depth for bids (highest price first)
+  let bidCumul = 0;
+  const bidCumuls = bids.map(o => {
+    bidCumul += parseFloat(o.quantity || o.remainingQuantity || o.amount || 0);
+    return bidCumul;
+  });
+  const maxBidCum = bidCumul || 1;
+  const maxCum = Math.max(maxAskCum, maxBidCum);
+
+  // Render asks (display highest at top, lowest near spread)
   let askHTML = '';
   asks.forEach(o => {
     const rawP = parseFloat(o.price) || 0;
     const rawQ = parseFloat(o.quantity || o.remainingQuantity || o.amount || 0);
-    const humanP = rawP; // price ratio stays same when both have same decimals
+    const humanP = rawP;
     const humanQ = rawQ / Math.pow(10, bDec);
     const humanTotal = humanP * humanQ;
-    const pct = (rawQ / maxQty) * 100;
+    // Find cumulative for this row
+    const idx = asksSorted.findIndex(a => a === o);
+    const cum = idx >= 0 ? askCumuls[idx] : rawQ;
+    const pct = (cum / maxCum) * 100;
     askHTML += `<div class="dex-ob-row ask" onclick="dexFillPrice(${humanP})">
       <span class="price">${dexFmt(humanP)}</span><span>${dexFmt(humanQ)}</span><span>${dexFmt(humanTotal)}</span>
       <div class="dbar" style="width:${pct}%"></div></div>`;
@@ -2344,19 +2752,23 @@ function dexRenderOrderbook(data){
   const highestBid = bids.length ? parseFloat(bids[0].price) : null;
   if(lowestAsk !== null && highestBid !== null){
     const spread = lowestAsk - highestBid;
-    document.getElementById('dexSpreadVal').textContent = `${dexFmt(spread)} (${((spread / lowestAsk) * 100).toFixed(2)}%)`;
+    const spreadPct = ((spread / lowestAsk) * 100).toFixed(2);
+    document.getElementById('dexSpreadVal').textContent = dexFmt(spread);
+    document.getElementById('dexSpreadPct').textContent = `(${spreadPct}%)`;
   } else {
     document.getElementById('dexSpreadVal').textContent = '--';
+    document.getElementById('dexSpreadPct').textContent = '';
   }
 
+  // Render bids (highest near spread)
   let bidHTML = '';
-  bids.forEach(o => {
+  bids.forEach((o, i) => {
     const rawP = parseFloat(o.price) || 0;
     const rawQ = parseFloat(o.quantity || o.remainingQuantity || o.amount || 0);
     const humanP = rawP;
     const humanQ = rawQ / Math.pow(10, bDec);
     const humanTotal = humanP * humanQ;
-    const pct = (rawQ / maxQty) * 100;
+    const pct = (bidCumuls[i] / maxCum) * 100;
     bidHTML += `<div class="dex-ob-row bid" onclick="dexFillPrice(${humanP})">
       <span class="price">${dexFmt(humanP)}</span><span>${dexFmt(humanQ)}</span><span>${dexFmt(humanTotal)}</span>
       <div class="dbar" style="width:${pct}%"></div></div>`;
@@ -2364,11 +2776,254 @@ function dexRenderOrderbook(data){
   bidC.innerHTML = bidHTML;
 }
 
+function dexUpdatePairStats(data){
+  const asks = (data.asks || []).sort((a,b) => parseFloat(a.price) - parseFloat(b.price));
+  const bids = (data.bids || []).sort((a,b) => parseFloat(b.price) - parseFloat(a.price));
+  const bestAsk = asks.length ? parseFloat(asks[0].price) : null;
+  const bestBid = bids.length ? parseFloat(bids[0].price) : null;
+
+  document.getElementById('dexStatAsk').textContent = bestAsk !== null ? dexFmt(bestAsk) : '--';
+  document.getElementById('dexStatBid').textContent = bestBid !== null ? dexFmt(bestBid) : '--';
+
+  if(bestAsk !== null && bestBid !== null){
+    const mid = (bestAsk + bestBid) / 2;
+    const spread = bestAsk - bestBid;
+    document.getElementById('dexStatLast').textContent = dexFmt(mid);
+    document.getElementById('dexStatSpread').textContent = dexFmt(spread);
+  } else if(bestBid !== null){
+    document.getElementById('dexStatLast').textContent = dexFmt(bestBid);
+    document.getElementById('dexStatSpread').textContent = '--';
+  } else if(bestAsk !== null){
+    document.getElementById('dexStatLast').textContent = dexFmt(bestAsk);
+    document.getElementById('dexStatSpread').textContent = '--';
+  }
+  const totalOrders = (data.asks || []).length + (data.bids || []).length;
+  document.getElementById('dexStatCount').textContent = totalOrders;
+}
+
 function dexFillPrice(price){
   document.getElementById('dexPrice').value = price;
   dexUpdateTotal();
 }
 
+/* ---- Depth Chart (Canvas) ---- */
+function dexDrawDepthChart(){
+  const canvas = document.getElementById('dexDepthCanvas');
+  if(!canvas || !dexLastOrderbook) return;
+  const rect = canvas.parentElement.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  canvas.style.width = rect.width + 'px';
+  canvas.style.height = rect.height + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  const W = rect.width;
+  const H = rect.height;
+  ctx.clearRect(0, 0, W, H);
+
+  // Background
+  ctx.fillStyle = '#0d0f14';
+  ctx.fillRect(0, 0, W, H);
+
+  const asks = (dexLastOrderbook.asks || []).sort((a,b) => parseFloat(a.price) - parseFloat(b.price));
+  const bids = (dexLastOrderbook.bids || []).sort((a,b) => parseFloat(b.price) - parseFloat(a.price));
+
+  if(!asks.length && !bids.length){
+    ctx.fillStyle = '#6b7280';
+    ctx.font = '12px "Space Mono", monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('No orderbook data', W/2, H/2);
+    return;
+  }
+
+  const bDec = DEX_DECIMALS;
+
+  // Build cumulative arrays
+  let bidPoints = [];
+  let cumBid = 0;
+  bids.forEach(o => {
+    const p = parseFloat(o.price) || 0;
+    const q = (parseFloat(o.quantity || o.remainingQuantity || o.amount || 0)) / Math.pow(10, bDec);
+    cumBid += q;
+    bidPoints.push({ price: p, cumQty: cumBid });
+  });
+
+  let askPoints = [];
+  let cumAsk = 0;
+  asks.forEach(o => {
+    const p = parseFloat(o.price) || 0;
+    const q = (parseFloat(o.quantity || o.remainingQuantity || o.amount || 0)) / Math.pow(10, bDec);
+    cumAsk += q;
+    askPoints.push({ price: p, cumQty: cumAsk });
+  });
+
+  const allPrices = [...bidPoints.map(p=>p.price), ...askPoints.map(p=>p.price)];
+  const minPrice = Math.min(...allPrices);
+  const maxPrice = Math.max(...allPrices);
+  const priceRange = maxPrice - minPrice || 1;
+  const maxQty = Math.max(cumBid, cumAsk, 1);
+
+  const pad = { top: 20, bottom: 24, left: 10, right: 10 };
+  const cW = W - pad.left - pad.right;
+  const cH = H - pad.top - pad.bottom;
+
+  function px(price){ return pad.left + ((price - minPrice) / priceRange) * cW; }
+  function py(qty){ return pad.top + cH - (qty / maxQty) * cH; }
+
+  // Grid lines
+  ctx.strokeStyle = '#1e2130';
+  ctx.lineWidth = 0.5;
+  for(let i = 0; i <= 4; i++){
+    const y = pad.top + (cH / 4) * i;
+    ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(W - pad.right, y); ctx.stroke();
+  }
+
+  // Draw bid area (green, left side)
+  if(bidPoints.length){
+    ctx.beginPath();
+    ctx.moveTo(px(bidPoints[0].price), py(0));
+    bidPoints.forEach(p => {
+      ctx.lineTo(px(p.price), py(p.cumQty));
+    });
+    ctx.lineTo(px(bidPoints[bidPoints.length-1].price), py(0));
+    ctx.closePath();
+    const gBid = ctx.createLinearGradient(0, pad.top, 0, H - pad.bottom);
+    gBid.addColorStop(0, 'rgba(6,214,160,0.25)');
+    gBid.addColorStop(1, 'rgba(6,214,160,0.02)');
+    ctx.fillStyle = gBid;
+    ctx.fill();
+
+    // Bid line
+    ctx.beginPath();
+    ctx.moveTo(px(bidPoints[0].price), py(bidPoints[0].cumQty));
+    bidPoints.forEach(p => ctx.lineTo(px(p.price), py(p.cumQty)));
+    ctx.strokeStyle = '#06d6a0';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+
+  // Draw ask area (red, right side)
+  if(askPoints.length){
+    ctx.beginPath();
+    ctx.moveTo(px(askPoints[0].price), py(0));
+    askPoints.forEach(p => {
+      ctx.lineTo(px(p.price), py(p.cumQty));
+    });
+    ctx.lineTo(px(askPoints[askPoints.length-1].price), py(0));
+    ctx.closePath();
+    const gAsk = ctx.createLinearGradient(0, pad.top, 0, H - pad.bottom);
+    gAsk.addColorStop(0, 'rgba(239,68,68,0.25)');
+    gAsk.addColorStop(1, 'rgba(239,68,68,0.02)');
+    ctx.fillStyle = gAsk;
+    ctx.fill();
+
+    // Ask line
+    ctx.beginPath();
+    ctx.moveTo(px(askPoints[0].price), py(askPoints[0].cumQty));
+    askPoints.forEach(p => ctx.lineTo(px(p.price), py(p.cumQty)));
+    ctx.strokeStyle = '#ef4444';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+
+  // Mid price label
+  if(bidPoints.length && askPoints.length){
+    const midP = (bidPoints[0].price + askPoints[0].price) / 2;
+    const midX = px(midP);
+    ctx.setLineDash([4,4]);
+    ctx.strokeStyle = '#7c6dfa';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(midX, pad.top); ctx.lineTo(midX, H - pad.bottom); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#7c6dfa';
+    ctx.font = '10px "Space Mono", monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(dexFmt(midP), midX, pad.top - 6);
+  }
+
+  // X-axis price labels
+  ctx.fillStyle = '#6b7280';
+  ctx.font = '9px "Space Mono", monospace';
+  ctx.textAlign = 'center';
+  for(let i = 0; i <= 4; i++){
+    const p = minPrice + (priceRange / 4) * i;
+    ctx.fillText(dexFmt(p), px(p), H - 6);
+  }
+}
+
+/* ---- Trade Detection ---- */
+function dexDetectFills(newData){
+  if(!dexPrevOrderbook) return;
+  const prevAll = [...(dexPrevOrderbook.bids||[]), ...(dexPrevOrderbook.asks||[])];
+  const newAll = [...(newData.bids||[]), ...(newData.asks||[])];
+  const newIds = new Set(newAll.map(o => o.id));
+  const bDec = DEX_DECIMALS;
+
+  prevAll.forEach(o => {
+    if(!newIds.has(o.id)){
+      // Order disappeared - likely filled
+      const rawP = parseFloat(o.price) || 0;
+      const rawQ = parseFloat(o.quantity || o.remainingQuantity || o.amount || 0);
+      const humanP = rawP;
+      const humanQ = rawQ / Math.pow(10, bDec);
+      let side = (o.side || '').toLowerCase().replace('side_','');
+      if(side !== 'buy' && side !== 'sell') side = 'buy';
+      dexTradeLog.unshift({
+        price: humanP,
+        amount: humanQ,
+        side: side,
+        time: new Date()
+      });
+    }
+  });
+
+  // Also detect partial fills (quantity decreased)
+  const prevMap = {};
+  prevAll.forEach(o => { prevMap[o.id] = o; });
+  newAll.forEach(o => {
+    if(prevMap[o.id]){
+      const prevQ = parseFloat(prevMap[o.id].quantity || prevMap[o.id].remainingQuantity || 0);
+      const newQ = parseFloat(o.quantity || o.remainingQuantity || 0);
+      if(newQ < prevQ){
+        const rawP = parseFloat(o.price) || 0;
+        const diffQ = (prevQ - newQ) / Math.pow(10, bDec);
+        let side = (o.side || '').toLowerCase().replace('side_','');
+        if(side !== 'buy' && side !== 'sell') side = 'buy';
+        dexTradeLog.unshift({
+          price: rawP,
+          amount: diffQ,
+          side: side,
+          time: new Date()
+        });
+      }
+    }
+  });
+
+  if(dexTradeLog.length > 50) dexTradeLog = dexTradeLog.slice(0, 50);
+  dexRenderTradeHistory();
+}
+
+function dexRenderTradeHistory(){
+  const el = document.getElementById('dexTradeHistory');
+  if(!dexTradeLog.length){
+    el.innerHTML = '<div class="dex-trade-empty">Monitoring for trades...</div>';
+    return;
+  }
+  let html = '';
+  dexTradeLog.slice(0, 20).forEach(t => {
+    const color = t.side === 'buy' ? 'var(--green)' : '#ef4444';
+    const timeStr = t.time.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    html += `<div class="dex-trade-row">
+      <span style="color:${color}">${dexFmt(t.price)}</span>
+      <span class="t-amt">${dexFmt(t.amount)}</span>
+      <span class="t-time">${timeStr}</span>
+    </div>`;
+  });
+  el.innerHTML = html;
+}
+
+/* ---- My Orders ---- */
 async function dexFetchMyOrders(){
   try {
     const res = await fetch(`${API_URL}/api/orders`);
@@ -2391,7 +3046,7 @@ function dexRenderMyOrders(orders){
     const sc = side === 'sell' ? 'sell' : 'buy';
     const rawPrice = parseFloat(o.price) || 0;
     const rawQty = parseFloat(o.quantity || o.remainingQuantity || o.amount || 0);
-    const humanPrice = rawPrice; // same decimals for both
+    const humanPrice = rawPrice;
     const humanQty = rawQty / Math.pow(10, DEX_DECIMALS);
     const id = o.id || o.order_id || '';
     const tokenName = dexTokenName(o.baseDenom || dexBaseDenom);
@@ -2407,12 +3062,38 @@ function dexRenderMyOrders(orders){
   body.innerHTML = html;
 }
 
+/* ---- Place / Execute / Cancel ---- */
 async function dexPlaceOrder(){
   const price = document.getElementById('dexPrice').value;
   const qty = document.getElementById('dexQty').value;
-  if(!price || !qty || !dexBaseDenom) return;
-  const instruction = `Place a limit ${dexSide} order for ${qty} tokens of ${dexBaseDenom} at a price of ${price} ${DEX_QUOTE_SYMBOL} per token on the DEX orderbook.`;
+  if(!qty || !dexBaseDenom) return;
+  if(dexOrderType === 'limit' && !price) return;
+
+  let instruction;
+  if(dexOrderType === 'market'){
+    instruction = `Place a market ${dexSide} order for ${qty} tokens of ${dexBaseDenom} on the DEX orderbook.`;
+  } else {
+    instruction = `Place a limit ${dexSide} order for ${qty} tokens of ${dexBaseDenom} at a price of ${price} ${DEX_QUOTE_SYMBOL} per token on the DEX orderbook.`;
+  }
+
+  // Track in session history
+  dexSessionLog.unshift({
+    type: dexOrderType,
+    side: dexSide,
+    price: price || 'market',
+    qty: qty,
+    status: 'pending',
+    time: new Date()
+  });
+  dexRenderSessionHistory();
+
   await dexExecuteTrade(instruction);
+
+  // Update status to placed
+  if(dexSessionLog.length){
+    dexSessionLog[0].status = 'placed';
+    dexRenderSessionHistory();
+  }
 }
 
 async function dexExecuteTrade(instruction){
@@ -2468,24 +3149,42 @@ async function dexExecuteTrade(instruction){
 
 async function dexCancelOrder(orderId){
   if(!orderId) return;
+  dexSessionLog.unshift({
+    type: 'cancel',
+    side: '--',
+    price: '--',
+    qty: '--',
+    status: 'cancelled',
+    time: new Date(),
+    orderId: orderId
+  });
+  dexRenderSessionHistory();
   await dexExecuteTrade(`Cancel order ${orderId} on the DEX orderbook.`);
 }
 
-/* DEX Chat */
-function dexToggleChat(){
-  dexChatOpen = !dexChatOpen;
-  const container = document.getElementById('dexChatContainer');
-  const arrow = document.getElementById('dexChatArrow');
-  if(dexChatOpen){
-    container.style.display = 'flex';
-    arrow.style.transform = 'rotate(180deg)';
-    document.getElementById('dexChatInput').focus();
-  } else {
-    container.style.display = 'none';
-    arrow.style.transform = '';
+function dexRenderSessionHistory(){
+  const el = document.getElementById('dexSessionHistory');
+  if(!dexSessionLog.length){
+    el.innerHTML = '<div class="dex-no-orders">No orders placed this session</div>';
+    return;
   }
+  let html = '';
+  dexSessionLog.forEach(o => {
+    const statusClass = o.status === 'placed' ? 'placed' : o.status === 'cancelled' ? 'cancelled' : 'pending';
+    const timeStr = o.time.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    const sideColor = o.side === 'buy' ? 'var(--green)' : o.side === 'sell' ? '#ef4444' : 'var(--text-muted)';
+    html += `<div class="dex-session-row">
+      <span class="dex-session-status ${statusClass}">${o.status}</span>
+      <span style="color:${sideColor};text-transform:uppercase;font-weight:600">${o.side}</span>
+      <span style="color:var(--text)">${o.price}</span>
+      <span style="color:var(--text-dim)">${o.qty}</span>
+      <span style="color:var(--text-muted)">${timeStr}</span>
+    </div>`;
+  });
+  el.innerHTML = html;
 }
 
+/* ---- DEX Chat (AI Advisor) ---- */
 async function dexSendChat(){
   const input = document.getElementById('dexChatInput');
   const msg = input.value.trim();
@@ -2495,12 +3194,11 @@ async function dexSendChat(){
   dexAppendMsg('user', msg);
   document.getElementById('dexChatSendBtn').disabled = true;
 
-  // Show typing
   const container = document.getElementById('dexChatMessages');
   const typingEl = document.createElement('div');
-  typingEl.className = 'chat-typing';
+  typingEl.className = 'dex-chat-msg';
   typingEl.id = 'dexChatTyping';
-  typingEl.innerHTML = '<div class="chat-typing-dots"><span></span><span></span><span></span></div>';
+  typingEl.innerHTML = '<div class="dex-chat-avatar ai">AI</div><div class="dex-chat-bubble ai" style="opacity:.6">Thinking...</div>';
   container.appendChild(typingEl);
   container.scrollTop = container.scrollHeight;
 
@@ -2514,11 +3212,9 @@ async function dexSendChat(){
     const reply = data.message || data.reply || data.response || '';
     dexChatHistory.push({ role: 'assistant', content: reply });
 
-    // Remove typing
     const t = document.getElementById('dexChatTyping'); if(t) t.remove();
     dexAppendMsg('assistant', reply);
 
-    // Check for ===ORDER_CONFIG=== marker
     const configMatch = reply.match(/===ORDER_CONFIG===\s*(\{[\s\S]*?\})\s*===ORDER_CONFIG===/);
     if(configMatch){
       try {
@@ -2542,23 +3238,20 @@ async function dexSendChat(){
 
 function dexAppendMsg(role, text){
   const container = document.getElementById('dexChatMessages');
-  const avatar = role === 'user' ? 'You' : 'AI';
-  const avatarBg = role === 'user' ? 'var(--purple)' : 'var(--green)';
-  const avatarColor = role === 'user' ? 'white' : 'var(--bg)';
-  const bubbleBg = role === 'user' ? 'var(--purple-dim)' : 'var(--bg4)';
-  const bubbleColor = role === 'user' ? 'white' : 'var(--text)';
-  const align = role === 'user' ? 'flex-end' : 'flex-start';
-  const dir = role === 'user' ? 'row-reverse' : 'row';
-  // Clean out ===ORDER_CONFIG=== markers from display
   let displayText = text.replace(/===ORDER_CONFIG===[\s\S]*?===ORDER_CONFIG===/g, '').trim();
-  const html = `<div style="display:flex;gap:10px;max-width:85%;align-self:${align};flex-direction:${dir};animation:fadeUp .3s ease">
-    <div style="width:30px;height:30px;border-radius:50%;background:${avatarBg};color:${avatarColor};display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;flex-shrink:0">${avatar}</div>
-    <div style="padding:10px 14px;border-radius:var(--radius);background:${bubbleBg};color:${bubbleColor};font-size:.85rem;line-height:1.5"><p>${escapeHtml(displayText)}</p></div>
+  const cls = role === 'user' ? 'user' : '';
+  const avatarCls = role === 'user' ? 'user' : 'ai';
+  const avatarText = role === 'user' ? 'You' : 'AI';
+  const bubbleCls = role === 'user' ? 'user' : 'ai';
+  const html = `<div class="dex-chat-msg ${cls}">
+    <div class="dex-chat-avatar ${avatarCls}">${avatarText}</div>
+    <div class="dex-chat-bubble ${bubbleCls}">${escapeHtml(displayText)}</div>
   </div>`;
   container.insertAdjacentHTML('beforeend', html);
   container.scrollTop = container.scrollHeight;
 }
 
+/* ---- Utility ---- */
 function dexFmt(n){
   if(isNaN(n) || n === null || n === undefined) return '--';
   if(n === 0) return '0';
@@ -2566,14 +3259,12 @@ function dexFmt(n){
   return n.toPrecision(6);
 }
 
-// Convert chain smallest-unit amount to human-readable (divide by 10^decimals)
 function dexHuman(raw, decimals){
   decimals = decimals || DEX_DECIMALS;
   const n = parseFloat(raw) || 0;
   return n / Math.pow(10, decimals);
 }
 
-// Extract token name from denom (e.g. "wonder-testcore1abc..." -> "WONDER")
 function dexTokenName(denom){
   if(!denom) return '?';
   const parts = denom.split('-');
@@ -2584,9 +3275,13 @@ function dexTokenName(denom){
 function populateDexFromToken(denom){
   if(denom){
     document.getElementById('dexBaseDenom').value = denom;
-    // Show a brief toast or just set it ready
   }
 }
+
+/* Resize depth chart when window resizes */
+window.addEventListener('resize', () => {
+  if(dexLastOrderbook) dexDrawDepthChart();
+});
 </script>
 </body>
 </html>
