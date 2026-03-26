@@ -1184,19 +1184,27 @@ app.post("/api/dex/live-demo", async (req, res) => {
 
   const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
 
-  // SSE headers
+  // SSE headers — flush immediately so Railway knows it's streaming
   res.writeHead(200, {
     "Content-Type": "text/event-stream",
     "Cache-Control": "no-cache",
     Connection: "keep-alive",
     "Access-Control-Allow-Origin": "*",
+    "X-Accel-Buffering": "no",  // Disable nginx/proxy buffering
   });
+  res.flushHeaders();
+  res.write(`:connected\n\n`); // immediate flush
 
   const sendEvent = (event: string, data: Record<string, unknown>) => {
     try {
       res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
     } catch { /* connection closed */ }
   };
+
+  // SSE keepalive: send a comment every 10s so Railway doesn't kill the connection
+  const keepalive = setInterval(() => {
+    try { res.write(`:keepalive\n\n`); } catch { /* ignore */ }
+  }, 10000);
 
   // Abort controller for cleanup
   const abortController = new AbortController();
@@ -1214,6 +1222,7 @@ app.post("/api/dex/live-demo", async (req, res) => {
     sendEvent("error", { message: (err as Error).message });
   }
 
+  clearInterval(keepalive);
   try { res.end(); } catch { /* ignore */ }
 });
 
