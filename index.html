@@ -2594,6 +2594,34 @@ let _pendingPreset = null;   // stash preset while modal is open
 
 function showWalletChoice(preset){
   _pendingPreset = preset || null;
+  // If wallet already connected, show a streamlined modal
+  if(walletMode !== 'agent' && connectedAddress){
+    const overlay = document.getElementById('walletChoiceOverlay');
+    const modal = overlay.querySelector('.wallet-choice-modal');
+    const shortAddr = connectedAddress.slice(0,10) + '...' + connectedAddress.slice(-4);
+    const provName = walletMode === 'keplr' ? 'Keplr' : 'Leap';
+    modal.innerHTML = `
+      <div class="wallet-choice-title">Create with which wallet?</div>
+      <div class="wallet-choice-subtitle">You have ${provName} connected (${shortAddr})</div>
+      <div class="wallet-choice-cards">
+        <div class="wallet-choice-card" onclick="chooseWalletMode('agent')">
+          <div class="wc-icon">&#129302;</div>
+          <div class="wc-label">AI Agent Wallet</div>
+          <div class="wc-desc">Quick demo &mdash; AI creates the token. You won't be the issuer.</div>
+          <span class="wc-badge free">No signing needed</span>
+        </div>
+        <div class="wallet-choice-card recommended" onclick="chooseWalletMode('existing')">
+          <div class="wc-icon">&#128273;</div>
+          <div class="wc-label">Your Wallet (${provName})</div>
+          <div class="wc-desc">You sign the transaction &mdash; you own and control the token.</div>
+          <span class="wc-badge own">${shortAddr}</span>
+        </div>
+      </div>
+      <button class="wallet-choice-dismiss" onclick="closeWalletChoice()">Cancel</button>
+    `;
+    overlay.classList.add('show');
+    return;
+  }
   document.getElementById('walletChoiceOverlay').classList.add('show');
 }
 function closeWalletChoice(){
@@ -2604,19 +2632,35 @@ function closeWalletChoice(){
 }
 async function chooseWalletMode(mode){
   document.getElementById('walletChoiceOverlay').classList.remove('show');
+  resetWalletChoiceModal();
+  if(mode === 'agent'){
+    // Temporarily switch to agent mode for this creation
+    // (don't disconnect — just route through agent)
+    const savedMode = walletMode;
+    const savedAddr = connectedAddress;
+    const savedSigner = connectedOfflineSigner;
+    walletMode = 'agent';
+    connectedAddress = '';
+    connectedOfflineSigner = null;
+    await _runDemoInternal(_pendingPreset);
+    // Restore wallet state
+    walletMode = savedMode;
+    connectedAddress = savedAddr;
+    connectedOfflineSigner = savedSigner;
+    _pendingPreset = null;
+    return;
+  }
   if(mode === 'connect'){
-    // Need to connect wallet first — show the dropdown from global bar
-    // After connection completes, re-trigger runDemo
+    // Need to connect wallet first
     const ok = await connectWalletForChoice();
     if(!ok){
-      // User cancelled or failed — reset
       demoRunning = false;
       document.getElementById('demoBtn').disabled = false;
       _pendingPreset = null;
       return;
     }
   }
-  // Now actually run the demo with the chosen mode
+  // mode === 'connect' (now connected) or 'existing' (already connected)
   _runDemoInternal(_pendingPreset);
   _pendingPreset = null;
 }
@@ -2723,15 +2767,8 @@ async function runDemo(preset){
   document.getElementById('demoBtn').disabled=true;
   hideDemoError();
 
-  // If live mode, show wallet choice if not already connected
+  // If live mode, always show wallet choice modal
   if(liveMode){
-    // If wallet already connected, skip the choice and go straight
-    if(walletMode !== 'agent' && connectedAddress){
-      const desc = preset ? preset.input : input;
-      await runWalletTokenCreation(desc);
-      return;
-    }
-    // Show the choice modal: Agent vs Connect Wallet
     showWalletChoice(preset);
     return;
   }
@@ -2998,10 +3035,10 @@ function updateGlobalWalletUI(connected, provider){
     walletAddr.textContent = connected ? connectedAddress : (dexAgentWallet || 'Loading...');
   }
 
-  // Update Create tab button text
+  // Update Create tab button text — always same label, modal handles the choice
   const demoBtn = document.getElementById('demoBtn');
   if(demoBtn){
-    demoBtn.textContent = connected ? 'Create Token (Your Wallet)' : 'Deploy Token (Testnet)';
+    demoBtn.textContent = 'Deploy Token (Testnet)';
   }
 
   // Fetch balances for active address
@@ -3352,6 +3389,22 @@ async function runWalletTokenCreation(inputText){
       if(parsed.error) throw new Error('SERVER_ERROR:' + parsed.error);
 
       tokenConfig = parsed.config;
+
+      // Fix: if AI returned a generic name, extract from user input
+      const genericNames = ['token','coin','asset','tokens','coins'];
+      const aiName = (tokenConfig.name || '').trim().toLowerCase();
+      if(!aiName || genericNames.includes(aiName)){
+        // Extract first distinct word from input as the name
+        const words = inputText.split(/[\s,]+/).filter(w => w.length > 0);
+        const skipWords = ['a','an','the','my','create','make','with','and','supply','token','coin','mint','burn','mintable','burnable','freezable','minting','burning','freezing','clawback','ibc','whitelist','whitelisting','governance','deflationary'];
+        const nameWord = words.find(w => !skipWords.includes(w.toLowerCase()) && !/^\d+[kmbt]?$/i.test(w));
+        if(nameWord){
+          tokenConfig.name = nameWord.charAt(0).toUpperCase() + nameWord.slice(1);
+          tokenConfig.subunit = nameWord.toLowerCase().replace(/[^a-z0-9]/g, '');
+          if(tokenConfig.subunit.length < 3) tokenConfig.subunit += 'token';
+        }
+      }
+
       addStatus('AI parsed token configuration');
     }
 
@@ -3462,7 +3515,7 @@ async function runWalletTokenCreation(inputText){
       showDemoError('Token creation failed: ' + (err.message || 'Unknown error'));
     }
   } finally {
-    btn.textContent = 'Create Token (Your Wallet)';
+    btn.textContent = 'Deploy Token (Testnet)';
     btn.disabled = false;
     demoRunning = false;
   }
