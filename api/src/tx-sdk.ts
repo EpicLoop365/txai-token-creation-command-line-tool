@@ -207,7 +207,7 @@ export class TxClient {
 
   static async connectWithWallet(txWallet: TxWallet): Promise<TxClient> {
     const { network, networkName, wallet, address } = txWallet;
-    const gasPrice = GasPrice.fromString(`0.0625${network.denom}`);
+    const gasPrice = GasPrice.fromString(`0.1${network.denom}`);
 
     // Force HTTP transport (not WebSocket) for cloud platforms like Railway
     const httpClient = new HttpBatchClient(network.rpcEndpoint);
@@ -252,7 +252,7 @@ export class TxClient {
     try {
       const fee = calculateFee(
         gasLimit,
-        GasPrice.fromString(`0.0625${this.network.denom}`)
+        GasPrice.fromString(`0.1${this.network.denom}`)
       );
 
       const broadcast = () =>

@@ -36,6 +36,7 @@ import {
   globallyUnfreezeToken,
   clawbackTokens,
   setWhitelistedLimit,
+  requestFaucet,
 } from "./tx-sdk";
 import { defaultRegistryTypes } from "@cosmjs/stargate";
 import { Registry, GeneratedType } from "@cosmjs/proto-signing";
@@ -709,6 +710,22 @@ app.post("/api/token/whitelist", async (req, res) => {
   } catch (err) { res.status(500).json({ error: (err as Error).message }); }
 });
 
+// ─── FAUCET PROXY (avoids CORS issues) ──────────────────────────────────
+
+app.post("/api/faucet", async (req, res) => {
+  try {
+    const { address } = req.body as { address?: string };
+    if (!address) {
+      res.status(400).json({ error: "Missing address." });
+      return;
+    }
+    const result = await requestFaucet(address);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
 // ─── DEX: BUILD UNSIGNED TX (for Keplr/Leap wallet signing) ─────────────
 
 app.post("/api/build-tx", async (req, res) => {
@@ -770,7 +787,8 @@ app.post("/api/build-tx", async (req, res) => {
     const sequence = parseInt(accountData.account.sequence || "0", 10);
 
     // Build fee
-    const feeAmount = Math.ceil(gas * 0.0625).toString();
+    // Use generous gas price to avoid "insufficient fees" on testnet
+    const feeAmount = Math.ceil(gas * 0.1).toString();
 
     // Decode the pubkey from hex
     const pubkeyBytes = Buffer.from(pubkeyHex, "hex");

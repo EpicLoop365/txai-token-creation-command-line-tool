@@ -3015,43 +3015,35 @@ function globalDisconnectWallet(){
 }
 
 async function fundWallet(){
-  // Use the Coreum testnet faucet to fund the connected wallet
+  // Use server proxy to call the Coreum testnet faucet (avoids CORS)
   const addr = connectedAddress || dexAgentWallet;
   if(!addr){ alert('No wallet address to fund.'); return; }
-  const btn = document.querySelector('.gw-fund-btn');
-  const origText = btn.textContent;
-  btn.textContent = 'Requesting...';
-  btn.disabled = true;
+  // Find whichever fund button was clicked
+  const btns = document.querySelectorAll('.gw-fund-btn');
+  btns.forEach(b => { b.dataset.origText = b.textContent; b.textContent = 'Requesting...'; b.disabled = true; });
   try {
-    const res = await fetch('https://api.testnet-1.coreum.dev/api/faucet/v1/fund', {
+    const res = await fetch(API_URL + '/api/faucet', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ address: addr })
     });
-    if(res.ok){
-      btn.textContent = 'Funded!';
-      btn.style.borderColor = 'var(--green)';
+    const data = await res.json();
+    if(data.success){
+      btns.forEach(b => { b.textContent = 'Funded!'; b.style.borderColor = 'var(--green)'; });
       // Refresh balances after a short delay
       setTimeout(() => {
         dexFetchBalances(addr);
-        btn.textContent = origText;
-        btn.disabled = false;
-        btn.style.borderColor = '';
+        btns.forEach(b => { b.textContent = b.dataset.origText; b.disabled = false; b.style.borderColor = ''; });
       }, 3000);
     } else {
-      const data = await res.json().catch(() => ({}));
-      btn.textContent = 'Failed';
-      setTimeout(() => { btn.textContent = origText; btn.disabled = false; }, 3000);
-      // If faucet API doesn't work, open the faucet page
-      if(res.status === 404 || res.status === 405){
-        window.open('https://docs.coreum.dev/docs/tools/faucet', '_blank');
-      }
+      btns.forEach(b => {
+        b.textContent = 'Failed';
+        setTimeout(() => { b.textContent = b.dataset.origText; b.disabled = false; }, 3000);
+      });
     }
   } catch(err){
-    // Faucet API not available — open docs page
-    window.open('https://docs.coreum.dev/docs/tools/faucet', '_blank');
-    btn.textContent = origText;
-    btn.disabled = false;
+    btns.forEach(b => { b.textContent = b.dataset.origText; b.disabled = false; });
+    alert('Faucet request failed: ' + (err.message || 'Unknown error'));
   }
 }
 
