@@ -32,10 +32,8 @@ img{max-width:100%}
 /* ===== LAYOUT ===== */
 .container{max-width:1120px;margin:0 auto;padding:0 24px}
 section{padding:100px 0}
+#demo{padding-top:80px}
 @media(max-width:768px){section{padding:64px 0}}
-
-/* ===== PARTICLES CANVAS ===== */
-#particles{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.45}
 
 /* ===== NAV ===== */
 nav{
@@ -62,66 +60,10 @@ nav .gh-btn:hover{border-color:var(--purple);color:var(--purple);background:var(
 nav .gh-btn svg{width:16px;height:16px}
 @media(max-width:640px){nav .links a:not(.gh-btn){display:none}}
 
-/* ===== HERO ===== */
-.hero{
-  min-height:100vh;display:flex;flex-direction:column;
-  align-items:center;justify-content:center;text-align:center;
-  position:relative;z-index:1;padding-top:80px;
-}
-.hero-badge{
-  display:inline-flex;align-items:center;gap:8px;
-  padding:6px 16px;border-radius:999px;margin-bottom:28px;
-  border:1px solid var(--border-light);background:var(--bg2);
-  font-size:.8rem;font-weight:500;color:var(--text-dim);
-  animation:fadeInDown .7s ease;
-}
-.hero-badge .dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse-dot 2s infinite}
 @keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:.4}}
-.hero h1{
-  font-family:var(--mono);font-size:clamp(2.4rem,6vw,4.2rem);font-weight:700;
-  line-height:1.1;margin-bottom:20px;
-  background:linear-gradient(135deg,var(--text) 0%,var(--purple) 50%,var(--green) 100%);
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-  background-clip:text;animation:fadeInUp .7s ease;
-}
-.hero p{
-  font-size:clamp(1rem,2vw,1.25rem);color:var(--text-dim);max-width:600px;
-  margin:0 auto 40px;animation:fadeInUp .7s .15s ease both;
-}
-.hero-cta{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;animation:fadeInUp .7s .3s ease both}
-.btn{
-  display:inline-flex;align-items:center;gap:8px;
-  padding:12px 28px;border-radius:var(--radius-sm);font-weight:600;font-size:.95rem;
-  border:none;cursor:pointer;transition:all .3s;font-family:var(--sans);
-}
-.btn-primary{background:var(--purple);color:#fff;box-shadow:0 0 24px var(--purple-glow)}
-.btn-primary:hover{background:var(--purple-dim);box-shadow:0 0 40px var(--purple-glow);transform:translateY(-2px)}
-.btn-outline{background:transparent;color:var(--text);border:1px solid var(--border-light)}
-.btn-outline:hover{border-color:var(--purple);color:var(--purple);background:rgba(124,109,250,.06)}
-
-/* Hero terminal */
-.hero-terminal{
-  margin-top:56px;width:100%;max-width:700px;
-  background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);
-  overflow:hidden;text-align:left;animation:fadeInUp .7s .45s ease both;
-  box-shadow:0 24px 80px rgba(0,0,0,.45);
-}
-.term-bar{display:flex;align-items:center;gap:7px;padding:12px 16px;background:var(--bg3);border-bottom:1px solid var(--border)}
-.term-dot{width:11px;height:11px;border-radius:50%}
-.term-dot.r{background:#ff5f57}.term-dot.y{background:#ffbd2e}.term-dot.g{background:#28c840}
-.term-bar span{margin-left:auto;font-family:var(--mono);font-size:.7rem;color:var(--text-muted)}
-.term-body{padding:20px;font-family:var(--mono);font-size:.82rem;line-height:1.8;min-height:140px}
-.term-body .line{opacity:0;animation:typeLine .4s ease forwards}
-.term-body .prompt{color:var(--green)}
-.term-body .cmd{color:var(--text)}
-.term-body .out{color:var(--text-dim)}
-.term-body .hl{color:var(--purple)}
-.term-body .cursor{display:inline-block;width:8px;height:16px;background:var(--green);animation:blink 1s step-end infinite;vertical-align:middle;margin-left:2px}
-@keyframes blink{50%{opacity:0}}
-@keyframes typeLine{to{opacity:1}}
 
 /* ===== DEMO SECTION ===== */
-#demo{position:relative;z-index:1}
+#demo{position:relative;z-index:1;padding-top:80px}
 .section-label{
   font-family:var(--mono);font-size:.8rem;color:var(--purple);
   text-transform:uppercase;letter-spacing:2px;margin-bottom:12px;
@@ -274,87 +216,6 @@ nav .gh-btn svg{width:16px;height:16px}
 .tc-explorer-icon{font-size:1.2rem}
 .tc-explorer-text{font-size:.85rem;color:var(--text-dim)}
 .tc-explorer-text a{color:var(--green);font-family:var(--mono);font-size:.8rem}
-
-/* ===== HOW IT WORKS ===== */
-#how{position:relative;z-index:1}
-.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:28px;margin-top:48px}
-.step{
-  background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);
-  padding:32px;text-align:center;transition:all .35s;position:relative;
-}
-.step:hover{border-color:var(--purple);transform:translateY(-4px);box-shadow:0 12px 40px rgba(0,0,0,.3)}
-.step-num{
-  font-family:var(--mono);font-size:.7rem;color:var(--purple);
-  position:absolute;top:16px;left:20px;opacity:.6;
-}
-.step-icon{
-  width:64px;height:64px;border-radius:16px;margin:0 auto 20px;
-  background:linear-gradient(135deg,rgba(124,109,250,.15),rgba(6,214,160,.1));
-  border:1px solid var(--border-light);
-  display:flex;align-items:center;justify-content:center;font-size:1.6rem;
-}
-.step h3{font-family:var(--mono);font-size:1.1rem;margin-bottom:8px}
-.step p{font-size:.9rem;color:var(--text-dim);line-height:1.6}
-.step-connector{
-  display:none;position:absolute;right:-28px;top:50%;width:28px;height:2px;
-  background:linear-gradient(90deg,var(--purple),transparent);
-}
-@media(min-width:900px){.step-connector{display:block}}
-
-/* ===== FEATURES GRID ===== */
-#features{position:relative;z-index:1}
-.features-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px;margin-top:48px}
-.feat-card{
-  background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);
-  padding:24px;transition:all .35s;cursor:default;
-}
-.feat-card:hover{
-  border-color:var(--purple);
-  box-shadow:0 0 30px var(--purple-glow);transform:translateY(-3px);
-}
-.feat-icon{
-  width:44px;height:44px;border-radius:10px;margin-bottom:14px;
-  display:flex;align-items:center;justify-content:center;font-size:1.2rem;
-  background:rgba(124,109,250,.1);border:1px solid rgba(124,109,250,.2);
-}
-.feat-card:nth-child(even) .feat-icon{background:rgba(6,214,160,.1);border-color:rgba(6,214,160,.2)}
-.feat-card h3{font-family:var(--mono);font-size:.95rem;margin-bottom:6px}
-.feat-card p{font-size:.85rem;color:var(--text-dim);line-height:1.55}
-
-/* ===== CLI QUICK START ===== */
-#quickstart{position:relative;z-index:1}
-.qs-terminal{
-  background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);
-  overflow:hidden;margin-top:40px;box-shadow:0 20px 60px rgba(0,0,0,.35);
-}
-.qs-body{padding:24px;font-family:var(--mono);font-size:.82rem;line-height:2}
-.qs-body .comment{color:var(--text-muted)}
-.qs-body .prompt-g{color:var(--green)}
-.qs-body .str{color:var(--purple)}
-.qs-body .cmd-text{color:var(--text)}
-
-/* ===== ARCHITECTURE ===== */
-#architecture{position:relative;z-index:1}
-.arch-flow{
-  display:flex;align-items:center;justify-content:center;gap:0;
-  margin-top:48px;flex-wrap:wrap;
-}
-.arch-node{
-  background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);
-  padding:20px 24px;text-align:center;min-width:150px;transition:all .35s;
-}
-.arch-node:hover{border-color:var(--purple);transform:translateY(-3px)}
-.arch-node-icon{font-size:1.5rem;margin-bottom:8px}
-.arch-node-title{font-family:var(--mono);font-size:.85rem;font-weight:700;margin-bottom:4px}
-.arch-node-sub{font-size:.75rem;color:var(--text-muted)}
-.arch-arrow{
-  font-family:var(--mono);font-size:1.2rem;color:var(--purple);padding:0 12px;
-  display:flex;align-items:center;
-}
-@media(max-width:768px){
-  .arch-flow{flex-direction:column;gap:8px}
-  .arch-arrow{transform:rotate(90deg);padding:4px}
-}
 
 /* ===== FOOTER ===== */
 footer{
@@ -1314,19 +1175,13 @@ footer{
 </head>
 <body>
 
-<!-- Particles -->
-<canvas id="particles"></canvas>
 
 <!-- Nav -->
 <nav>
   <div class="inner">
     <div class="logo"><span>&gt;_</span> TXAI</div>
     <div class="links">
-      <a href="#demo">Demo</a>
-      <a href="#how">How It Works</a>
-      <a href="#features">Features</a>
-      <a href="#quickstart">Quick Start</a>
-      <a href="https://github.com/EpicLoop365/txai-token-creation-command-line-tool" target="_blank" class="gh-btn">
+<a href="https://github.com/EpicLoop365/txai-token-creation-command-line-tool" target="_blank" class="gh-btn">
         <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
         GitHub
       </a>
@@ -1334,32 +1189,10 @@ footer{
   </div>
 </nav>
 
-<!-- Hero -->
-<section class="hero">
-  <div class="hero-badge"><span class="dot"></span> Open Source CLI Tool</div>
-  <h1>TXAI Smart Token Studio</h1>
-  <p>Create Smart Tokens with plain English. Powered by Claude AI + TX Agent SDK.</p>
-  <div class="hero-cta">
-    <a href="#demo" class="btn btn-primary">Try the Demo</a>
-    <a href="#quickstart" class="btn btn-outline">Quick Start</a>
-  </div>
-  <div class="hero-terminal">
-    <div class="term-bar">
-      <span class="term-dot r"></span><span class="term-dot y"></span><span class="term-dot g"></span>
-      <span>txai-cli</span>
-    </div>
-    <div class="term-body" id="heroTerm"></div>
-  </div>
-</section>
 
 <!-- Interactive Demo -->
 <section id="demo">
   <div class="container">
-    <div class="reveal" id="demoHeader">
-      <div class="section-label">Interactive Demo</div>
-      <div class="section-title">Create a Smart Token</div>
-      <div class="section-sub">Describe your token in plain English and watch the AI parse it into a deployable configuration.</div>
-    </div>
 
     <!-- Tab Bar: Create vs Chat -->
     <div class="chat-tab-bar reveal">
@@ -1992,105 +1825,6 @@ footer{
   </div>
 </section>
 
-<!-- How It Works -->
-<section id="how">
-  <div class="container">
-    <div class="reveal" style="text-align:center">
-      <div class="section-label">How It Works</div>
-      <div class="section-title">Three Simple Steps</div>
-    </div>
-    <div class="steps">
-      <div class="step reveal">
-        <div class="step-num">01</div>
-        <div class="step-icon">&#9997;&#65039;</div>
-        <h3>Describe</h3>
-        <p>Write what you want in plain English. No technical knowledge required.</p>
-        <div class="step-connector"></div>
-      </div>
-      <div class="step reveal">
-        <div class="step-num">02</div>
-        <div class="step-icon">&#129302;</div>
-        <h3>AI Parses</h3>
-        <p>Claude extracts token parameters and features using tool_use.</p>
-        <div class="step-connector"></div>
-      </div>
-      <div class="step reveal">
-        <div class="step-num">03</div>
-        <div class="step-icon">&#128640;</div>
-        <h3>Deploy</h3>
-        <p>Token is issued on the TX blockchain as a native asset in seconds.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- Features Grid -->
-<section id="features">
-  <div class="container">
-    <div class="reveal" style="text-align:center">
-      <div class="section-label">Smart Token Features</div>
-      <div class="section-title">Native Blockchain Capabilities</div>
-      <div class="section-sub" style="margin:12px auto 0">No smart contracts needed. All features are built into the chain.</div>
-    </div>
-    <div class="features-grid">
-      <div class="feat-card reveal"><div class="feat-icon">&#9878;&#65039;</div><h3>Mintable</h3><p>Expand token supply as your project grows. Controlled by the issuer.</p></div>
-      <div class="feat-card reveal"><div class="feat-icon">&#128293;</div><h3>Burnable</h3><p>Permanently reduce supply by burning tokens. Built-in deflation.</p></div>
-      <div class="feat-card reveal"><div class="feat-icon">&#10052;&#65039;</div><h3>Freezable</h3><p>Freeze individual addresses for compliance and security requirements.</p></div>
-      <div class="feat-card reveal"><div class="feat-icon">&#9989;</div><h3>Whitelistable</h3><p>Restrict transfers to pre-approved addresses only.</p></div>
-      <div class="feat-card reveal"><div class="feat-icon">&#128274;</div><h3>Clawback</h3><p>Reclaim tokens from any holder. Essential for regulated assets.</p></div>
-      <div class="feat-card reveal"><div class="feat-icon">&#127760;</div><h3>IBC Enabled</h3><p>Cross-chain transfers via Cosmos IBC. Interoperable by default.</p></div>
-      <div class="feat-card reveal"><div class="feat-icon">&#9888;&#65039;</div><h3>Global Freeze</h3><p>Emergency pause on all transfers. Circuit breaker for your token.</p></div>
-      <div class="feat-card reveal"><div class="feat-icon">&#127963;&#65039;</div><h3>Governance</h3><p>DAO-ready token governance. On-chain voting and proposals.</p></div>
-    </div>
-  </div>
-</section>
-
-<!-- CLI Quick Start -->
-<section id="quickstart">
-  <div class="container">
-    <div class="reveal" style="text-align:center">
-      <div class="section-label">Quick Start</div>
-      <div class="section-title">Up and Running in 60 Seconds</div>
-    </div>
-    <div class="qs-terminal reveal">
-      <div class="term-bar">
-        <span class="term-dot r"></span><span class="term-dot y"></span><span class="term-dot g"></span>
-        <span>terminal</span>
-      </div>
-      <div class="qs-body">
-<span class="comment"># Install the CLI</span>
-<br><span class="prompt-g">$</span> <span class="cmd-text">npm install -g @tx-agent/cli</span>
-<br><br><span class="comment"># Set your API key</span>
-<br><span class="prompt-g">$</span> <span class="cmd-text">export ANTHROPIC_API_KEY=</span><span class="str">your_key</span>
-<br><br><span class="comment"># Create a token with natural language</span>
-<br><span class="prompt-g">$</span> <span class="cmd-text">txai create </span><span class="str">"a gaming token called GEMS with 5M supply, mintable and burnable"</span>
-<br><br><span class="comment"># Or use npx without installing</span>
-<br><span class="prompt-g">$</span> <span class="cmd-text">npx txai-create </span><span class="str">"a loyalty points token called POINTS with 1B supply"</span>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- Architecture -->
-<section id="architecture">
-  <div class="container">
-    <div class="reveal" style="text-align:center">
-      <div class="section-label">Architecture</div>
-      <div class="section-title">From Words to Tokens</div>
-    </div>
-    <div class="arch-flow reveal">
-      <div class="arch-node"><div class="arch-node-icon">&#128172;</div><div class="arch-node-title">Natural Language</div><div class="arch-node-sub">Your description</div></div>
-      <div class="arch-arrow">&#8594;</div>
-      <div class="arch-node"><div class="arch-node-icon">&#129302;</div><div class="arch-node-title">Claude AI</div><div class="arch-node-sub">tool_use parsing</div></div>
-      <div class="arch-arrow">&#8594;</div>
-      <div class="arch-node"><div class="arch-node-icon">&#128736;&#65039;</div><div class="arch-node-title">TX Agent SDK</div><div class="arch-node-sub">Token config</div></div>
-      <div class="arch-arrow">&#8594;</div>
-      <div class="arch-node"><div class="arch-node-icon">&#9939;&#65039;</div><div class="arch-node-title">TX Chain</div><div class="arch-node-sub">Blockchain</div></div>
-      <div class="arch-arrow">&#8594;</div>
-      <div class="arch-node" style="border-color:var(--green)"><div class="arch-node-icon">&#127942;</div><div class="arch-node-title">Token Live</div><div class="arch-node-sub">Deployed!</div></div>
-    </div>
-  </div>
-</section>
 
 <!-- Footer -->
 <footer>
@@ -2431,72 +2165,6 @@ function mergeCustomizeIntoInput(){
   }
 }
 
-/* ===== PARTICLES ===== */
-(function(){
-  const c=document.getElementById('particles'),x=c.getContext('2d');
-  let w,h,dots=[];
-  function resize(){w=c.width=window.innerWidth;h=c.height=window.innerHeight;init()}
-  function init(){
-    dots=[];
-    const n=Math.floor((w*h)/12000);
-    for(let i=0;i<n;i++) dots.push({x:Math.random()*w,y:Math.random()*h,r:Math.random()*1.5+.5,dx:(Math.random()-.5)*.3,dy:(Math.random()-.5)*.3,o:Math.random()*.5+.2});
-  }
-  function draw(){
-    x.clearRect(0,0,w,h);
-    for(const d of dots){
-      d.x+=d.dx;d.y+=d.dy;
-      if(d.x<0||d.x>w)d.dx*=-1;if(d.y<0||d.y>h)d.dy*=-1;
-      x.beginPath();x.arc(d.x,d.y,d.r,0,Math.PI*2);
-      x.fillStyle='rgba(124,109,250,'+d.o+')';x.fill();
-    }
-    for(let i=0;i<dots.length;i++){
-      for(let j=i+1;j<dots.length;j++){
-        const dx=dots[i].x-dots[j].x,dy=dots[i].y-dots[j].y,dist=Math.sqrt(dx*dx+dy*dy);
-        if(dist<120){
-          x.beginPath();x.moveTo(dots[i].x,dots[i].y);x.lineTo(dots[j].x,dots[j].y);
-          x.strokeStyle='rgba(124,109,250,'+(1-dist/120)*.12+')';x.stroke();
-        }
-      }
-    }
-    requestAnimationFrame(draw);
-  }
-  window.addEventListener('resize',resize);resize();draw();
-})();
-
-/* ===== HERO TERMINAL ANIMATION ===== */
-(function(){
-  const lines=[
-    {type:'prompt',text:'$ txai create "a gaming token called GEMS with 50M supply, mintable and burnable"'},
-    {type:'out',text:''},
-    {type:'hl',text:'[Claude AI] Parsing natural language...'},
-    {type:'out',text:'  Name: GEMS'},
-    {type:'out',text:'  Supply: 50,000,000'},
-    {type:'out',text:'  Features: minting, burning'},
-    {type:'out',text:''},
-    {type:'hl',text:'[TX Agent] Deploying to TX Chain...'},
-    {type:'out',text:'  Transaction: 0xA3F7...B21E'},
-    {type:'out',text:''},
-    {type:'green',text:'Token GEMS deployed successfully!'},
-  ];
-  const term=document.getElementById('heroTerm');
-  let i=0;
-  function addLine(){
-    if(i>=lines.length){
-      const cur=document.createElement('span');cur.className='cursor';term.appendChild(cur);
-      setTimeout(()=>{term.innerHTML='';i=0;addLine()},4000);
-      return;
-    }
-    const l=lines[i];const el=document.createElement('div');el.className='line';
-    el.style.animationDelay='.05s';
-    if(l.type==='prompt'){el.innerHTML='<span class="prompt">$ </span><span class="cmd">'+l.text.slice(2)+'</span>';
-    }else if(l.type==='hl'){el.innerHTML='<span class="hl">'+l.text+'</span>';
-    }else if(l.type==='green'){el.innerHTML='<span class="prompt">'+l.text+'</span>';
-    }else{el.innerHTML='<span class="out">'+l.text+'</span>';}
-    term.appendChild(el);i++;
-    setTimeout(addLine, l.text===''?150:l.type==='prompt'?800:250);
-  }
-  setTimeout(addLine,800);
-})();
 
 /* ===== SCROLL REVEAL ===== */
 const observer=new IntersectionObserver((entries)=>{
