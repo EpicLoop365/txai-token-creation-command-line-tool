@@ -320,7 +320,7 @@
         <span class="dex-pair-or">or</span>
         <input type="text" class="dex-pair-manual" id="dexBaseDenom" placeholder="Paste denom (e.g. mytoken-testcore1...)">
         <button class="dex-pair-load" onclick="dexLoadOrderbook()">Load</button>
-        <button class="dex-demo-btn" onclick="dexStartDemo()" title="Launch AI Agent Swarm Demo">🤖 Live Demo</button>
+        <button class="dex-demo-btn" onclick="dexStartDemo()" title="Populate this token's orderbook with AI agents">🤖 Populate Orderbook</button>
 
         <div class="dex-stats-strip">
           <div class="dex-stat"><span class="dex-stat-label">Last Price</span><span class="dex-stat-value" id="dexStatLast">--</span></div>
@@ -346,7 +346,7 @@
       <div class="dex-demo-overlay" id="dexDemoOverlay" style="display:none">
         <div class="dex-demo-panel">
           <div class="dex-demo-header">
-            <h3>🤖 AI Agent Swarm — Live DEX Demo</h3>
+            <h3>🤖 AI Agent Swarm — Populating <span id="dexDemoTokenName">Token</span></h3>
             <div class="dex-demo-header-right">
               <span class="dex-demo-timer" id="dexDemoTimer">00:00</span>
               <button class="dex-demo-close" onclick="dexStopDemo()">✕</button>

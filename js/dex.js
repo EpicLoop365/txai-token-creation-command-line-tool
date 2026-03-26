@@ -976,10 +976,19 @@ function dexStartDemo() {
   const overlay = document.getElementById('dexDemoOverlay');
   if (!overlay) return;
 
+  // Must have a token loaded
+  if (!dexBaseDenom) {
+    alert('Please load a token in the DEX first, then click Populate Orderbook.');
+    return;
+  }
+
+  const tokenSymbol = dexBaseDenom.split('-')[0].toUpperCase();
+
   // Reset UI
   overlay.style.display = 'flex';
+  document.getElementById('dexDemoTokenName').textContent = tokenSymbol;
   document.getElementById('dexDemoTimeline').innerHTML =
-    '<div class="demo-log-entry info">Launching AI Agent Swarm...</div>';
+    `<div class="demo-log-entry info">Populating ${tokenSymbol} orderbook with 3 AI agents...</div>`;
   document.getElementById('dexDemoSummary').style.display = 'none';
   document.getElementById('dexDemoPhase').textContent = 'Initializing...';
   document.getElementById('dexDemoBar').style.width = '0%';
@@ -1014,15 +1023,15 @@ function dexStartDemo() {
   }
 
   // Use fetch-based SSE
-  dexDemoFetchSSE();
+  dexDemoFetchSSE(dexBaseDenom);
 }
 
-async function dexDemoFetchSSE() {
+async function dexDemoFetchSSE(baseDenom) {
   try {
     const res = await fetch(`${API_URL}/api/dex/live-demo`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({}),
+      body: JSON.stringify({ baseDenom }),
     });
 
     if (!res.ok) {

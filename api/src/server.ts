@@ -1172,6 +1172,16 @@ app.post("/api/dex/live-demo", async (req, res) => {
     return;
   }
 
+  const { baseDenom } = req.body as { baseDenom?: string };
+  if (!baseDenom) {
+    res.status(400).json({ error: "Missing 'baseDenom'. Load a token in the DEX first." });
+    return;
+  }
+  if (!process.env.AGENT_MNEMONIC) {
+    res.status(500).json({ error: "Server not configured (no agent mnemonic)." });
+    return;
+  }
+
   const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
 
   // SSE headers
@@ -1194,6 +1204,8 @@ app.post("/api/dex/live-demo", async (req, res) => {
 
   try {
     await runDexDemo({
+      baseDenom,
+      agentMnemonic: process.env.AGENT_MNEMONIC,
       networkName,
       onEvent: sendEvent,
       abortSignal: abortController.signal,

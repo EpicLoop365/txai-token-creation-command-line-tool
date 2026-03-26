@@ -1,13 +1,17 @@
 /**
  * DEX Live Demo — AI Agent Swarm Orchestrator
  *
- * Creates 3 AI agent wallets that demonstrate a full DEX trading lifecycle:
- *   - Market Maker A (MM-A): places BUY limit orders
- *   - Market Maker B (MM-B): creates token, places SELL limit orders
- *   - Taker: executes market-style orders that fill against the book
+ * Populates the orderbook for a USER'S token with realistic trading activity.
+ * Uses the server's agent wallet (token issuer) to distribute tokens, then
+ * 3 AI agent wallets trade it live:
  *
- * The demo is fully self-contained: MM-B creates a fresh demo token,
- * so no existing tokens are needed.
+ *   - Agent Wallet: distributes tokens to sellers (already holds supply)
+ *   - Market Maker A (MM-A): funded via faucet, places BUY limit orders
+ *   - Market Maker B (MM-B): receives tokens from agent, places SELL limit orders
+ *   - Taker Bot: receives tokens + TX, executes market-style fills
+ *
+ * The user watches their newly created token get a real orderbook with
+ * live fills — demonstrating a full AI agent swarm on-chain.
  *
  * Emits SSE events for real-time UI updates.
  */
@@ -16,7 +20,6 @@ import {
   createWallet,
   importWallet,
   requestFaucet,
-  issueSmartToken,
   placeOrder,
   cancelOrder,
   queryOrderbook,
@@ -29,6 +32,8 @@ import {
 // ─── Types ──────────────────────────────────────────────────────────────────
 
 export interface DemoConfig {
+  baseDenom: string;         // The user's token denom
+  agentMnemonic: string;     // Server's agent wallet (holds the tokens)
   networkName: NetworkName;
   onEvent: (event: string, data: Record<string, unknown>) => void;
   abortSignal?: AbortSignal;
@@ -36,10 +41,12 @@ export interface DemoConfig {
 
 interface AgentWallet {
   name: string;
+  role: string;
   address: string;
   mnemonic: string;
   client: TxClient | null;
-  balance: number; // utestcore
+  txBalance: number;    // utestcore
+  tokenBalance: number; // base token (raw)
 }
 
 // ─── Constants ──────────────────────────────────────────────────────────────
@@ -48,14 +55,15 @@ const FAUCET_REQUESTS_PER_WALLET = 3; // ~200 TX each × 3 = ~600 TX per wallet
 const FAUCET_DELAY = 5000;            // 5s between faucet requests
 const ORDER_DELAY = 5000;             // 5s between orders (same wallet)
 const INTERLEAVE_DELAY = 2000;        // 2s between different wallet orders
-const TOKEN_SUPPLY = 10_000_000;      // 10M demo tokens
 const TOKEN_PRECISION = 6;
 const QUOTE_DENOM = "utestcore";
 
-// Price ladder: midpoint at 1e-2 (0.01 TX per token)
-// BUY orders below midpoint, SELL orders above
-// 6 overlapping prices create instant fills
-const MIDPOINT = 0.01; // 0.01 TX per token = 1e-2
+// Token distribution: how many tokens to give each seller agent
+const SELLER_TOKEN_AMOUNT = 5000;  // 5000 tokens to MM-B
+const TAKER_TOKEN_AMOUNT = 2000;   // 2000 tokens to Taker
+
+// Price config: 0.001 TX per token (1e-3)
+const BASE_PRICE = 0.001;
 
 /**
  * Generate Coreum-compatible price string.
@@ -63,6 +71,8 @@ const MIDPOINT = 0.01; // 0.01 TX per token = 1e-2
  */
 function formatPrice(price: number): string {
   if (price <= 0) throw new Error(`Invalid price: ${price}`);
+  // Round to tick size (6 decimals) to avoid floating point artifacts
+  price = Math.round(price * 1e6) / 1e6;
   const s = price.toExponential();
   const [mantissaStr, expStr] = s.split("e");
   let exp = parseInt(expStr);
@@ -98,35 +108,75 @@ export async function runDexDemo(config: DemoConfig): Promise<void> {
   if (demoRunning) throw new Error("Demo already in progress");
   demoRunning = true;
 
-  const { networkName, onEvent, abortSignal } = config;
+  const { baseDenom, agentMnemonic, networkName, onEvent, abortSignal } = config;
+  const tokenSymbol = baseDenom.split("-")[0].toUpperCase();
+
   const emit = (event: string, data: Record<string, unknown>) => {
     try { onEvent(event, data); } catch { /* ignore */ }
   };
 
   const agents: AgentWallet[] = [];
   const clients: TxClient[] = [];
+  let agentClient: TxClient | null = null;
 
   try {
-    // ── Phase 1: Create Wallets ──
-    emit("phase", { phase: "wallets", message: "Creating 3 AI agent wallets..." });
+    emit("phase", { phase: "init", message: `Populating orderbook for ${tokenSymbol}...` });
+    emit("token", { symbol: tokenSymbol, denom: baseDenom });
 
-    const walletNames = ["Market Maker A (Buyer)", "Market Maker B (Seller)", "Taker"];
-    for (const name of walletNames) {
+    // ── Phase 1: Connect Agent Wallet (token issuer) ──
+    emit("phase", { phase: "agent", message: "Connecting issuer wallet..." });
+
+    const agentWallet = await importWallet(agentMnemonic, networkName);
+    agentClient = await TxClient.connectWithWallet(agentWallet, { isolatedMutex: true });
+    clients.push(agentClient);
+
+    // Check agent has the token
+    const agentBals = await agentClient.getBalances(agentClient.address);
+    const agentTokenBal = agentBals.find(b => b.denom === baseDenom);
+    const agentTxBal = agentBals.find(b => b.denom === QUOTE_DENOM);
+    const agentTokenAmount = agentTokenBal ? parseInt(agentTokenBal.amount) : 0;
+    const agentTxAmount = agentTxBal ? parseInt(agentTxBal.amount) : 0;
+
+    emit("balance", {
+      agent: "Issuer (Agent)",
+      address: agentClient.address,
+      txBalance: (agentTxAmount / 1e6).toFixed(2) + " TX",
+      tokenBalance: (agentTokenAmount / 1e6).toLocaleString() + ` ${tokenSymbol}`,
+    });
+
+    const neededTokens = (SELLER_TOKEN_AMOUNT + TAKER_TOKEN_AMOUNT) * 1e6;
+    if (agentTokenAmount < neededTokens) {
+      throw new Error(
+        `Agent needs at least ${(neededTokens / 1e6).toLocaleString()} ${tokenSymbol} but only has ${(agentTokenAmount / 1e6).toLocaleString()}`
+      );
+    }
+
+    // ── Phase 2: Create 3 Trading Wallets ──
+    emit("phase", { phase: "wallets", message: "Creating 3 AI trading agents..." });
+
+    const walletDefs = [
+      { name: "Market Maker A", role: "BUYER" },
+      { name: "Market Maker B", role: "SELLER" },
+      { name: "Taker Bot", role: "MARKET TAKER" },
+    ];
+
+    for (const def of walletDefs) {
       if (abortSignal?.aborted) throw new Error("Demo aborted");
       const w = await createWallet(networkName);
       agents.push({
-        name,
+        name: def.name,
+        role: def.role,
         address: w.address,
         mnemonic: w.mnemonic,
         client: null,
-        balance: 0,
+        txBalance: 0,
+        tokenBalance: 0,
       });
-      emit("wallet", { agent: name, address: w.address });
+      emit("wallet", { agent: def.name, role: def.role, address: w.address });
     }
-    emit("phase", { phase: "wallets", message: "All wallets created", done: true });
 
-    // ── Phase 2: Fund Wallets ──
-    emit("phase", { phase: "funding", message: "Funding wallets from testnet faucet..." });
+    // ── Phase 3: Fund Wallets from Faucet ──
+    emit("phase", { phase: "funding", message: "Funding wallets from testnet faucet (this takes ~30s)..." });
 
     for (const agent of agents) {
       for (let i = 0; i < FAUCET_REQUESTS_PER_WALLET; i++) {
@@ -153,12 +203,11 @@ export async function runDexDemo(config: DemoConfig): Promise<void> {
       }
     }
 
-    // Wait for funds to propagate
-    emit("phase", { phase: "funding", message: "Waiting for funds to arrive..." });
-    await sleep(8000);
+    emit("phase", { phase: "funding", message: "Waiting for faucet transactions..." });
+    await sleep(6000);
 
-    // ── Phase 3: Connect Clients ──
-    emit("phase", { phase: "connecting", message: "Connecting to blockchain..." });
+    // ── Phase 4: Connect Trading Clients ──
+    emit("phase", { phase: "connecting", message: "Connecting trading agents to blockchain..." });
 
     for (const agent of agents) {
       if (abortSignal?.aborted) throw new Error("Demo aborted");
@@ -167,110 +216,97 @@ export async function runDexDemo(config: DemoConfig): Promise<void> {
       agent.client = client;
       clients.push(client);
 
-      // Check balance
-      const balances = await client.getBalances(agent.address);
-      const coreBal = balances.find(b => b.denom === QUOTE_DENOM);
-      agent.balance = coreBal ? parseInt(coreBal.amount) : 0;
+      const bals = await client.getBalances(agent.address);
+      const txBal = bals.find(b => b.denom === QUOTE_DENOM);
+      agent.txBalance = txBal ? parseInt(txBal.amount) : 0;
+
       emit("balance", {
         agent: agent.name,
         address: agent.address,
-        balance: agent.balance,
-        display: (agent.balance / 1e6).toFixed(2) + " TX",
+        display: (agent.txBalance / 1e6).toFixed(2) + " TX",
       });
     }
 
     const [mmA, mmB, taker] = agents;
 
-    // ── Phase 4: MM-B Creates Demo Token ──
-    emit("phase", { phase: "token", message: "Market Maker B creating demo token..." });
+    // ── Phase 5: Distribute Tokens to Sellers ──
+    emit("phase", { phase: "transfer", message: `Sending ${tokenSymbol} to trading agents...` });
 
-    const demoSymbol = "DEMO" + Date.now().toString(36).slice(-3).toUpperCase();
-    const tokenResult = await issueSmartToken(mmB.client!, {
-      subunit: demoSymbol.toLowerCase(),
-      symbol: demoSymbol,
-      name: `AI DEX Demo ${demoSymbol}`,
-      description: `AI DEX Demo Token ${demoSymbol}`,
-      initialAmount: String(TOKEN_SUPPLY),
-      precision: TOKEN_PRECISION,
-      features: { minting: true, burning: true },
-    });
-
-    const baseDenom = tokenResult.denom;
-    emit("token", {
-      symbol: demoSymbol,
-      denom: baseDenom,
-      supply: TOKEN_SUPPLY,
-      txHash: tokenResult.txHash,
-      issuer: mmB.address,
-    });
-
-    if (!tokenResult.success) {
-      throw new Error(`Token creation failed: ${tokenResult.error}`);
-    }
-
-    await sleep(3000); // wait for token to propagate
-
-    // ── Phase 5: MM-B Sends Tokens to Taker ──
-    emit("phase", { phase: "transfer", message: "Distributing tokens to Taker agent..." });
-
-    const takerTokens = Math.floor(TOKEN_SUPPLY * 0.1); // 10% to taker
-    const sendMsg = {
+    // Send tokens to MM-B (seller)
+    const sendToB = {
       typeUrl: "/cosmos.bank.v1beta1.MsgSend",
       value: {
-        fromAddress: mmB.address,
-        toAddress: taker.address,
-        amount: [{ denom: baseDenom, amount: toRaw(takerTokens) }],
+        fromAddress: agentClient.address,
+        toAddress: mmB.address,
+        amount: [{ denom: baseDenom, amount: toRaw(SELLER_TOKEN_AMOUNT) }],
       },
     };
-    const sendResult = await mmB.client!.signAndBroadcastMsg(sendMsg, 200000);
+    const sendBResult = await agentClient.signAndBroadcastMsg(sendToB, 200000);
     emit("transfer", {
-      from: mmB.name,
-      to: taker.name,
-      amount: takerTokens,
-      symbol: demoSymbol,
-      txHash: sendResult.txHash,
+      from: "Issuer",
+      to: mmB.name,
+      amount: SELLER_TOKEN_AMOUNT,
+      symbol: tokenSymbol,
+      txHash: sendBResult.txHash,
+      success: sendBResult.success,
     });
 
     await sleep(3000);
 
-    // ── Phase 6: Place Orders ──
-    // Generate price levels
-    // Buy orders: 12 total (6 non-overlapping below mid, 6 overlapping near mid)
-    // Sell orders: 11 total (5 non-overlapping above mid, 6 overlapping near mid)
-    // Overlapping prices: both sides at same price → instant fill
+    // Send tokens to Taker
+    const sendToTaker = {
+      typeUrl: "/cosmos.bank.v1beta1.MsgSend",
+      value: {
+        fromAddress: agentClient.address,
+        toAddress: taker.address,
+        amount: [{ denom: baseDenom, amount: toRaw(TAKER_TOKEN_AMOUNT) }],
+      },
+    };
+    const sendTakerResult = await agentClient.signAndBroadcastMsg(sendToTaker, 200000);
+    emit("transfer", {
+      from: "Issuer",
+      to: taker.name,
+      amount: TAKER_TOKEN_AMOUNT,
+      symbol: tokenSymbol,
+      txHash: sendTakerResult.txHash,
+      success: sendTakerResult.success,
+    });
+
+    await sleep(3000);
+
+    // ── Phase 6: Place Limit Orders ──
+    // 12 buy orders (MM-A) + 11 sell orders (MM-B)
+    // 6 prices overlap → instant fills when both sides hit
 
     const buyPrices: { price: number; quantity: number; overlap: boolean }[] = [];
     const sellPrices: { price: number; quantity: number; overlap: boolean }[] = [];
 
-    // Non-overlapping buys: spread below midpoint
+    // 6 non-overlapping buys spread below midpoint
     for (let i = 0; i < 6; i++) {
-      const price = Math.round((MIDPOINT * (0.5 + 0.08 * i)) * 1e6) / 1e6;
-      buyPrices.push({ price, quantity: 100 + i * 50, overlap: false });
+      const price = Math.round(BASE_PRICE * (0.5 + 0.07 * i) * 1e6) / 1e6;
+      buyPrices.push({ price, quantity: 10 + i * 5, overlap: false });
     }
 
-    // Non-overlapping sells: spread above midpoint
+    // 5 non-overlapping sells spread above midpoint
     for (let i = 0; i < 5; i++) {
-      const price = Math.round((MIDPOINT * (1.2 + 0.1 * i)) * 1e6) / 1e6;
-      sellPrices.push({ price, quantity: 100 + i * 50, overlap: false });
+      const price = Math.round(BASE_PRICE * (1.15 + 0.08 * i) * 1e6) / 1e6;
+      sellPrices.push({ price, quantity: 10 + i * 5, overlap: false });
     }
 
-    // Overlapping prices (creates fills): 6 prices right around midpoint
-    const overlapPrices = [
-      Math.round(MIDPOINT * 0.99 * 1e6) / 1e6,
-      Math.round(MIDPOINT * 1.0 * 1e6) / 1e6,
-      Math.round(MIDPOINT * 1.01 * 1e6) / 1e6,
-      Math.round(MIDPOINT * 1.02 * 1e6) / 1e6,
-      Math.round(MIDPOINT * 1.03 * 1e6) / 1e6,
-      Math.round(MIDPOINT * 1.04 * 1e6) / 1e6,
-    ];
-    for (const p of overlapPrices) {
-      buyPrices.push({ price: p, quantity: 200, overlap: true });
-      sellPrices.push({ price: p, quantity: 200, overlap: true });
+    // 6 overlapping prices near midpoint (creates fills)
+    const overlapMultipliers = [0.97, 0.98, 0.99, 1.0, 1.01, 1.02];
+    for (const mult of overlapMultipliers) {
+      const price = Math.round(BASE_PRICE * mult * 1e6) / 1e6;
+      // Vary quantities: some partial fills, some full fills
+      const buyQty = 15 + Math.floor(Math.random() * 20);
+      const sellQty = mult < 1.0 ? buyQty : Math.floor(buyQty * 0.6); // partials for some
+      buyPrices.push({ price, quantity: buyQty, overlap: true });
+      sellPrices.push({ price, quantity: sellQty, overlap: true });
     }
 
     emit("phase", {
       phase: "orders",
-      message: `Placing ${buyPrices.length} buy + ${sellPrices.length} sell orders...`,
+      message: `Placing ${buyPrices.length} buy + ${sellPrices.length} sell orders for ${tokenSymbol}...`,
       buyCount: buyPrices.length,
       sellCount: sellPrices.length,
       overlapCount: 6,
@@ -280,197 +316,90 @@ export async function runDexDemo(config: DemoConfig): Promise<void> {
     let fillCount = 0;
     let errorCount = 0;
 
-    // Place non-overlapping buys first (MM-A)
-    const nonOverlapBuys = buyPrices.filter((p) => !p.overlap);
-    for (let i = 0; i < nonOverlapBuys.length; i++) {
-      if (abortSignal?.aborted) throw new Error("Demo aborted");
-      const level = nonOverlapBuys[i];
-      const priceStr = formatPrice(level.price);
+    // Helper to place an order and emit events
+    const placeAndEmit = async (
+      client: TxClient,
+      agentName: string,
+      side: 1 | 2,
+      price: number,
+      quantity: number,
+      overlap: boolean
+    ) => {
+      const priceStr = formatPrice(price);
+      const sideStr = side === 1 ? "buy" : "sell";
       try {
-        const result = await placeOrder(mmA.client!, {
+        const result = await placeOrder(client, {
           baseDenom,
           quoteDenom: QUOTE_DENOM,
-          side: 1, // BUY
-          orderType: 1, // LIMIT
+          side,
+          orderType: 1,
           price: priceStr,
-          quantity: toRaw(level.quantity),
-          timeInForce: 1, // GTC
+          quantity: toRaw(quantity),
+          timeInForce: 1,
         } as any);
         placedCount++;
         emit("order", {
-          agent: mmA.name,
-          side: "buy",
-          price: priceStr,
-          priceDisplay: level.price,
-          quantity: level.quantity,
-          symbol: demoSymbol,
-          orderId: result.orderId,
-          txHash: result.txHash,
-          status: result.success ? "placed" : "failed",
-          error: result.error,
-          overlap: false,
+          agent: agentName, side: sideStr, price: priceStr, priceDisplay: price,
+          quantity, symbol: tokenSymbol, orderId: result.orderId,
+          txHash: result.txHash, status: result.success ? "placed" : "failed",
+          error: result.error, overlap,
         });
+        return result;
       } catch (err) {
         errorCount++;
         emit("order", {
-          agent: mmA.name,
-          side: "buy",
-          price: priceStr,
-          quantity: level.quantity,
-          status: "error",
-          error: (err as Error).message.slice(0, 100),
+          agent: agentName, side: sideStr, price: priceStr, priceDisplay: price,
+          quantity, symbol: tokenSymbol, status: "error",
+          error: (err as Error).message.slice(0, 120), overlap,
         });
+        return null;
       }
+    };
+
+    // Place non-overlapping buys (MM-A)
+    const nonOverlapBuys = buyPrices.filter(p => !p.overlap);
+    for (let i = 0; i < nonOverlapBuys.length; i++) {
+      if (abortSignal?.aborted) throw new Error("Demo aborted");
+      const l = nonOverlapBuys[i];
+      await placeAndEmit(mmA.client!, mmA.name, 1, l.price, l.quantity, false);
       if (i < nonOverlapBuys.length - 1) await sleep(ORDER_DELAY);
     }
 
     // Place non-overlapping sells (MM-B)
-    const nonOverlapSells = sellPrices.filter((p) => !p.overlap);
+    const nonOverlapSells = sellPrices.filter(p => !p.overlap);
     for (let i = 0; i < nonOverlapSells.length; i++) {
       if (abortSignal?.aborted) throw new Error("Demo aborted");
-      const level = nonOverlapSells[i];
-      const priceStr = formatPrice(level.price);
-      try {
-        const result = await placeOrder(mmB.client!, {
-          baseDenom,
-          quoteDenom: QUOTE_DENOM,
-          side: 2, // SELL
-          orderType: 1, // LIMIT
-          price: priceStr,
-          quantity: toRaw(level.quantity),
-          timeInForce: 1, // GTC
-        } as any);
-        placedCount++;
-        emit("order", {
-          agent: mmB.name,
-          side: "sell",
-          price: priceStr,
-          priceDisplay: level.price,
-          quantity: level.quantity,
-          symbol: demoSymbol,
-          orderId: result.orderId,
-          txHash: result.txHash,
-          status: result.success ? "placed" : "failed",
-          error: result.error,
-          overlap: false,
-        });
-      } catch (err) {
-        errorCount++;
-        emit("order", {
-          agent: mmB.name,
-          side: "sell",
-          price: priceStr,
-          quantity: level.quantity,
-          status: "error",
-          error: (err as Error).message.slice(0, 100),
-        });
-      }
+      const l = nonOverlapSells[i];
+      await placeAndEmit(mmB.client!, mmB.name, 2, l.price, l.quantity, false);
       if (i < nonOverlapSells.length - 1) await sleep(ORDER_DELAY);
     }
 
-    // Now place overlapping orders (interleaved: buy then sell at same price → fill)
-    emit("phase", {
-      phase: "fills",
-      message: "Placing overlapping orders (will create instant fills)...",
-    });
+    // Place overlapping orders (interleaved buy → sell for fills)
+    emit("phase", { phase: "fills", message: "Placing matching orders (instant fills)..." });
 
-    const overlapBuys = buyPrices.filter((p) => p.overlap);
-    const overlapSells = sellPrices.filter((p) => p.overlap);
+    const overlapBuys = buyPrices.filter(p => p.overlap);
+    const overlapSells = sellPrices.filter(p => p.overlap);
 
     for (let i = 0; i < overlapBuys.length; i++) {
       if (abortSignal?.aborted) throw new Error("Demo aborted");
 
-      const buyLevel = overlapBuys[i];
-      const sellLevel = overlapSells[i];
-      const priceStr = formatPrice(buyLevel.price);
-
-      // Place buy first
-      try {
-        const buyResult = await placeOrder(mmA.client!, {
-          baseDenom,
-          quoteDenom: QUOTE_DENOM,
-          side: 1,
-          orderType: 1,
-          price: priceStr,
-          quantity: toRaw(buyLevel.quantity),
-          timeInForce: 1,
-        } as any);
-        placedCount++;
-        emit("order", {
-          agent: mmA.name,
-          side: "buy",
-          price: priceStr,
-          priceDisplay: buyLevel.price,
-          quantity: buyLevel.quantity,
-          symbol: demoSymbol,
-          orderId: buyResult.orderId,
-          txHash: buyResult.txHash,
-          status: buyResult.success ? "placed" : "failed",
-          overlap: true,
-        });
-      } catch (err) {
-        errorCount++;
-        emit("order", {
-          agent: mmA.name,
-          side: "buy",
-          price: priceStr,
-          status: "error",
-          error: (err as Error).message.slice(0, 100),
-          overlap: true,
-        });
-      }
-
+      // Buy first
+      await placeAndEmit(mmA.client!, mmA.name, 1, overlapBuys[i].price, overlapBuys[i].quantity, true);
       await sleep(INTERLEAVE_DELAY);
 
-      // Place matching sell → should trigger fill
-      try {
-        const sellResult = await placeOrder(mmB.client!, {
-          baseDenom,
-          quoteDenom: QUOTE_DENOM,
-          side: 2,
-          orderType: 1,
-          price: priceStr,
-          quantity: toRaw(sellLevel.quantity),
-          timeInForce: 1,
-        } as any);
-        placedCount++;
-
-        const filled = sellResult.success;
-        if (filled) fillCount++;
-
-        emit("order", {
-          agent: mmB.name,
-          side: "sell",
-          price: priceStr,
-          priceDisplay: sellLevel.price,
-          quantity: sellLevel.quantity,
-          symbol: demoSymbol,
-          orderId: sellResult.orderId,
+      // Matching sell → triggers fill
+      const sellResult = await placeAndEmit(mmB.client!, mmB.name, 2, overlapSells[i].price, overlapSells[i].quantity, true);
+      if (sellResult?.success) {
+        fillCount++;
+        emit("fill", {
+          price: formatPrice(overlapBuys[i].price),
+          priceDisplay: overlapBuys[i].price,
+          buyQty: overlapBuys[i].quantity,
+          sellQty: overlapSells[i].quantity,
+          symbol: tokenSymbol,
+          buyer: mmA.name,
+          seller: mmB.name,
           txHash: sellResult.txHash,
-          status: sellResult.success ? "placed" : "failed",
-          overlap: true,
-        });
-
-        if (filled) {
-          emit("fill", {
-            price: priceStr,
-            priceDisplay: buyLevel.price,
-            quantity: buyLevel.quantity,
-            symbol: demoSymbol,
-            buyer: mmA.name,
-            seller: mmB.name,
-            txHash: sellResult.txHash,
-          });
-        }
-      } catch (err) {
-        errorCount++;
-        emit("order", {
-          agent: mmB.name,
-          side: "sell",
-          price: priceStr,
-          status: "error",
-          error: (err as Error).message.slice(0, 100),
-          overlap: true,
         });
       }
 
@@ -478,107 +407,45 @@ export async function runDexDemo(config: DemoConfig): Promise<void> {
     }
 
     // ── Phase 7: Taker Market Orders ──
-    emit("phase", { phase: "taker", message: "Taker placing market-style orders..." });
+    emit("phase", { phase: "taker", message: "Taker sweeping the orderbook..." });
 
-    // Taker buys with aggressive limit (acts like market order)
-    const takerBuyPrice = formatPrice(Math.round(MIDPOINT * 1.5 * 1e6) / 1e6);
-    try {
-      const takerBuyResult = await placeOrder(taker.client!, {
-        baseDenom,
-        quoteDenom: QUOTE_DENOM,
-        side: 1, // BUY
-        orderType: 1, // LIMIT (aggressive)
-        price: takerBuyPrice,
-        quantity: toRaw(500),
-        timeInForce: 1,
-      } as any);
-      placedCount++;
-      emit("taker", {
-        action: "buy",
-        price: takerBuyPrice,
-        quantity: 500,
-        symbol: demoSymbol,
-        txHash: takerBuyResult.txHash,
-        success: takerBuyResult.success,
-      });
-    } catch (err) {
-      emit("taker", {
-        action: "buy",
-        status: "error",
-        error: (err as Error).message.slice(0, 100),
-      });
-    }
-
+    // Taker buys aggressively (sweeps asks)
+    const takerBuyPrice = Math.round(BASE_PRICE * 1.5 * 1e6) / 1e6;
+    await placeAndEmit(taker.client!, taker.name, 1, takerBuyPrice, 100, false);
     await sleep(ORDER_DELAY);
 
-    // Taker sells with aggressive limit
-    const takerSellPrice = formatPrice(Math.round(MIDPOINT * 0.5 * 1e6) / 1e6);
-    try {
-      const takerSellResult = await placeOrder(taker.client!, {
-        baseDenom,
-        quoteDenom: QUOTE_DENOM,
-        side: 2, // SELL
-        orderType: 1,
-        price: takerSellPrice,
-        quantity: toRaw(500),
-        timeInForce: 1,
-      } as any);
-      placedCount++;
-      emit("taker", {
-        action: "sell",
-        price: takerSellPrice,
-        quantity: 500,
-        symbol: demoSymbol,
-        txHash: takerSellResult.txHash,
-        success: takerSellResult.success,
-      });
-    } catch (err) {
-      emit("taker", {
-        action: "sell",
-        status: "error",
-        error: (err as Error).message.slice(0, 100),
-      });
-    }
+    // Taker sells aggressively (sweeps bids)
+    const takerSellPrice = Math.round(BASE_PRICE * 0.4 * 1e6) / 1e6;
+    await placeAndEmit(taker.client!, taker.name, 2, takerSellPrice, 100, false);
 
     // ── Phase 8: Final Summary ──
-    await sleep(5000); // wait for chain propagation
-
+    await sleep(5000);
     emit("phase", { phase: "summary", message: "Gathering final results..." });
 
-    // Query final orderbook
-    const network = NETWORKS[networkName];
     const finalOb = await queryOrderbook(baseDenom, QUOTE_DENOM, networkName);
-
-    // Query open orders per agent
     const mmAOrders = await queryOrdersByCreator(mmA.address, networkName);
     const mmBOrders = await queryOrdersByCreator(mmB.address, networkName);
     const takerOrders = await queryOrdersByCreator(taker.address, networkName);
 
     emit("summary", {
-      token: { symbol: demoSymbol, denom: baseDenom },
+      token: { symbol: tokenSymbol, denom: baseDenom },
       orderbook: { bids: finalOb.bids.length, asks: finalOb.asks.length },
       agents: {
-        mmA: { address: mmA.address, openOrders: mmAOrders.length || 0 },
-        mmB: { address: mmB.address, openOrders: mmBOrders.length || 0 },
-        taker: { address: taker.address, openOrders: takerOrders.length || 0 },
+        mmA: { name: mmA.name, address: mmA.address, openOrders: mmAOrders.length },
+        mmB: { name: mmB.name, address: mmB.address, openOrders: mmBOrders.length },
+        taker: { name: taker.name, address: taker.address, openOrders: takerOrders.length },
       },
-      totals: {
-        placed: placedCount,
-        fills: fillCount,
-        errors: errorCount,
-      },
+      totals: { placed: placedCount, fills: fillCount, errors: errorCount },
     });
 
-    emit("done", { success: true });
+    emit("done", { success: true, denom: baseDenom });
 
   } catch (err) {
     emit("error", { message: (err as Error).message });
   } finally {
-    // Cleanup: disconnect all clients
     for (const client of clients) {
       try { client.disconnect(); } catch { /* ignore */ }
     }
-    // Clear mnemonics from memory
     for (const agent of agents) {
       agent.mnemonic = "";
     }
