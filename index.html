@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/styles.css?v=2">
+<link rel="stylesheet" href="css/styles.css?v=3">
 </head>
 <body>
 
@@ -36,6 +36,7 @@
       <button class="chat-tab active" id="tabCreate" onclick="switchTab('create')">🚀 Create Smart Token</button>
       <button class="chat-tab" id="tabChat" onclick="switchTab('chat')">💬 Smart Token Advisor Chat</button>
       <button class="chat-tab" id="tabDex" onclick="switchTab('dex')">📊 Exchange (Order Book)</button>
+      <button class="chat-tab" id="tabNft" onclick="switchTab('nft')">🎨 Create NFT Collection</button>
       <button class="chat-tab" id="tabManage" onclick="switchTab('manage')">⚙️ Manage Smart Token</button>
     </div>
 
@@ -481,6 +482,159 @@
 
     </div>
 
+    <!-- ===== NFT TAB ===== -->
+    <div class="nft-wrap" id="nftWrap">
+
+      <!-- Create Collection -->
+      <div class="nft-section">
+        <h3 class="nft-section-title">🎨 Create NFT Collection</h3>
+        <p class="nft-section-desc">Issue a new NFT class on the TX blockchain with native features like royalties, freezing, and soulbound.</p>
+
+        <div class="nft-form-grid">
+          <div class="nft-field">
+            <label>Collection Symbol <span class="nft-required">*</span></label>
+            <input type="text" class="nft-input" id="nftSymbol" placeholder="e.g. PUNKS" maxlength="20">
+          </div>
+          <div class="nft-field">
+            <label>Collection Name <span class="nft-required">*</span></label>
+            <input type="text" class="nft-input" id="nftName" placeholder="e.g. CryptoPunks Collection">
+          </div>
+          <div class="nft-field nft-field-full">
+            <label>Description</label>
+            <textarea class="nft-input nft-textarea" id="nftDescription" placeholder="Describe your NFT collection..." rows="2"></textarea>
+          </div>
+          <div class="nft-field">
+            <label>URI (metadata link)</label>
+            <input type="text" class="nft-input" id="nftUri" placeholder="https://...">
+          </div>
+          <div class="nft-field">
+            <label>Royalty Rate (%)</label>
+            <input type="number" class="nft-input" id="nftRoyalty" placeholder="e.g. 5" min="0" max="100" step="0.1">
+          </div>
+        </div>
+
+        <!-- Features -->
+        <div class="nft-features-bar">
+          <label class="nft-feature-toggle">
+            <input type="checkbox" id="nftFeatBurning" checked> <span>🔥 Burning</span>
+          </label>
+          <label class="nft-feature-toggle">
+            <input type="checkbox" id="nftFeatFreezing"> <span>❄️ Freezing</span>
+          </label>
+          <label class="nft-feature-toggle">
+            <input type="checkbox" id="nftFeatWhitelisting"> <span>✅ Whitelisting</span>
+          </label>
+          <label class="nft-feature-toggle">
+            <input type="checkbox" id="nftFeatDisableSending"> <span>🚫 Disable Sending</span>
+          </label>
+          <label class="nft-feature-toggle">
+            <input type="checkbox" id="nftFeatSoulbound"> <span>🔗 Soulbound</span>
+          </label>
+        </div>
+
+        <button class="nft-create-btn" id="nftCreateBtn" onclick="nftIssueClass()">
+          <span id="nftCreateBtnText">🚀 Create Collection</span>
+          <span id="nftCreateSpinner" class="nft-spinner" style="display:none"></span>
+        </button>
+
+        <!-- Result -->
+        <div class="nft-result" id="nftCreateResult" style="display:none">
+          <div class="nft-result-icon" id="nftCreateResultIcon">✓</div>
+          <div class="nft-result-msg" id="nftCreateResultMsg"></div>
+          <div class="nft-result-classid" id="nftCreateResultClassId"></div>
+          <a class="nft-result-link" id="nftCreateResultLink" target="_blank">View on Explorer</a>
+        </div>
+      </div>
+
+      <!-- Divider -->
+      <div class="nft-divider"></div>
+
+      <!-- Mint NFTs -->
+      <div class="nft-section">
+        <h3 class="nft-section-title">⚡ Mint NFTs</h3>
+        <p class="nft-section-desc">Mint individual NFTs into an existing collection.</p>
+
+        <div class="nft-form-grid">
+          <div class="nft-field">
+            <label>Class ID <span class="nft-required">*</span></label>
+            <input type="text" class="nft-input" id="nftMintClassId" placeholder="symbol-testcore1...">
+          </div>
+          <div class="nft-field">
+            <label>NFT ID <span class="nft-required">*</span></label>
+            <input type="text" class="nft-input" id="nftMintId" placeholder="e.g. nft-001">
+          </div>
+          <div class="nft-field">
+            <label>Metadata URI</label>
+            <input type="text" class="nft-input" id="nftMintUri" placeholder="https://...metadata.json">
+          </div>
+          <div class="nft-field">
+            <label>Recipient (optional)</label>
+            <input type="text" class="nft-input" id="nftMintRecipient" placeholder="testcore1... (default: issuer)">
+          </div>
+        </div>
+
+        <!-- Batch Mint -->
+        <div class="nft-batch-bar">
+          <label class="nft-batch-label">
+            <input type="checkbox" id="nftBatchMode" onchange="nftToggleBatch()"> Batch Mint
+          </label>
+          <div class="nft-batch-fields" id="nftBatchFields" style="display:none">
+            <label>Count</label>
+            <input type="number" class="nft-input nft-input-sm" id="nftBatchCount" value="10" min="1" max="100">
+            <label>ID Prefix</label>
+            <input type="text" class="nft-input nft-input-sm" id="nftBatchPrefix" value="nft-" placeholder="nft-">
+          </div>
+        </div>
+
+        <button class="nft-create-btn nft-mint-btn" id="nftMintBtn" onclick="nftMintToken()">
+          <span id="nftMintBtnText">⚡ Mint NFT</span>
+          <span id="nftMintSpinner" class="nft-spinner" style="display:none"></span>
+        </button>
+
+        <!-- Mint Result -->
+        <div class="nft-result" id="nftMintResult" style="display:none">
+          <div class="nft-result-icon" id="nftMintResultIcon">✓</div>
+          <div class="nft-result-msg" id="nftMintResultMsg"></div>
+          <a class="nft-result-link" id="nftMintResultLink" target="_blank">View on Explorer</a>
+        </div>
+      </div>
+
+      <!-- Divider -->
+      <div class="nft-divider"></div>
+
+      <!-- Browse NFTs -->
+      <div class="nft-section">
+        <h3 class="nft-section-title">🔍 Browse NFTs</h3>
+
+        <div class="nft-browse-bar">
+          <input type="text" class="nft-input" id="nftBrowseInput" placeholder="Enter Class ID or wallet address..." style="flex:1">
+          <button class="nft-browse-btn" onclick="nftBrowse()">Search</button>
+        </div>
+
+        <!-- Class Info Card -->
+        <div class="nft-class-card" id="nftClassCard" style="display:none">
+          <div class="nft-class-header">
+            <div class="nft-class-name" id="nftClassName">--</div>
+            <div class="nft-class-id" id="nftClassId">--</div>
+          </div>
+          <div class="nft-class-meta">
+            <span id="nftClassIssuer">Issuer: --</span>
+            <span id="nftClassRoyalty">Royalty: --</span>
+          </div>
+          <div class="nft-class-features" id="nftClassFeatures"></div>
+        </div>
+
+        <!-- NFT Grid -->
+        <div class="nft-grid" id="nftGrid"></div>
+
+        <!-- Empty State -->
+        <div class="nft-empty" id="nftEmpty" style="display:none">
+          No NFTs found.
+        </div>
+      </div>
+
+    </div><!-- end nft-wrap -->
+
     <!-- ===== MANAGE TAB ===== -->
     <div class="manage-wrap" id="manageWrap">
 
@@ -684,14 +838,14 @@
 
 
 <!-- Modular JavaScript -->
-<script src="js/config.js?v=2"></script>
-<script src="js/wallet.js?v=2"></script>
-<script src="js/chat.js?v=2"></script>
-<script src="js/create-token.js?v=2"></script>
-<script src="js/create-nft.js?v=2"></script>
-<script src="js/dex.js?v=2"></script>
-<script src="js/manage.js?v=2"></script>
-<script src="js/auth.js?v=2"></script>
+<script src="js/config.js?v=3"></script>
+<script src="js/wallet.js?v=3"></script>
+<script src="js/chat.js?v=3"></script>
+<script src="js/create-token.js?v=3"></script>
+<script src="js/create-nft.js?v=3"></script>
+<script src="js/dex.js?v=3"></script>
+<script src="js/manage.js?v=3"></script>
+<script src="js/auth.js?v=3"></script>
 
 </body>
 </html>

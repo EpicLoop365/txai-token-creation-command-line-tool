@@ -37,6 +37,14 @@ import {
   clawbackTokens,
   setWhitelistedLimit,
   requestFaucet,
+  issueNFTClass,
+  mintNFT,
+  burnNFT,
+  freezeNFT,
+  unfreezeNFT,
+  queryNFTClass,
+  queryNFTsByClass,
+  queryNFTsByOwner,
 } from "./tx-sdk";
 import { defaultRegistryTypes } from "@cosmjs/stargate";
 import { Registry, GeneratedType } from "@cosmjs/proto-signing";
@@ -830,6 +838,115 @@ app.post("/api/build-tx", async (req, res) => {
     console.error("[build-tx] Error:", err);
     res.status(500).json({ error: (err as Error).message });
   }
+});
+
+// ─── NFT: ISSUE CLASS ─────────────────────────────────────────────────────
+app.post("/api/nft/issue-class", async (req, res) => {
+  const { symbol, name, description, uri, uriHash, features, royaltyRate } = req.body as {
+    symbol?: string; name?: string; description?: string; uri?: string; uriHash?: string;
+    features?: Record<string, boolean>; royaltyRate?: string;
+  };
+  if (!symbol || !name) { res.status(400).json({ error: "Missing 'symbol' and 'name'." }); return; }
+  if (!process.env.AGENT_MNEMONIC) { res.status(500).json({ error: "Server not configured." }); return; }
+  const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
+  try {
+    const txWallet = await importWallet(process.env.AGENT_MNEMONIC, networkName);
+    const client = await TxClient.connectWithWallet(txWallet);
+    const result = await issueNFTClass(client, { symbol, name, description, uri, uriHash, features, royaltyRate });
+    client.disconnect();
+    res.json(result);
+  } catch (err) { res.status(500).json({ error: (err as Error).message }); }
+});
+
+// ─── NFT: MINT ────────────────────────────────────────────────────────────
+app.post("/api/nft/mint", async (req, res) => {
+  const { classId, id, uri, uriHash, data, recipient } = req.body as {
+    classId?: string; id?: string; uri?: string; uriHash?: string; data?: string; recipient?: string;
+  };
+  if (!classId || !id) { res.status(400).json({ error: "Missing 'classId' and 'id'." }); return; }
+  if (!process.env.AGENT_MNEMONIC) { res.status(500).json({ error: "Server not configured." }); return; }
+  const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
+  try {
+    const txWallet = await importWallet(process.env.AGENT_MNEMONIC, networkName);
+    const client = await TxClient.connectWithWallet(txWallet);
+    const result = await mintNFT(client, { classId, id, uri, uriHash, data, recipient });
+    client.disconnect();
+    res.json(result);
+  } catch (err) { res.status(500).json({ error: (err as Error).message }); }
+});
+
+// ─── NFT: BURN ────────────────────────────────────────────────────────────
+app.post("/api/nft/burn", async (req, res) => {
+  const { classId, id } = req.body as { classId?: string; id?: string };
+  if (!classId || !id) { res.status(400).json({ error: "Missing 'classId' and 'id'." }); return; }
+  if (!process.env.AGENT_MNEMONIC) { res.status(500).json({ error: "Server not configured." }); return; }
+  const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
+  try {
+    const txWallet = await importWallet(process.env.AGENT_MNEMONIC, networkName);
+    const client = await TxClient.connectWithWallet(txWallet);
+    const result = await burnNFT(client, classId, id);
+    client.disconnect();
+    res.json(result);
+  } catch (err) { res.status(500).json({ error: (err as Error).message }); }
+});
+
+// ─── NFT: FREEZE / UNFREEZE ──────────────────────────────────────────────
+app.post("/api/nft/freeze", async (req, res) => {
+  const { classId, id } = req.body as { classId?: string; id?: string };
+  if (!classId || !id) { res.status(400).json({ error: "Missing 'classId' and 'id'." }); return; }
+  if (!process.env.AGENT_MNEMONIC) { res.status(500).json({ error: "Server not configured." }); return; }
+  const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
+  try {
+    const txWallet = await importWallet(process.env.AGENT_MNEMONIC, networkName);
+    const client = await TxClient.connectWithWallet(txWallet);
+    const result = await freezeNFT(client, classId, id);
+    client.disconnect();
+    res.json(result);
+  } catch (err) { res.status(500).json({ error: (err as Error).message }); }
+});
+
+app.post("/api/nft/unfreeze", async (req, res) => {
+  const { classId, id } = req.body as { classId?: string; id?: string };
+  if (!classId || !id) { res.status(400).json({ error: "Missing 'classId' and 'id'." }); return; }
+  if (!process.env.AGENT_MNEMONIC) { res.status(500).json({ error: "Server not configured." }); return; }
+  const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
+  try {
+    const txWallet = await importWallet(process.env.AGENT_MNEMONIC, networkName);
+    const client = await TxClient.connectWithWallet(txWallet);
+    const result = await unfreezeNFT(client, classId, id);
+    client.disconnect();
+    res.json(result);
+  } catch (err) { res.status(500).json({ error: (err as Error).message }); }
+});
+
+// ─── NFT: QUERY CLASS ─────────────────────────────────────────────────────
+app.get("/api/nft/class", async (req, res) => {
+  const classId = req.query.classId as string;
+  if (!classId) { res.status(400).json({ error: "Missing 'classId' query param." }); return; }
+  const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
+  try {
+    const info = await queryNFTClass(classId, networkName);
+    if (!info) { res.status(404).json({ error: "Class not found." }); return; }
+    res.json({ class: info });
+  } catch (err) { res.status(500).json({ error: (err as Error).message }); }
+});
+
+// ─── NFT: QUERY NFTs BY CLASS ─────────────────────────────────────────────
+app.get("/api/nft/nfts", async (req, res) => {
+  const classId = req.query.classId as string;
+  const owner = req.query.owner as string;
+  const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
+  try {
+    let nfts;
+    if (classId) {
+      nfts = await queryNFTsByClass(classId, networkName);
+    } else if (owner) {
+      nfts = await queryNFTsByOwner(owner, networkName);
+    } else {
+      res.status(400).json({ error: "Provide 'classId' or 'owner' query param." }); return;
+    }
+    res.json({ nfts });
+  } catch (err) { res.status(500).json({ error: (err as Error).message }); }
 });
 
 // ─── DEX: CHAT (Trading Advisor) ────────────────────────────────────────────

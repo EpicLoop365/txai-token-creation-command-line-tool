@@ -5,20 +5,24 @@ function switchTab(tab){
   const tabCreate = document.getElementById('tabCreate');
   const tabChat = document.getElementById('tabChat');
   const tabDex = document.getElementById('tabDex');
+  const tabNft = document.getElementById('tabNft');
   const tabManage = document.getElementById('tabManage');
   const createWrap = document.getElementById('createModeWrap');
   const chatWrap = document.getElementById('chatWrap');
   const dexWrap = document.getElementById('dexWrap');
+  const nftWrap = document.getElementById('nftWrap');
   const manageWrap = document.getElementById('manageWrap');
 
   // Reset all tabs
   tabCreate.classList.remove('active');
   tabChat.classList.remove('active');
   tabDex.classList.remove('active');
+  tabNft.classList.remove('active');
   tabManage.classList.remove('active');
   createWrap.style.display = 'none';
   chatWrap.classList.remove('show');
   dexWrap.classList.remove('show');
+  nftWrap.classList.remove('show');
   manageWrap.classList.remove('show');
   // Reset container width when leaving DEX
   dexWrap.closest('.container').style.maxWidth = '';
@@ -38,6 +42,9 @@ function switchTab(tab){
     if(!dexAgentWallet) dexFetchWallet();
     if(!document.getElementById('dexPairSelect').options.length || document.getElementById('dexPairSelect').options.length <= 1) dexFetchPairs();
     setTimeout(() => dexDrawDepthChart(), 100);
+  } else if(tab === 'nft'){
+    tabNft.classList.add('active');
+    nftWrap.classList.add('show');
   } else if(tab === 'manage'){
     tabManage.classList.add('active');
     manageWrap.classList.add('show');
