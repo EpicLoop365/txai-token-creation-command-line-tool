@@ -983,17 +983,101 @@ function addrLink(addr) {
   return `<a href="${EXPLORER_ACCT_URL}${addr}" target="_blank" class="demo-addr-link" title="View on Explorer">${addr.slice(0, 14)}...</a>`;
 }
 
-function dexStartDemo() {
-  const overlay = document.getElementById('dexDemoOverlay');
-  if (!overlay) return;
+// Track deposit state for the modal
+let dexDepositBaseDenom = '';
 
+async function dexStartDemo() {
   // Must have a token loaded
   if (!dexBaseDenom) {
     alert('Please load a token in the DEX first, then click Populate Orderbook.');
     return;
   }
 
+  // Step 1: Check if agent already has enough tokens
+  try {
+    const checkRes = await fetch(`${API_URL}/api/dex/check-demo-ready`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ baseDenom: dexBaseDenom }),
+    });
+    const checkData = await checkRes.json();
+
+    if (checkData.ready) {
+      // Agent has tokens — launch demo directly
+      dexLaunchDemoOverlay();
+    } else {
+      // Agent doesn't have tokens — show deposit modal
+      dexDepositBaseDenom = dexBaseDenom;
+      document.getElementById('dexDepositAmount').textContent = checkData.tokensNeeded.toLocaleString();
+      document.getElementById('dexDepositSymbol').textContent = checkData.symbol;
+      document.getElementById('dexDepositAddress').textContent = checkData.agentAddress;
+      document.getElementById('dexDepositStatus').textContent = '';
+      document.getElementById('dexDepositStatus').className = 'dex-deposit-status';
+      document.getElementById('dexDepositCheckBtn').disabled = false;
+      document.getElementById('dexDepositModal').style.display = 'flex';
+    }
+  } catch (err) {
+    alert('Could not check demo readiness: ' + err.message);
+  }
+}
+
+function dexCloseDeposit() {
+  document.getElementById('dexDepositModal').style.display = 'none';
+}
+
+function dexCopyDepositAddr() {
+  const addr = document.getElementById('dexDepositAddress').textContent;
+  navigator.clipboard.writeText(addr).then(() => {
+    const btn = document.querySelector('.dex-deposit-copy');
+    const orig = btn.textContent;
+    btn.textContent = '✅ Copied!';
+    setTimeout(() => { btn.textContent = orig; }, 2000);
+  });
+}
+
+async function dexCheckAndStart() {
+  const btn = document.getElementById('dexDepositCheckBtn');
+  const status = document.getElementById('dexDepositStatus');
+  btn.disabled = true;
+  status.textContent = 'Checking balance...';
+  status.className = 'dex-deposit-status';
+
+  try {
+    const res = await fetch(`${API_URL}/api/dex/check-demo-ready`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ baseDenom: dexDepositBaseDenom }),
+    });
+    const data = await res.json();
+
+    if (data.ready) {
+      status.textContent = 'Tokens received! Launching demo...';
+      status.className = 'dex-deposit-status success';
+      document.getElementById('dexDepositModal').style.display = 'none';
+      dexLaunchDemoOverlay();
+    } else {
+      const held = data.tokensHeld || 0;
+      const needed = data.tokensNeeded || 7000;
+      status.textContent = `Received ${held.toLocaleString()} of ${needed.toLocaleString()} ${data.symbol} needed. Please send more tokens.`;
+      status.className = 'dex-deposit-status error';
+      btn.disabled = false;
+    }
+  } catch (err) {
+    status.textContent = 'Error checking: ' + err.message;
+    status.className = 'dex-deposit-status error';
+    btn.disabled = false;
+  }
+}
+
+function dexLaunchDemoOverlay() {
+  const overlay = document.getElementById('dexDemoOverlay');
+  if (!overlay) return;
+
   const tokenSymbol = dexBaseDenom.split('-')[0].toUpperCase();
+  // Determine returnAddress: if user has a connected wallet, return tokens to them
+  const returnAddr = (typeof walletMode !== 'undefined' && walletMode !== 'agent' && typeof connectedAddress !== 'undefined' && connectedAddress)
+    ? connectedAddress
+    : undefined;
 
   // Reset UI
   overlay.style.display = 'flex';
@@ -1023,26 +1107,18 @@ function dexStartDemo() {
     document.getElementById('dexDemoTimer').textContent = `${m}:${s}`;
   }, 1000);
 
-  // Start SSE connection
-  dexDemoEventSource = new EventSource(`${API_URL}/api/dex/live-demo`);
-
-  // Note: EventSource only supports GET. We need POST for this.
-  // Use fetch with ReadableStream instead.
-  if (dexDemoEventSource) {
-    dexDemoEventSource.close();
-    dexDemoEventSource = null;
-  }
-
   // Use fetch-based SSE
-  dexDemoFetchSSE(dexBaseDenom);
+  dexDemoFetchSSE(dexBaseDenom, returnAddr);
 }
 
-async function dexDemoFetchSSE(baseDenom) {
+async function dexDemoFetchSSE(baseDenom, returnAddress) {
   try {
+    const body = { baseDenom };
+    if (returnAddress) body.returnAddress = returnAddress;
     const res = await fetch(`${API_URL}/api/dex/live-demo`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ baseDenom }),
+      body: JSON.stringify(body),
     });
 
     if (!res.ok) {
@@ -1197,6 +1273,16 @@ function dexDemoProcessEvent(event, data) {
       if (data.token?.denom) {
         document.getElementById('dexBaseDenom').value = data.token.denom;
         dexLoadOrderbook();
+      }
+      break;
+
+    case 'return':
+      if (data.step === 'sweep') {
+        dexDemoLog('transfer', `🔄 Sweeping: ${data.from} → Agent: ${(data.amount || 0).toLocaleString()} ${data.symbol}`);
+      } else if (data.step === 'refund') {
+        dexDemoLog('success', `💰 Returned <b>${(data.amount || 0).toLocaleString()} ${data.symbol}</b> to your wallet${txLink(data.txHash)}`);
+      } else if (data.step === 'error') {
+        dexDemoLog('warn', `⚠️ ${data.message}`);
       }
       break;
 

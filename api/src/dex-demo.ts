@@ -37,6 +37,7 @@ export interface DemoConfig {
   networkName: NetworkName;
   onEvent: (event: string, data: Record<string, unknown>) => void;
   abortSignal?: AbortSignal;
+  returnAddress?: string;    // If set, return leftover tokens here after demo
 }
 
 interface AgentWallet {
@@ -59,8 +60,9 @@ const TOKEN_PRECISION = 6;
 const QUOTE_DENOM = "utestcore";
 
 // Token distribution: how many tokens to give each seller agent
-const SELLER_TOKEN_AMOUNT = 5000;  // 5000 tokens to MM-B
-const TAKER_TOKEN_AMOUNT = 2000;   // 2000 tokens to Taker
+export const SELLER_TOKEN_AMOUNT = 5000;  // 5000 tokens to MM-B
+export const TAKER_TOKEN_AMOUNT = 2000;   // 2000 tokens to Taker
+export const DEMO_TOKENS_NEEDED = SELLER_TOKEN_AMOUNT + TAKER_TOKEN_AMOUNT; // 7000
 
 // Price config: 0.001 TX per token (1e-3)
 const BASE_PRICE = 0.001;
@@ -108,7 +110,7 @@ export async function runDexDemo(config: DemoConfig): Promise<void> {
   if (demoRunning) throw new Error("Demo already in progress");
   demoRunning = true;
 
-  const { baseDenom, agentMnemonic, networkName, onEvent, abortSignal } = config;
+  const { baseDenom, agentMnemonic, networkName, onEvent, abortSignal, returnAddress } = config;
   const tokenSymbol = baseDenom.split("-")[0].toUpperCase();
 
   const emit = (event: string, data: Record<string, unknown>) => {
@@ -439,6 +441,75 @@ export async function runDexDemo(config: DemoConfig): Promise<void> {
       },
       totals: { placed: placedCount, fills: fillCount, errors: errorCount },
     });
+
+    // ── Phase 9: Return Leftover Tokens to User ──
+    if (returnAddress) {
+      emit("phase", { phase: "return", message: `Returning leftover ${tokenSymbol} to your wallet...` });
+      await sleep(3000);
+
+      try {
+        // Sweep tokens from MM-B → agent
+        const mmBBals = await mmB.client!.getBalances(mmB.address);
+        const mmBTokenBal = mmBBals.find(b => b.denom === baseDenom);
+        if (mmBTokenBal && parseInt(mmBTokenBal.amount) > 0) {
+          await mmB.client!.signAndBroadcastMsg({
+            typeUrl: "/cosmos.bank.v1beta1.MsgSend",
+            value: {
+              fromAddress: mmB.address,
+              toAddress: agentClient!.address,
+              amount: [{ denom: baseDenom, amount: mmBTokenBal.amount }],
+            },
+          }, 200000);
+          emit("return", { step: "sweep", from: mmB.name, amount: parseInt(mmBTokenBal.amount) / 1e6, symbol: tokenSymbol });
+        }
+
+        await sleep(2000);
+
+        // Sweep tokens from Taker → agent
+        const takerBals = await taker.client!.getBalances(taker.address);
+        const takerTokenBal = takerBals.find(b => b.denom === baseDenom);
+        if (takerTokenBal && parseInt(takerTokenBal.amount) > 0) {
+          await taker.client!.signAndBroadcastMsg({
+            typeUrl: "/cosmos.bank.v1beta1.MsgSend",
+            value: {
+              fromAddress: taker.address,
+              toAddress: agentClient!.address,
+              amount: [{ denom: baseDenom, amount: takerTokenBal.amount }],
+            },
+          }, 200000);
+          emit("return", { step: "sweep", from: taker.name, amount: parseInt(takerTokenBal.amount) / 1e6, symbol: tokenSymbol });
+        }
+
+        await sleep(3000);
+
+        // Send all collected tokens from agent → user
+        const agentFinalBals = await agentClient!.getBalances(agentClient!.address);
+        const agentFinalToken = agentFinalBals.find(b => b.denom === baseDenom);
+        const returnAmount = agentFinalToken ? parseInt(agentFinalToken.amount) : 0;
+
+        if (returnAmount > 0) {
+          const returnResult = await agentClient!.signAndBroadcastMsg({
+            typeUrl: "/cosmos.bank.v1beta1.MsgSend",
+            value: {
+              fromAddress: agentClient!.address,
+              toAddress: returnAddress,
+              amount: [{ denom: baseDenom, amount: returnAmount.toString() }],
+            },
+          }, 200000);
+          emit("return", {
+            step: "refund",
+            to: returnAddress,
+            amount: returnAmount / 1e6,
+            symbol: tokenSymbol,
+            txHash: returnResult.txHash,
+            success: returnResult.success,
+          });
+        }
+      } catch (err) {
+        console.error("[dex-demo] Token return failed:", (err as Error).message);
+        emit("return", { step: "error", message: `Could not return all tokens: ${(err as Error).message.slice(0, 100)}` });
+      }
+    }
 
     emit("done", { success: true, denom: baseDenom });
 

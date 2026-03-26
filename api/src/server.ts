@@ -1163,8 +1163,52 @@ app.post("/api/dex-chat", async (req, res) => {
 
 // ─── DEX: LIVE DEMO (SSE) ────────────────────────────────────────────────────
 
-import { runDexDemo, isDemoRunning } from "./dex-demo";
+import { runDexDemo, isDemoRunning, DEMO_TOKENS_NEEDED } from "./dex-demo";
 
+// ─── DEX DEMO: Check if agent has enough tokens ─────────────────────────────
+app.post("/api/dex/check-demo-ready", async (req, res) => {
+  const { baseDenom } = req.body as { baseDenom?: string };
+  if (!baseDenom) {
+    res.status(400).json({ error: "Missing 'baseDenom'." });
+    return;
+  }
+  if (!process.env.AGENT_MNEMONIC) {
+    res.status(500).json({ error: "Server not configured (no agent mnemonic)." });
+    return;
+  }
+
+  try {
+    const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
+    const agentWallet = await importWallet(process.env.AGENT_MNEMONIC, networkName);
+    const client = await TxClient.connectWithWallet(agentWallet, { isolatedMutex: true });
+
+    const balances = await client.getBalances(client.address);
+    const tokenBal = balances.find((b: any) => b.denom === baseDenom);
+    const rawAmount = tokenBal ? parseInt(tokenBal.amount) : 0;
+    const displayAmount = rawAmount / 1e6;
+    const needed = DEMO_TOKENS_NEEDED; // 7000 display units
+    const neededRaw = needed * 1e6;
+    const symbol = baseDenom.split("-")[0].toUpperCase();
+
+    client.disconnect();
+
+    if (rawAmount >= neededRaw) {
+      res.json({ ready: true });
+    } else {
+      res.json({
+        ready: false,
+        agentAddress: client.address,
+        tokensNeeded: needed,
+        tokensHeld: displayAmount,
+        symbol,
+      });
+    }
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+// ─── DEX DEMO: Live SSE stream ──────────────────────────────────────────────
 app.post("/api/dex/live-demo", async (req, res) => {
   // Only one demo at a time
   if (isDemoRunning()) {
@@ -1172,7 +1216,7 @@ app.post("/api/dex/live-demo", async (req, res) => {
     return;
   }
 
-  const { baseDenom } = req.body as { baseDenom?: string };
+  const { baseDenom, returnAddress } = req.body as { baseDenom?: string; returnAddress?: string };
   if (!baseDenom) {
     res.status(400).json({ error: "Missing 'baseDenom'. Load a token in the DEX first." });
     return;
@@ -1222,6 +1266,7 @@ app.post("/api/dex/live-demo", async (req, res) => {
       networkName,
       onEvent: sendEvent,
       abortSignal: abortController.signal,
+      returnAddress: returnAddress || undefined,
     });
   } catch (err) {
     sendEvent("error", { message: (err as Error).message });

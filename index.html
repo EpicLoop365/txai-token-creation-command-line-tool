@@ -404,6 +404,38 @@
         </div>
       </div>
 
+      <!-- Deposit Modal (shown when agent doesn't hold the token) -->
+      <div class="dex-deposit-overlay" id="dexDepositModal" style="display:none">
+        <div class="dex-deposit-panel">
+          <div class="dex-deposit-header">
+            <h3>📦 Token Deposit Required</h3>
+            <button class="dex-demo-close" onclick="dexCloseDeposit()">✕</button>
+          </div>
+          <div class="dex-deposit-body">
+            <p class="dex-deposit-desc">
+              The AI trading agents need <b><span id="dexDepositAmount">7,000</span>
+              <span id="dexDepositSymbol">TOKEN</span></b> to populate your orderbook.
+            </p>
+            <p class="dex-deposit-instruction">
+              Send tokens to this address from your wallet:
+            </p>
+            <div class="dex-deposit-address-row">
+              <code id="dexDepositAddress">testcore1...</code>
+              <button class="dex-deposit-copy" onclick="dexCopyDepositAddr()">📋 Copy</button>
+            </div>
+            <p class="dex-deposit-note">
+              After the demo completes, unused tokens will be returned to your wallet automatically.
+            </p>
+            <div class="dex-deposit-actions">
+              <button class="dex-deposit-check-btn" id="dexDepositCheckBtn" onclick="dexCheckAndStart()">
+                🔍 Check & Start Demo
+              </button>
+              <div class="dex-deposit-status" id="dexDepositStatus"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Terminal Grid -->
       <div class="dex-terminal">
 
