@@ -231,8 +231,8 @@ async function run() {
     }
     if (!ok) errors++;
 
-    // Delay between orders — server needs time to connect wallet + broadcast TX
-    await sleep(5000);
+    // Delay between orders — server needs time to process TX + free resources
+    await sleep(15000);
   }
 
   // Place sell orders

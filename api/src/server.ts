@@ -859,9 +859,10 @@ app.post("/api/dex/place-order", async (req, res) => {
     res.status(500).json({ error: "Server not configured." }); return;
   }
   const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
+  let client: TxClient | null = null;
   try {
     const txWallet = await importWallet(process.env.AGENT_MNEMONIC, networkName);
-    const client = await TxClient.connectWithWallet(txWallet);
+    client = await TxClient.connectWithWallet(txWallet);
     const result = await placeOrder(client, {
       baseDenom,
       quoteDenom,
@@ -871,10 +872,12 @@ app.post("/api/dex/place-order", async (req, res) => {
       quantity,
       timeInForce: DexTimeInForce.GTC,
     });
-    client.disconnect();
     res.json(result);
   } catch (err) {
+    console.error("[dex/place-order] Error:", err);
     res.status(500).json({ error: (err as Error).message });
+  } finally {
+    try { if (client) client.disconnect(); } catch { /* ignore disconnect errors */ }
   }
 });
 
@@ -889,14 +892,17 @@ app.post("/api/dex/cancel-order", async (req, res) => {
     res.status(500).json({ error: "Server not configured." }); return;
   }
   const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
+  let client: TxClient | null = null;
   try {
     const txWallet = await importWallet(process.env.AGENT_MNEMONIC, networkName);
-    const client = await TxClient.connectWithWallet(txWallet);
+    client = await TxClient.connectWithWallet(txWallet);
     const result = await cancelOrder(client, orderId);
-    client.disconnect();
     res.json(result);
   } catch (err) {
+    console.error("[dex/cancel-order] Error:", err);
     res.status(500).json({ error: (err as Error).message });
+  } finally {
+    try { if (client) client.disconnect(); } catch { /* ignore */ }
   }
 });
 
