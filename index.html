@@ -1261,7 +1261,7 @@ footer{
 <!-- Interactive Demo -->
 <section id="demo">
   <div class="container">
-    <div class="reveal">
+    <div class="reveal" id="demoHeader">
       <div class="section-label">Interactive Demo</div>
       <div class="section-title">Create a Smart Token</div>
       <div class="section-sub">Describe your token in plain English and watch the AI parse it into a deployable configuration.</div>
@@ -1271,8 +1271,8 @@ footer{
     <div class="chat-tab-bar reveal">
       <button class="chat-tab active" id="tabCreate" onclick="switchTab('create')">🚀 Create</button>
       <button class="chat-tab" id="tabChat" onclick="switchTab('chat')">💬 Chat Advisor</button>
-      <button class="chat-tab" id="tabDex" onclick="switchTab('dex')">📊 Order Book DEX</button>
-      <button class="chat-tab" id="tabManage" onclick="switchTab('manage')">⚙️ Manage</button>
+      <button class="chat-tab" id="tabDex" onclick="switchTab('dex')">📊 Order Book TXDEX</button>
+      <button class="chat-tab" id="tabManage" onclick="switchTab('manage')">⚙️ Manage Smart Tokens Post Creation</button>
     </div>
 
     <!-- Create Mode (existing) -->
@@ -1994,6 +1994,7 @@ function switchTab(tab){
   const chatWrap = document.getElementById('chatWrap');
   const dexWrap = document.getElementById('dexWrap');
   const manageWrap = document.getElementById('manageWrap');
+  const demoHeader = document.getElementById('demoHeader');
 
   // Reset all tabs
   tabCreate.classList.remove('active');
@@ -2012,10 +2013,12 @@ function switchTab(tab){
     chatMode = true;
     tabChat.classList.add('active');
     chatWrap.classList.add('show');
+    demoHeader.style.display = '';
     document.getElementById('chatInput').focus();
   } else if(tab === 'dex'){
     tabDex.classList.add('active');
     dexWrap.classList.add('show');
+    demoHeader.style.display = 'none';
     // Expand container for trading terminal
     dexWrap.closest('.container').style.maxWidth = '1440px';
     // Auto-fetch wallet and pairs on first load
@@ -2025,10 +2028,12 @@ function switchTab(tab){
   } else if(tab === 'manage'){
     tabManage.classList.add('active');
     manageWrap.classList.add('show');
+    demoHeader.style.display = 'none';
     document.getElementById('manageTokenDenom').focus();
   } else {
     tabCreate.classList.add('active');
     createWrap.style.display = '';
+    demoHeader.style.display = '';
   }
 }
 
