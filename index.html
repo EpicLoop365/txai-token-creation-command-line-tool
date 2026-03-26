@@ -596,6 +596,95 @@ footer{
 
 @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 
+/* ===== CUSTOMIZE PANEL ===== */
+.customize-toggle{
+  display:flex;align-items:center;gap:8px;margin:16px 0 0;cursor:pointer;
+  font-family:var(--mono);font-size:.8rem;color:var(--text-dim);
+  transition:color .2s;user-select:none;
+}
+.customize-toggle:hover{color:var(--purple)}
+.customize-toggle .arrow{transition:transform .2s;display:inline-block}
+.customize-toggle .arrow.open{transform:rotate(90deg)}
+
+.customize-panel{
+  display:none;margin-top:16px;background:var(--bg2);border:1px solid var(--border);
+  border-radius:var(--radius-lg);overflow:hidden;animation:fadeUp .3s ease;
+}
+.customize-panel.show{display:block}
+
+.cp-section{padding:20px 24px;border-bottom:1px solid var(--border)}
+.cp-section:last-child{border-bottom:none}
+.cp-section-title{
+  font-family:var(--mono);font-size:.78rem;font-weight:700;color:var(--green);
+  text-transform:uppercase;letter-spacing:1px;margin-bottom:14px;
+  display:flex;align-items:center;gap:8px;
+}
+.cp-section-title .icon{font-style:normal;font-size:1rem}
+
+.cp-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.cp-row.triple{grid-template-columns:1fr 1fr 1fr}
+.cp-row:last-child{margin-bottom:0}
+
+.cp-field{display:flex;flex-direction:column;gap:4px}
+.cp-label{
+  font-family:var(--mono);font-size:.72rem;font-weight:600;color:var(--text-muted);
+  text-transform:uppercase;letter-spacing:.5px;
+}
+.cp-input{
+  background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);
+  padding:9px 12px;color:var(--text);font-family:var(--sans);font-size:.85rem;
+  outline:none;transition:border-color .2s;width:100%;box-sizing:border-box;
+}
+.cp-input:focus{border-color:var(--purple)}
+.cp-input::placeholder{color:var(--text-muted)}
+.cp-input.full{grid-column:1/-1}
+
+.cp-features{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.cp-feature{
+  display:flex;align-items:center;gap:8px;padding:10px 12px;
+  background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);
+  cursor:pointer;transition:all .2s;user-select:none;
+}
+.cp-feature:hover{border-color:var(--purple)}
+.cp-feature.active{border-color:var(--green);background:rgba(0,255,136,.06)}
+.cp-feature-check{
+  width:18px;height:18px;border-radius:4px;border:2px solid var(--border);
+  display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0;
+}
+.cp-feature.active .cp-feature-check{border-color:var(--green);background:var(--green)}
+.cp-feature-check svg{display:none;width:12px;height:12px}
+.cp-feature.active .cp-feature-check svg{display:block}
+.cp-feature-label{font-size:.78rem;font-family:var(--mono);color:var(--text-dim)}
+.cp-feature.active .cp-feature-label{color:var(--text)}
+.cp-feature-tip{
+  font-size:.65rem;color:var(--text-muted);line-height:1.3;
+}
+
+.cp-slider-row{display:flex;align-items:center;gap:16px;margin-bottom:14px}
+.cp-slider-row:last-child{margin-bottom:0}
+.cp-slider-label{
+  font-family:var(--mono);font-size:.78rem;color:var(--text-dim);width:140px;flex-shrink:0;
+}
+.cp-slider-wrap{flex:1;display:flex;align-items:center;gap:12px}
+.cp-slider{
+  -webkit-appearance:none;appearance:none;flex:1;height:6px;border-radius:3px;
+  background:var(--bg);outline:none;cursor:pointer;
+}
+.cp-slider::-webkit-slider-thumb{
+  -webkit-appearance:none;width:18px;height:18px;border-radius:50%;
+  background:var(--purple);cursor:pointer;border:2px solid var(--bg2);
+}
+.cp-slider::-moz-range-thumb{
+  width:18px;height:18px;border-radius:50%;
+  background:var(--purple);cursor:pointer;border:2px solid var(--bg2);
+}
+.cp-slider-value{
+  font-family:var(--mono);font-size:.85rem;font-weight:700;color:var(--green);
+  min-width:42px;text-align:right;
+}
+
+.cp-hint{font-size:.7rem;color:var(--text-muted);margin-top:4px;line-height:1.4;font-style:italic}
+
 /* ===== RESPONSIVE ===== */
 @media(max-width:640px){
   .demo-input-row{flex-direction:column}
@@ -605,6 +694,11 @@ footer{
   .mode-toggle-option{padding:7px 14px;font-size:.75rem}
   .chat-msg{max-width:95%}
   .chat-tab{padding:8px 16px;font-size:.72rem}
+  .cp-features{grid-template-columns:repeat(2,1fr)}
+  .cp-row{grid-template-columns:1fr}
+  .cp-row.triple{grid-template-columns:1fr}
+  .cp-slider-row{flex-direction:column;align-items:flex-start;gap:8px}
+  .cp-slider-label{width:auto}
 }
 </style>
 </head>
@@ -686,6 +780,119 @@ footer{
         <button class="preset-btn" onclick="usePreset('loyalty')">Loyalty Points</button>
         <button class="preset-btn" onclick="usePreset('governance')">Governance Token</button>
       </div>
+
+      <!-- Customize Toggle -->
+      <div class="customize-toggle" onclick="toggleCustomize()">
+        <span class="arrow" id="cpArrow">▶</span>
+        <span>Customize Token Settings</span>
+      </div>
+
+      <!-- Customize Panel -->
+      <div class="customize-panel" id="customizePanel">
+
+        <!-- Basics -->
+        <div class="cp-section">
+          <div class="cp-section-title"><em class="icon">📝</em> Basics</div>
+          <div class="cp-row">
+            <div class="cp-field">
+              <label class="cp-label">Token Name</label>
+              <input class="cp-input" id="cpName" placeholder="e.g. GameCoin">
+            </div>
+            <div class="cp-field">
+              <label class="cp-label">Symbol</label>
+              <input class="cp-input" id="cpSymbol" placeholder="e.g. GAME">
+            </div>
+          </div>
+          <div class="cp-row triple">
+            <div class="cp-field">
+              <label class="cp-label">Supply</label>
+              <input class="cp-input" id="cpSupply" type="number" placeholder="1000000" min="1">
+            </div>
+            <div class="cp-field">
+              <label class="cp-label">Decimals</label>
+              <input class="cp-input" id="cpDecimals" type="number" placeholder="6" min="0" max="18" value="6">
+            </div>
+            <div class="cp-field">
+              <label class="cp-label">Description</label>
+              <input class="cp-input" id="cpDesc" placeholder="Brief description...">
+            </div>
+          </div>
+        </div>
+
+        <!-- Features -->
+        <div class="cp-section">
+          <div class="cp-section-title"><em class="icon">⚙️</em> Features</div>
+          <div class="cp-features" id="cpFeatures">
+            <div class="cp-feature" data-feature="minting" onclick="toggleFeature(this)">
+              <div class="cp-feature-check"><svg viewBox="0 0 12 12" fill="none" stroke="var(--bg)" stroke-width="2"><path d="M2 6l3 3 5-5"/></svg></div>
+              <div><div class="cp-feature-label">Mintable</div><div class="cp-feature-tip">Expand supply later</div></div>
+            </div>
+            <div class="cp-feature" data-feature="burning" onclick="toggleFeature(this)">
+              <div class="cp-feature-check"><svg viewBox="0 0 12 12" fill="none" stroke="var(--bg)" stroke-width="2"><path d="M2 6l3 3 5-5"/></svg></div>
+              <div><div class="cp-feature-label">Burnable</div><div class="cp-feature-tip">Reduce supply</div></div>
+            </div>
+            <div class="cp-feature" data-feature="freezing" onclick="toggleFeature(this)">
+              <div class="cp-feature-check"><svg viewBox="0 0 12 12" fill="none" stroke="var(--bg)" stroke-width="2"><path d="M2 6l3 3 5-5"/></svg></div>
+              <div><div class="cp-feature-label">Freezable</div><div class="cp-feature-tip">Freeze accounts</div></div>
+            </div>
+            <div class="cp-feature" data-feature="whitelisting" onclick="toggleFeature(this)">
+              <div class="cp-feature-check"><svg viewBox="0 0 12 12" fill="none" stroke="var(--bg)" stroke-width="2"><path d="M2 6l3 3 5-5"/></svg></div>
+              <div><div class="cp-feature-label">Whitelist</div><div class="cp-feature-tip">Restrict holders</div></div>
+            </div>
+            <div class="cp-feature" data-feature="clawback" onclick="toggleFeature(this)">
+              <div class="cp-feature-check"><svg viewBox="0 0 12 12" fill="none" stroke="var(--bg)" stroke-width="2"><path d="M2 6l3 3 5-5"/></svg></div>
+              <div><div class="cp-feature-label">Clawback</div><div class="cp-feature-tip">Reclaim tokens</div></div>
+            </div>
+            <div class="cp-feature" data-feature="ibcEnabled" onclick="toggleFeature(this)">
+              <div class="cp-feature-check"><svg viewBox="0 0 12 12" fill="none" stroke="var(--bg)" stroke-width="2"><path d="M2 6l3 3 5-5"/></svg></div>
+              <div><div class="cp-feature-label">IBC</div><div class="cp-feature-tip">Cross-chain transfers</div></div>
+            </div>
+            <div class="cp-feature" data-feature="globalFreeze" onclick="toggleFeature(this)">
+              <div class="cp-feature-check"><svg viewBox="0 0 12 12" fill="none" stroke="var(--bg)" stroke-width="2"><path d="M2 6l3 3 5-5"/></svg></div>
+              <div><div class="cp-feature-label">Global Freeze</div><div class="cp-feature-tip">Emergency pause</div></div>
+            </div>
+            <div class="cp-feature" data-feature="governance" onclick="toggleFeature(this)">
+              <div class="cp-feature-check"><svg viewBox="0 0 12 12" fill="none" stroke="var(--bg)" stroke-width="2"><path d="M2 6l3 3 5-5"/></svg></div>
+              <div><div class="cp-feature-label">Governance</div><div class="cp-feature-tip">DAO voting</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Token Economics -->
+        <div class="cp-section">
+          <div class="cp-section-title"><em class="icon">💰</em> Token Economics</div>
+          <div class="cp-slider-row">
+            <div class="cp-slider-label">Burn Rate</div>
+            <div class="cp-slider-wrap">
+              <input type="range" class="cp-slider" id="cpBurnRate" min="0" max="20" step="0.5" value="0" oninput="updateSlider('cpBurnRate','cpBurnVal')">
+              <span class="cp-slider-value" id="cpBurnVal">0%</span>
+            </div>
+          </div>
+          <div class="cp-hint">Percentage of tokens automatically burned on every transfer. Creates deflationary pressure.</div>
+          <div class="cp-slider-row" style="margin-top:14px">
+            <div class="cp-slider-label">Transfer Fee</div>
+            <div class="cp-slider-wrap">
+              <input type="range" class="cp-slider" id="cpFeeRate" min="0" max="20" step="0.5" value="0" oninput="updateSlider('cpFeeRate','cpFeeVal')">
+              <span class="cp-slider-value" id="cpFeeVal">0%</span>
+            </div>
+          </div>
+          <div class="cp-hint">Percentage of every transfer sent to the token issuer as a fee. Creates passive revenue.</div>
+        </div>
+
+        <!-- Metadata -->
+        <div class="cp-section">
+          <div class="cp-section-title"><em class="icon">🖼️</em> Metadata</div>
+          <div class="cp-row">
+            <div class="cp-field" style="grid-column:1/-1">
+              <label class="cp-label">Logo / Metadata URL</label>
+              <input class="cp-input" id="cpUri" placeholder="https://yoursite.com/logo.png or metadata.json">
+            </div>
+          </div>
+          <div class="cp-hint">Link to token logo, project page, or JSON metadata file. Hash is auto-computed for integrity.</div>
+        </div>
+
+      </div>
+
       <div class="demo-disclaimer visible" id="demoDisclaimer">Tokens are deployed on TX testnet. No real value.</div>
     </div>
 
@@ -1053,6 +1260,96 @@ function deployFromChat(cfgJson){
   // Fill the input and trigger deploy
   document.getElementById('demoInput').value = desc;
   setTimeout(() => runDemo(), 300);
+}
+
+/* ===== CUSTOMIZE PANEL ===== */
+let customizeOpen = false;
+
+function toggleCustomize(){
+  customizeOpen = !customizeOpen;
+  const panel = document.getElementById('customizePanel');
+  const arrow = document.getElementById('cpArrow');
+  if(customizeOpen){
+    panel.classList.add('show');
+    arrow.classList.add('open');
+  } else {
+    panel.classList.remove('show');
+    arrow.classList.remove('open');
+  }
+}
+
+function toggleFeature(el){
+  el.classList.toggle('active');
+}
+
+function updateSlider(sliderId, valId){
+  const val = document.getElementById(sliderId).value;
+  document.getElementById(valId).textContent = val + '%';
+}
+
+function getCustomizeConfig(){
+  const name = document.getElementById('cpName').value.trim();
+  const symbol = document.getElementById('cpSymbol').value.trim();
+  const supply = document.getElementById('cpSupply').value.trim();
+  const decimals = document.getElementById('cpDecimals').value.trim();
+  const desc = document.getElementById('cpDesc').value.trim();
+  const burnRate = document.getElementById('cpBurnRate').value;
+  const feeRate = document.getElementById('cpFeeRate').value;
+  const uri = document.getElementById('cpUri').value.trim();
+
+  // Gather features
+  const featureEls = document.querySelectorAll('.cp-feature.active');
+  const features = [];
+  featureEls.forEach(el => features.push(el.dataset.feature));
+
+  // Only return values that are filled in
+  const config = {};
+  if(name) config.name = name;
+  if(symbol) config.symbol = symbol;
+  if(supply) config.supply = supply;
+  if(decimals && decimals !== '6') config.decimals = decimals;
+  if(desc) config.description = desc;
+  if(features.length > 0) config.features = features;
+  if(parseFloat(burnRate) > 0) config.burnRate = burnRate;
+  if(parseFloat(feeRate) > 0) config.feeRate = feeRate;
+  if(uri) config.uri = uri;
+
+  return config;
+}
+
+function buildPromptFromCustomize(config){
+  const parts = [];
+  if(config.name) parts.push(config.name);
+  if(config.supply) parts.push(config.supply + ' supply');
+  if(config.features && config.features.length) parts.push(config.features.join(', '));
+  if(config.burnRate) parts.push(config.burnRate + '% burn rate');
+  if(config.feeRate) parts.push(config.feeRate + '% transfer fee');
+  if(config.decimals) parts.push(config.decimals + ' decimals');
+  if(config.description) parts.push(config.description);
+  if(config.uri) parts.push('URI: ' + config.uri);
+  return parts.join(', ');
+}
+
+// When user clicks Deploy, merge the text input + customize panel
+const _origRunDemo = typeof runDemo === 'function' ? runDemo : null;
+
+// Intercept the deploy to include customize settings
+function mergeCustomizeIntoInput(){
+  const cpConfig = getCustomizeConfig();
+  const input = document.getElementById('demoInput');
+  const textVal = input.value.trim();
+
+  // If customize panel has values, merge them into the prompt
+  if(Object.keys(cpConfig).length > 0){
+    const cpPrompt = buildPromptFromCustomize(cpConfig);
+    if(textVal){
+      // Append customize settings to what user typed
+      input.value = textVal + ', ' + cpPrompt;
+    } else {
+      // Use just the customize settings
+      input.value = cpPrompt;
+    }
+  }
 }
 
 /* ===== PARTICLES ===== */
@@ -1557,6 +1854,8 @@ function escapeHtml(str){
 let demoRunning=false;
 async function runDemo(preset){
   if(demoRunning)return;
+  // Merge customize panel settings into the input
+  if(!preset) mergeCustomizeIntoInput();
   const input=document.getElementById('demoInput').value.trim();
   if(!input&&!preset)return;
   demoRunning=true;

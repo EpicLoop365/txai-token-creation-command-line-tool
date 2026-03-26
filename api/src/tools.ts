@@ -95,6 +95,16 @@ const ISSUE_SMART_TOKEN_TOOL: ClaudeTool = {
         description:
           "Percentage of tokens sent to the issuer on every transfer as a commission (e.g. '0.02' = 2%). Set to '0' or omit for no commission. Max '1' (100%).",
       },
+      uri: {
+        type: "string",
+        description:
+          "URL pointing to token metadata, logo image, or project page (e.g. 'https://myproject.com/logo.png'). Optional.",
+      },
+      uriHash: {
+        type: "string",
+        description:
+          "SHA256 hash of the content at the URI for integrity verification. Optional — will be left empty if not provided.",
+      },
     },
     required: ["subunit", "name", "initialAmount"],
   },
@@ -220,6 +230,8 @@ export class DemoToolExecutor {
               features: args.features as SmartTokenFeatures | undefined,
               burnRate: args.burnRate as string | undefined,
               sendCommissionRate: args.sendCommissionRate as string | undefined,
+              uri: args.uri as string | undefined,
+              uriHash: args.uriHash as string | undefined,
             });
             return { success: result.success, data: result };
           } catch (issueErr) {

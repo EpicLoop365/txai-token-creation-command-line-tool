@@ -343,6 +343,8 @@ export interface IssueSmartTokenParams {
   features?: SmartTokenFeatures;
   burnRate?: string;
   sendCommissionRate?: string;
+  uri?: string;
+  uriHash?: string;
 }
 
 export async function issueSmartToken(
@@ -388,8 +390,8 @@ export async function issueSmartToken(
       initialAmount: rawAmount,
       description: params.description ?? "",
       features,
-      uri: "",
-      uriHash: "",
+      uri: params.uri ?? "",
+      uriHash: params.uriHash ?? "",
       ...(burnRateVal ? { burnRate: burnRateVal } : {}),
       ...(commissionVal ? { sendCommissionRate: commissionVal } : {}),
     },
