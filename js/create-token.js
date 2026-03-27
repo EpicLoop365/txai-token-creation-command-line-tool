@@ -809,7 +809,10 @@ function buildLiveTokenCard(data, desc){
   const denomName = denom.split('-')[0] || denom;
   const displayName = denomName.toUpperCase();
 
-  document.getElementById('tcIcon').textContent = displayName.slice(0,2);
+  // Show Multiavatar logo if available, otherwise initials
+  const tcIconEl = document.getElementById('tcIcon');
+  const tokenUri = data.uri || `https://api.multiavatar.com/${encodeURIComponent(denomName)}.svg`;
+  tcIconEl.innerHTML = `<img src="${tokenUri}" alt="${displayName}" style="width:100%;height:100%;border-radius:50%;object-fit:cover" onerror="this.parentElement.textContent='${displayName.slice(0,2)}'">`;
   document.getElementById('tcName').textContent = displayName;
   document.getElementById('tcSym').textContent = '$' + displayName;
 
@@ -1339,7 +1342,7 @@ function getDirectTokenConfig(){
     features: featObj,
     burnRate: burnRate,
     sendCommissionRate: feeRate,
-    uri: cpConfig.uri || '',
+    uri: cpConfig.uri || `https://api.multiavatar.com/${encodeURIComponent(subunit)}.svg`,
   };
 }
 

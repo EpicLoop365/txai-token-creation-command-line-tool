@@ -342,6 +342,14 @@ function dexLoadOrderbook(){
     if(addr) dexFetchBalances(addr);
   }, DEX_REFRESH_MS);
   document.getElementById('dexObStatus').innerHTML = '<span class="dex-status-dot live"></span> Live';
+  // Show token logo
+  const logoEl = document.getElementById('dexPairLogo');
+  if(logoEl){
+    const tokenSym = dexTokenName(denom);
+    const logoUrl = `https://api.multiavatar.com/${encodeURIComponent(tokenSym)}.svg`;
+    logoEl.innerHTML = `<img src="${logoUrl}" alt="${tokenSym}" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.style.display='none'">`;
+    logoEl.style.display = 'block';
+  }
   document.getElementById('dexLiveDot').classList.add('on');
   document.getElementById('dexLiveText').textContent = 'Live';
   dexUpdateTotal();

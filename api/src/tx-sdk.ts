@@ -250,7 +250,8 @@ export class TxClient {
 
   async signAndBroadcastMsg(
     msg: { typeUrl: string; value: unknown },
-    gasLimit = 500000
+    gasLimit = 500000,
+    memo = ""
   ): Promise<TransactionResult> {
     // Acquire the global mutex so only one transaction is in-flight at a time.
     // This prevents sequence number conflicts when multiple users share one wallet.
@@ -266,7 +267,8 @@ export class TxClient {
         this.signingClient.signAndBroadcast(
           this.address,
           [msg as Parameters<typeof this.signingClient.signAndBroadcast>[1][0]],
-          fee
+          fee,
+          memo
         );
 
       // Retry up to 3 times on sequence mismatch
@@ -553,6 +555,8 @@ export interface SmartTokenInfo {
   globallyFrozen?: boolean;
   features?: string[];
   type?: string;
+  uri?: string;
+  uri_hash?: string;
 }
 
 export async function getTokenInfo(

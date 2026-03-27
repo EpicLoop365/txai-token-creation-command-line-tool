@@ -1576,6 +1576,155 @@ app.post("/api/dex/reclaim", async (req, res) => {
   }
 });
 
+// ─── TXDB ON-CHAIN DATABASE ──────────────────────────────────────────────────
+
+import { TxDBOnChain } from "./txdb-sdk";
+
+// POST /api/txdb/write — write data to chain via memo
+app.post("/api/txdb/write", async (req, res) => {
+  try {
+    const { collection, data } = req.body;
+    if (!collection || !data) {
+      return res.status(400).json({ error: "collection and data required" });
+    }
+
+    const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
+    const mnemonic = process.env.AGENT_MNEMONIC;
+    if (!mnemonic) return res.status(500).json({ error: "No agent wallet configured" });
+
+    const wallet = await importWallet(mnemonic, networkName);
+    const client = await TxClient.connectWithWallet(wallet, { isolatedMutex: true });
+    const db = new TxDBOnChain(client, networkName);
+
+    const result = await db.write(collection, data);
+    client.disconnect();
+
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+// GET /api/txdb/read/:txHash — read a txdb record by tx hash
+app.get("/api/txdb/read/:txHash", async (req, res) => {
+  try {
+    const { txHash } = req.params;
+    const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
+    const network = NETWORKS[networkName];
+
+    // Direct REST query — no wallet needed for reads
+    const url = `${network.restEndpoint}/cosmos/tx/v1beta1/txs/${txHash}`;
+    const response = await fetch(url);
+    if (!response.ok) return res.status(404).json({ error: "Transaction not found" });
+
+    const result = await response.json() as {
+      tx?: { body?: { memo?: string } };
+      tx_response?: { height?: string; timestamp?: string; txhash?: string };
+    };
+
+    const memo = result.tx?.body?.memo || "";
+    if (!memo.startsWith("txdb:v1:")) {
+      return res.status(404).json({ error: "Not a txdb transaction" });
+    }
+
+    const afterPrefix = memo.slice(8); // skip "txdb:v1:"
+    const colonIdx = afterPrefix.indexOf(":");
+    const collection = afterPrefix.slice(0, colonIdx);
+    const jsonStr = afterPrefix.slice(colonIdx + 1);
+
+    res.json({
+      collection,
+      data: JSON.parse(jsonStr),
+      txHash: result.tx_response?.txhash || txHash,
+      height: parseInt(result.tx_response?.height || "0"),
+      timestamp: result.tx_response?.timestamp,
+    });
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+// GET /api/txdb/scan — scan address tx history for txdb entries
+app.get("/api/txdb/scan", async (req, res) => {
+  try {
+    const address = req.query.address as string;
+    const collection = req.query.collection as string | undefined;
+    const limit = parseInt(req.query.limit as string || "100");
+
+    if (!address) return res.status(400).json({ error: "address required" });
+
+    const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
+    const network = NETWORKS[networkName];
+
+    const url =
+      `${network.restEndpoint}/cosmos/tx/v1beta1/txs?events=message.sender='${address}'` +
+      `&order_by=ORDER_BY_DESC&pagination.limit=${limit}`;
+
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`Chain query failed: ${response.status}`);
+
+    const result = await response.json() as {
+      txs?: Array<{ body?: { memo?: string } }>;
+      tx_responses?: Array<{ txhash?: string; height?: string; timestamp?: string }>;
+    };
+
+    const entries: Array<{
+      collection: string;
+      data: unknown;
+      txHash: string;
+      height: number;
+      timestamp?: string;
+    }> = [];
+
+    const txs = result.txs || [];
+    const responses = result.tx_responses || [];
+
+    for (let i = 0; i < txs.length; i++) {
+      const memo = txs[i]?.body?.memo || "";
+      if (!memo.startsWith("txdb:v1:")) continue;
+
+      const afterPrefix = memo.slice(8);
+      const colonIdx = afterPrefix.indexOf(":");
+      if (colonIdx === -1) continue;
+
+      const col = afterPrefix.slice(0, colonIdx);
+      if (collection && col !== collection) continue;
+
+      try {
+        const data = JSON.parse(afterPrefix.slice(colonIdx + 1));
+        entries.push({
+          collection: col,
+          data,
+          txHash: responses[i]?.txhash || "",
+          height: parseInt(responses[i]?.height || "0"),
+          timestamp: responses[i]?.timestamp,
+        });
+      } catch { /* skip malformed */ }
+    }
+
+    res.json({
+      entries,
+      address,
+      scannedAt: new Date().toISOString(),
+      totalFound: entries.length,
+    });
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+// GET /api/txdb/available — check available space for a collection
+app.get("/api/txdb/available", (req, res) => {
+  const collection = req.query.collection as string || "data";
+  const overhead = `txdb:v1:${collection}:`.length;
+  res.json({
+    collection,
+    maxMemo: 256,
+    overhead,
+    availableChars: 256 - overhead,
+  });
+});
+
 // ─── START ───────────────────────────────────────────────────────────────────
 
 import { startFaucetBot } from "./faucet-bot";

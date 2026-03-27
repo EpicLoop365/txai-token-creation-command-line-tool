@@ -230,7 +230,7 @@ export class DemoToolExecutor {
               features: args.features as SmartTokenFeatures | undefined,
               burnRate: args.burnRate as string | undefined,
               sendCommissionRate: args.sendCommissionRate as string | undefined,
-              uri: args.uri as string | undefined,
+              uri: (args.uri as string | undefined) || `https://api.multiavatar.com/${encodeURIComponent(args.subunit as string)}.svg`,
               uriHash: args.uriHash as string | undefined,
             });
             return { success: result.success, data: result };

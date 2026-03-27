@@ -28,6 +28,12 @@ async function manageLoadToken(){
     document.getElementById('manageTokenName').textContent = symbol.toUpperCase();
     document.getElementById('manageTokenDenomDisplay').textContent = denom;
     document.getElementById('manageIssuer').textContent = `Issuer: ${manageTokenData.issuer || 'unknown'}`;
+    // Token logo via Multiavatar
+    const logoEl = document.getElementById('manageTokenLogo');
+    if(logoEl){
+      const logoUri = data.uri || `https://api.multiavatar.com/${encodeURIComponent(symbol)}.svg`;
+      logoEl.innerHTML = `<img src="${logoUri}" alt="${symbol}" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.textContent='${symbol.slice(0,2).toUpperCase()}'">`;
+    }
 
     // Populate stats
     const precision = data.precision || 6;

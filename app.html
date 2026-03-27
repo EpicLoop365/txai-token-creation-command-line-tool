@@ -55,7 +55,7 @@
           <div class="wallet-choice-card" onclick="chooseWalletMode('agent')">
             <div class="wc-icon">&#129302;</div>
             <div class="wc-label">AI Agent Wallet</div>
-            <div class="wc-desc">Quick demo &mdash; the AI agent creates and owns the token. Great for testing and exploring.</div>
+            <div class="wc-desc">Use this if you do not want to connect a wallet. The AI agent creates and owns the token for you.</div>
             <span class="wc-badge free">No wallet needed</span>
           </div>
           <div class="wallet-choice-card recommended" onclick="chooseWalletMode('connect')">
@@ -341,6 +341,7 @@
 
       <!-- Pair Bar -->
       <div class="dex-pair-bar">
+        <div class="dex-pair-token-logo" id="dexPairLogo" style="width:32px;height:32px;border-radius:50%;overflow:hidden;flex-shrink:0;display:none"></div>
         <div class="dex-pair-select-wrap">
           <select class="dex-pair-select" id="dexPairSelect" onchange="dexOnPairSelect()">
             <option value="">-- Select Pair --</option>
@@ -1114,7 +1115,8 @@
 
       <!-- Token Info Card -->
       <div class="manage-info-card" id="manageInfoCard" style="display:none">
-        <div class="manage-info-header">
+        <div class="manage-info-header" style="display:flex;align-items:center;gap:16px">
+          <div class="manage-token-logo" id="manageTokenLogo" style="width:48px;height:48px;border-radius:50%;overflow:hidden;flex-shrink:0;background:linear-gradient(135deg,var(--purple),var(--green));display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff"></div>
           <div class="manage-token-name" id="manageTokenName">--</div>
           <div class="manage-token-denom" id="manageTokenDenomDisplay">--</div>
           <div class="manage-issuer" id="manageIssuer">Issuer: --</div>
@@ -1404,14 +1406,14 @@
 
 
 <!-- Modular JavaScript -->
-<script src="js/txdb.js?v=10"></script>
+<script src="js/txdb.js?v=11"></script>
 <script src="js/config.js?v=10"></script>
 <script src="js/wallet.js?v=10"></script>
 <script src="js/chat.js?v=10"></script>
-<script src="js/create-token.js?v=13"></script>
+<script src="js/create-token.js?v=14"></script>
 <script src="js/create-nft.js?v=10"></script>
-<script src="js/dex.js?v=17"></script>
-<script src="js/manage.js?v=10"></script>
+<script src="js/dex.js?v=18"></script>
+<script src="js/manage.js?v=11"></script>
 <script src="js/swarm.js?v=11"></script>
 <script src="js/auth.js?v=10"></script>
 <script>
