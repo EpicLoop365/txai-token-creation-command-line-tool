@@ -141,11 +141,21 @@ const TOKEN_SUGGESTIONS = [
 function setRandomPlaceholder(){
   const input = document.getElementById('demoInput');
   if(!input) return;
-  const lastIdx = parseInt(localStorage.getItem('txai_lastSuggestion') || '-1', 10);
-  let idx;
-  do { idx = Math.floor(Math.random() * TOKEN_SUGGESTIONS.length); } while(idx === lastIdx && TOKEN_SUGGESTIONS.length > 1);
-  localStorage.setItem('txai_lastSuggestion', idx);
-  input.setAttribute('placeholder', 'e.g. "' + TOKEN_SUGGESTIONS[idx] + '"');
+
+  // Filter out suggestions whose symbol has already been minted (stored in txdb)
+  const createdTokens = (typeof txdbGetTokens === 'function' ? txdbGetTokens() : [])
+    .map(t => (t.symbol || '').toUpperCase());
+  const available = TOKEN_SUGGESTIONS.filter(s => {
+    const m = s.match(/called\s+(\w+)/i);
+    return !m || !createdTokens.includes(m[1].toUpperCase());
+  });
+
+  const pool = available.length > 0 ? available : TOKEN_SUGGESTIONS;
+  const lastShown = localStorage.getItem('txai_lastSuggestion') || '';
+  let pick;
+  do { pick = pool[Math.floor(Math.random() * pool.length)]; } while(pick === lastShown && pool.length > 1);
+  localStorage.setItem('txai_lastSuggestion', pick);
+  input.setAttribute('placeholder', 'e.g. "' + pick + '"');
 }
 
 /* ---- Logo URL Preview ---- */
