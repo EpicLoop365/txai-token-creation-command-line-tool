@@ -399,12 +399,17 @@ footer{
 /* ===== CHAT MODE ===== */
 .chat-tab-bar{
   display:flex;gap:0;margin-bottom:20px;background:var(--bg3);border-radius:var(--radius-sm);
-  overflow:hidden;border:1px solid var(--border);width:fit-content;
+  overflow-x:auto;overflow-y:hidden;border:1px solid var(--border);width:100%;
+  scrollbar-width:thin;scrollbar-color:var(--border-light) transparent;
+  -webkit-overflow-scrolling:touch;
 }
+.chat-tab-bar::-webkit-scrollbar{height:4px}
+.chat-tab-bar::-webkit-scrollbar-track{background:transparent}
+.chat-tab-bar::-webkit-scrollbar-thumb{background:var(--border-light);border-radius:4px}
 .chat-tab{
-  padding:10px 24px;font-family:var(--mono);font-size:.8rem;font-weight:600;
+  padding:10px 20px;font-family:var(--mono);font-size:.8rem;font-weight:600;
   color:var(--text-dim);cursor:pointer;transition:all .2s;border:none;background:transparent;
-  position:relative;
+  position:relative;white-space:nowrap;flex-shrink:0;
 }
 .chat-tab.active{color:var(--green);background:var(--bg4)}
 .chat-tab.active::after{
@@ -1001,7 +1006,7 @@ footer{
   .footer-inner{flex-direction:column;text-align:center}
   .mode-toggle-option{padding:7px 14px;font-size:.75rem}
   .chat-msg{max-width:95%}
-  .chat-tab{padding:8px 16px;font-size:.72rem}
+  .chat-tab{padding:8px 14px;font-size:.75rem}
   .cp-features{grid-template-columns:repeat(2,1fr)}
   .cp-row{grid-template-columns:1fr}
   .cp-row.triple{grid-template-columns:1fr}
