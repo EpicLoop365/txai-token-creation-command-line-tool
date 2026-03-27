@@ -1148,13 +1148,15 @@ function dexLaunchDemoOverlay() {
   document.getElementById('demoOrdersTaker').textContent = '0';
   dexDemoOrderCounts = { A: 0, B: 0, Taker: 0 };
 
-  // Start timer
+  // Start timer + auto-refresh orderbook so user sees orders appearing live
   dexDemoStartTime = Date.now();
   dexDemoTimerInterval = setInterval(() => {
     const elapsed = Math.floor((Date.now() - dexDemoStartTime) / 1000);
     const m = String(Math.floor(elapsed / 60)).padStart(2, '0');
     const s = String(elapsed % 60).padStart(2, '0');
     document.getElementById('dexDemoTimer').textContent = `${m}:${s}`;
+    // Refresh orderbook every 8 seconds during demo
+    if (elapsed % 8 === 0 && elapsed > 0) dexLoadOrderbook();
   }, 1000);
 
   // Use fetch-based SSE
@@ -1341,6 +1343,8 @@ function dexDemoProcessEvent(event, data) {
     case 'done':
       dexDemoLog('success', '🏁 Demo complete! The orderbook is now populated.');
       if (dexDemoTimerInterval) clearInterval(dexDemoTimerInterval);
+      // Final orderbook refresh
+      setTimeout(() => dexLoadOrderbook(), 1000);
       break;
 
     case 'error':

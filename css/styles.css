@@ -1401,22 +1401,25 @@ footer{
 .dex-add-wallet-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
 
 .dex-demo-overlay{
-  position:fixed;top:0;left:0;right:0;bottom:0;
-  background:rgba(0,0,0,.85);z-index:1000;
-  display:flex;align-items:center;justify-content:center;
-  padding:20px;
+  position:fixed;top:0;right:0;bottom:0;
+  width:440px;z-index:1000;
+  background:rgba(0,0,0,.6);backdrop-filter:blur(8px);
+  display:flex;flex-direction:column;
+  box-shadow:-4px 0 24px rgba(0,0,0,.5);
+  animation:slideInRight .3s ease;
 }
+@keyframes slideInRight{from{transform:translateX(100%)}to{transform:translateX(0)}}
 .dex-demo-panel{
-  background:#0d1117;border:1px solid #30363d;border-radius:12px;
-  width:100%;max-width:900px;max-height:90vh;
+  background:#0d1117;border-left:1px solid #30363d;
+  width:100%;height:100%;
   display:flex;flex-direction:column;overflow:hidden;
 }
 .dex-demo-header{
   display:flex;align-items:center;justify-content:space-between;
-  padding:16px 20px;border-bottom:1px solid #30363d;
+  padding:12px 16px;border-bottom:1px solid #30363d;
   background:linear-gradient(135deg,rgba(124,58,237,.15),rgba(37,99,235,.15));
 }
-.dex-demo-header h3{margin:0;font-size:1.1rem;color:#e6edf3}
+.dex-demo-header h3{margin:0;font-size:.92rem;color:#e6edf3}
 .dex-demo-header-right{display:flex;align-items:center;gap:12px}
 .dex-demo-timer{
   font-family:'JetBrains Mono',monospace;font-size:1rem;
@@ -1431,12 +1434,12 @@ footer{
 
 /* Agent Cards */
 .dex-demo-agents{
-  display:grid;grid-template-columns:repeat(3,1fr);gap:12px;
-  padding:16px 20px;
+  display:grid;grid-template-columns:repeat(3,1fr);gap:8px;
+  padding:10px 16px;
 }
 .dex-demo-agent-card{
   background:#161b22;border:1px solid #30363d;border-radius:8px;
-  padding:12px;position:relative;overflow:hidden;
+  padding:8px 10px;position:relative;overflow:hidden;
 }
 .dex-demo-agent-card::before{
   content:'';position:absolute;top:0;left:0;right:0;height:3px;
@@ -1518,9 +1521,9 @@ footer{
 .demo-stat-value.red{color:#ef4444}
 
 @media(max-width:768px){
+  .dex-demo-overlay{width:100%}
   .dex-demo-agents{grid-template-columns:1fr}
   .demo-summary-grid{grid-template-columns:repeat(2,1fr)}
-  .dex-demo-panel{max-height:95vh}
 }
 
 /* ─── Deposit Modal ─────────────────────────────────────────────────────── */
