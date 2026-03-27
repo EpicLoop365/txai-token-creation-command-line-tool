@@ -26,9 +26,13 @@ async function globalConnectWallet(provider){
     if(walletObj.experimentalSuggestChain) await walletObj.experimentalSuggestChain(COREUM_CHAIN_INFO);
     await walletObj.enable(COREUM_CHAIN_ID);
 
-    const signer = walletObj.getOfflineSigner
-      ? walletObj.getOfflineSigner(COREUM_CHAIN_ID)
-      : await walletObj.getOfflineSignerAuto(COREUM_CHAIN_ID);
+    // Prefer getOfflineSignerAuto for broader compatibility (amino + direct signing)
+    let signer;
+    try {
+      signer = await walletObj.getOfflineSignerAuto(COREUM_CHAIN_ID);
+    } catch {
+      signer = walletObj.getOfflineSigner(COREUM_CHAIN_ID);
+    }
     const accounts = await signer.getAccounts();
     if(!accounts || !accounts.length){ alert('No accounts found.'); return; }
 
@@ -38,6 +42,7 @@ async function globalConnectWallet(provider){
 
     updateGlobalWalletUI(true, provider);
     window.addEventListener('keplr_keystorechange', globalOnAccountChange);
+    if(provider === 'leap') window.addEventListener('leap_keystorechange', globalOnAccountChange);
     console.log(`Connected ${provider} wallet: ${connectedAddress}`);
   } catch(err){
     console.error('Wallet connect error:', err);
