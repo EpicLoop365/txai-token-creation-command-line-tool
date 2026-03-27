@@ -70,6 +70,8 @@ function switchTab(tab){
   if(activeTab) activeTab.scrollIntoView({behavior:'smooth',block:'nearest',inline:'nearest'});
   // Show/hide agent wallet bar
   if(typeof showAgentBar === 'function') showAgentBar(tab);
+  // Update chat starters for this tab
+  updateChatStarters(tab);
 }
 
 
@@ -77,6 +79,86 @@ function switchTab(tab){
 function toggleChatSidebar(){
   const sidebar = document.getElementById('chatSidebar');
   if(sidebar) sidebar.classList.toggle('collapsed');
+}
+
+/* Update chat starters based on active tab */
+const chatStarterPool = {
+  create: [
+    { icon: '🚀', label: 'What can I build?', prompt: 'What can I build with TXAI?' },
+    { icon: '🪙', label: 'Design a token', prompt: 'Help me design a token for my project' },
+    { icon: '⚙️', label: 'Which features?', prompt: 'What smart token features should I enable?' },
+    { icon: '💡', label: 'Use case ideas', prompt: 'Give me creative utility token ideas' },
+    { icon: '☕', label: 'Loyalty program', prompt: 'How would I create a loyalty token for a coffee shop?' },
+    { icon: '🎫', label: 'Event tickets', prompt: 'Can I tokenize event tickets with Smart Tokens?' },
+    { icon: '🤖', label: 'AI permissions', prompt: 'How do I create a permission token for AI agents?' },
+    { icon: '🔑', label: 'Access passes', prompt: 'How do I mint a 30-day access pass on-chain?' },
+    { icon: '🏛️', label: 'DAO governance', prompt: 'Help me design a governance token for a DAO' },
+    { icon: '🎮', label: 'Gaming currency', prompt: 'What features should a gaming token have?' },
+    { icon: '🌐', label: 'API keys on-chain', prompt: 'Can I replace API keys with on-chain tokens?' },
+    { icon: '💎', label: 'Deflationary token', prompt: 'How do burn rates create deflationary pressure?' },
+  ],
+  manage: [
+    { icon: '🔥', label: 'Burn tokens', prompt: 'How do I burn tokens to reduce supply?' },
+    { icon: '❄️', label: 'Freeze accounts', prompt: 'How does freezing work and when should I use it?' },
+    { icon: '📈', label: 'Mint more supply', prompt: 'When should I mint additional tokens?' },
+    { icon: '🔒', label: 'Whitelist setup', prompt: 'How do I set up whitelisting for compliance?' },
+    { icon: '🔄', label: 'Clawback tokens', prompt: 'When would I use clawback to recover tokens?' },
+    { icon: '🌍', label: 'Global freeze', prompt: 'What does globally freezing a token do?' },
+    { icon: '📋', label: 'Check token info', prompt: 'How do I view my token features and supply?' },
+    { icon: '⚖️', label: 'Compliance tools', prompt: 'Which management features help with regulatory compliance?' },
+  ],
+  dex: [
+    { icon: '📊', label: 'Trading strategies', prompt: 'What trading strategies work on the TX DEX?' },
+    { icon: '💧', label: 'Add liquidity', prompt: 'How do I add liquidity to my token on the DEX?' },
+    { icon: '🤖', label: 'AI swarm demo', prompt: 'How does the AI agent swarm populate my orderbook?' },
+    { icon: '📈', label: 'Read the chart', prompt: 'How do I read candlestick and depth charts?' },
+    { icon: '🔄', label: 'Limit vs market', prompt: 'What is the difference between limit and market orders?' },
+    { icon: '📉', label: 'Spread explained', prompt: 'What is the bid-ask spread and why does it matter?' },
+    { icon: '⚡', label: 'Order matching', prompt: 'How does the on-chain order matching engine work?' },
+    { icon: '🏦', label: 'Native DEX', prompt: 'What makes the TX native DEX different from Uniswap?' },
+  ],
+  swarm: [
+    { icon: '🤖', label: 'How it works', prompt: 'How does the AI agent swarm work step by step?' },
+    { icon: '⚡', label: 'What are fills?', prompt: 'What are order fills and how do they generate?' },
+    { icon: '📊', label: 'Market making', prompt: 'Explain market making — what do the agents do?' },
+    { icon: '🔄', label: 'After the demo', prompt: 'What happens to the tokens after the demo finishes?' },
+    { icon: '💰', label: 'Agent wallets', prompt: 'How are the sub-wallets funded during the demo?' },
+    { icon: '📈', label: 'Price discovery', prompt: 'How does the swarm create price discovery?' },
+    { icon: '🎯', label: 'Overlap orders', prompt: 'What are overlapping orders and why do they fill?' },
+    { icon: '⏱️', label: 'Demo timing', prompt: 'How long does the swarm take and what are the phases?' },
+  ],
+  auth: [
+    { icon: '🔐', label: 'What is AuthZ?', prompt: 'What is Cosmos AuthZ and how do grants work?' },
+    { icon: '🤝', label: 'Delegate trading', prompt: 'Can I let someone else trade on my behalf?' },
+    { icon: '⏳', label: 'Grant expiry', prompt: 'How do grant expirations work?' },
+    { icon: '🛡️', label: 'Security tips', prompt: 'What are best practices for permission grants?' },
+    { icon: '💼', label: 'Team access', prompt: 'How do I grant my team access to manage tokens?' },
+    { icon: '🔑', label: 'Revoke a grant', prompt: 'How do I revoke a permission grant?' },
+    { icon: '🏗️', label: 'Grant types', prompt: 'What types of grants are available on TX?' },
+    { icon: '🤖', label: 'Agent grants', prompt: 'Can I authorize an AI agent to act on my behalf?' },
+  ],
+  nft: [
+    { icon: '🎨', label: 'Create an NFT', prompt: 'How do I create a Smart NFT on TX?' },
+    { icon: '❄️', label: 'Freezable NFTs', prompt: 'What are freezable NFTs used for?' },
+    { icon: '🎫', label: 'NFT tickets', prompt: 'Can I use NFTs for event tickets or access passes?' },
+    { icon: '🔥', label: 'Burnable NFTs', prompt: 'How do burnable NFTs work for one-time-use items?' },
+    { icon: '🖼️', label: 'On-chain metadata', prompt: 'How does on-chain NFT metadata work on TX?' },
+    { icon: '🎮', label: 'Gaming NFTs', prompt: 'How can I use Smart NFTs for in-game items?' },
+    { icon: '📜', label: 'NFT vs FT', prompt: 'When should I use an NFT instead of a fungible token?' },
+    { icon: '🏷️', label: 'NFT collections', prompt: 'How do NFT classes and collections work?' },
+  ],
+};
+
+function updateChatStarters(tab) {
+  const pool = chatStarterPool[tab] || chatStarterPool.create;
+  // Pick 4 random starters from the pool
+  const shuffled = [...pool].sort(() => Math.random() - 0.5);
+  const picked = shuffled.slice(0, 4);
+  const container = document.querySelector('.chat-sidebar .chat-starters');
+  if (!container) return;
+  container.innerHTML = picked.map(s =>
+    `<button class="chat-starter" onclick="chatFromStarter('${s.prompt.replace(/'/g, "\\'")}')">${s.icon} ${s.label}</button>`
+  ).join('');
 }
 
 /* Reset deploy buttons */
