@@ -581,6 +581,36 @@ export async function runDexDemo(config: DemoConfig): Promise<void> {
 
     emit("done", { success: true, denom: baseDenom });
 
+    // ── Post-demo: Sweep leftover TX from sub-wallets back to agent ──
+    try {
+      for (const agent of agents) {
+        if (!agent.client) continue;
+        const bals = await agent.client.getBalances(agent.address);
+        const txBal = bals.find(b => b.denom === QUOTE_DENOM);
+        const amount = txBal ? parseInt(txBal.amount) : 0;
+        // Keep 10 TX for gas, sweep the rest
+        const sweepAmount = amount - 10_000_000;
+        if (sweepAmount > 0) {
+          try {
+            await agent.client.signAndBroadcastMsg({
+              typeUrl: "/cosmos.bank.v1beta1.MsgSend",
+              value: {
+                fromAddress: agent.address,
+                toAddress: agentClient!.address,
+                amount: [{ denom: QUOTE_DENOM, amount: sweepAmount.toString() }],
+              },
+            }, 200000);
+          } catch { /* best effort */ }
+        }
+      }
+    } catch { /* non-fatal */ }
+
+    // ── Post-demo: Refill agent wallet from faucet so it's ready for next run ──
+    try {
+      await requestFaucet(agentClient!.address, networkName);
+      emit("log", { message: "Agent wallet refilled from faucet for next run" });
+    } catch { /* non-fatal — faucet may rate limit, that's ok */ }
+
   } catch (err) {
     emit("error", { message: (err as Error).message });
   } finally {
