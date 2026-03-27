@@ -377,6 +377,72 @@ function removeLogoPreview(){
   document.getElementById('cpUri').value = '';
   document.getElementById('logoPreviewWrap').style.display = 'none';
   document.getElementById('logoPreview').src = '';
+  document.getElementById('cpLogoFile').value = '';
+}
+
+/* ---- Logo File Upload (imgbb) ---- */
+async function handleLogoUpload(input){
+  const file = input.files && input.files[0];
+  if(!file) return;
+
+  // Validate
+  if(!file.type.startsWith('image/')){
+    showLogoStatus('Only image files are supported.', true);
+    return;
+  }
+  if(file.size > 10 * 1024 * 1024){
+    showLogoStatus('File too large (max 10 MB).', true);
+    return;
+  }
+
+  // Show local preview immediately
+  const localUrl = URL.createObjectURL(file);
+  const wrap = document.getElementById('logoPreviewWrap');
+  const img = document.getElementById('logoPreview');
+  img.src = localUrl;
+  wrap.style.display = 'inline-block';
+
+  showLogoStatus('Uploading...', false);
+
+  try {
+    // Convert to base64
+    const base64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+    // Upload to imgbb via our API proxy
+    const res = await fetch(`${API_URL}/api/upload-image`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: base64, name: file.name }),
+    });
+    const data = await res.json();
+
+    if(data.url){
+      document.getElementById('cpUri').value = data.url;
+      img.src = data.url;
+      showLogoStatus('Uploaded!', false);
+      setTimeout(() => hideLogoStatus(), 2000);
+    } else {
+      throw new Error(data.error || 'Upload failed');
+    }
+  } catch(err){
+    // Keep local preview, just show error
+    showLogoStatus(`Upload failed: ${err.message}. You can paste a URL instead.`, true);
+  }
+}
+
+function showLogoStatus(msg, isError){
+  const el = document.getElementById('logoUploadStatus');
+  el.textContent = msg;
+  el.style.display = 'block';
+  el.style.color = isError ? '#ff7386' : 'var(--green)';
+}
+function hideLogoStatus(){
+  document.getElementById('logoUploadStatus').style.display = 'none';
 }
 
 function getCustomizeConfig(){

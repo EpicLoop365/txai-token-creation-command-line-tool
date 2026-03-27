@@ -884,6 +884,68 @@ app.post("/api/send", async (req, res) => {
   }
 });
 
+// ─── AIRDROP TOKENS ──────────────────────────────────────────────────────
+
+app.post("/api/airdrop", async (req, res) => {
+  const { denom, amount, recipients } = req.body as {
+    denom?: string; amount?: string; recipients?: string[];
+  };
+
+  // Validate inputs
+  if (!denom) {
+    res.status(400).json({ error: "Missing 'denom'." }); return;
+  }
+  if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
+    res.status(400).json({ error: "'amount' must be a positive number." }); return;
+  }
+  if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
+    res.status(400).json({ error: "'recipients' must be a non-empty array." }); return;
+  }
+  if (recipients.length > 50) {
+    res.status(400).json({ error: "Max 50 recipients per request." }); return;
+  }
+  if (!process.env.AGENT_MNEMONIC) {
+    res.status(500).json({ error: "Server not configured." }); return;
+  }
+
+  const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
+  let client: TxClient | null = null;
+  let sent = 0;
+  let failed = 0;
+  const errors: string[] = [];
+
+  try {
+    const txWallet = await importWallet(process.env.AGENT_MNEMONIC, networkName);
+    client = await TxClient.connectWithWallet(txWallet);
+
+    // Process recipients sequentially to avoid nonce issues
+    for (const recipient of recipients) {
+      try {
+        const msg = {
+          typeUrl: "/cosmos.bank.v1beta1.MsgSend",
+          value: {
+            fromAddress: client.address,
+            toAddress: recipient,
+            amount: [{ denom, amount }],
+          },
+        };
+        await client.signAndBroadcastMsg(msg, 200000);
+        sent++;
+      } catch (err) {
+        failed++;
+        errors.push(`${recipient}: ${(err as Error).message}`);
+      }
+    }
+
+    res.json({ success: true, sent, failed, errors });
+  } catch (err) {
+    console.error("[airdrop] Error:", err);
+    res.status(500).json({ error: (err as Error).message });
+  } finally {
+    try { if (client) client.disconnect(); } catch { /* ignore */ }
+  }
+});
+
 // ─── CREATE WALLET ────────────────────────────────────────────────────────
 
 app.post("/api/create-wallet", async (_req, res) => {
@@ -1903,6 +1965,40 @@ app.get("/api/subs/verify", async (req, res) => {
   } catch (err) {
     console.error("[subs] Verify error:", (err as Error).message);
     res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+// ─── IMAGE UPLOAD (imgbb proxy) ──────────────────────────────────────────────
+
+app.post("/api/upload-image", async (req, res) => {
+  try {
+    const { image, name } = req.body;
+    if (!image) return res.status(400).json({ error: "No image data provided" });
+
+    const IMGBB_KEY = process.env.IMGBB_API_KEY || ""; // Free imgbb API key
+    if (!IMGBB_KEY) {
+      // Fallback: return a data URI if no imgbb key configured
+      return res.json({ url: `data:image/png;base64,${image.slice(0, 100)}...`, note: "No IMGBB_API_KEY configured — paste a URL instead" });
+    }
+
+    const formData = new URLSearchParams();
+    formData.append("key", IMGBB_KEY);
+    formData.append("image", image);
+    if (name) formData.append("name", name);
+
+    const response = await fetch("https://api.imgbb.com/1/upload", {
+      method: "POST",
+      body: formData,
+    });
+    const result = await response.json();
+
+    if (result.success) {
+      res.json({ url: result.data.url, thumb: result.data.thumb?.url, deleteUrl: result.data.delete_url });
+    } else {
+      res.status(400).json({ error: result.error?.message || "Upload failed" });
+    }
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
   }
 });
 

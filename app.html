@@ -42,6 +42,25 @@
 </nav>
 
 
+<!-- Landing Hero -->
+<section class="landing-hero" id="landingHero">
+  <div class="container">
+    <div class="hero-content">
+      <h1 class="hero-title">The infrastructure layer for<br><span class="hero-accent">Smart Tokens</span></h1>
+      <p class="hero-sub">Issue, manage, trade, and automate tokens with built-in compliance — all enforced on-chain. No smart contracts required.</p>
+      <div class="hero-stats">
+        <div class="hero-stat"><span class="hero-stat-val">5</span><span class="hero-stat-lbl">Tools</span></div>
+        <div class="hero-stat"><span class="hero-stat-val">On-Chain</span><span class="hero-stat-lbl">Settlement</span></div>
+        <div class="hero-stat"><span class="hero-stat-val">Coreum</span><span class="hero-stat-lbl">L1 Blockchain</span></div>
+      </div>
+      <div class="hero-actions">
+        <button class="hero-cta" onclick="document.getElementById('demo').scrollIntoView({behavior:'smooth'})">Open Platform</button>
+        <a class="hero-link" href="https://docs.coreum.dev" target="_blank">Read Docs</a>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- Interactive Demo -->
 <section id="demo">
   <div class="container">
@@ -210,23 +229,25 @@
 
         <!-- Token Economics -->
         <div class="cp-section">
-          <div class="cp-section-title"><em class="icon">💰</em> Token Economics</div>
-          <div class="cp-slider-row">
-            <div class="cp-slider-label">Burn Rate</div>
-            <div class="cp-slider-wrap">
-              <input type="range" class="cp-slider" id="cpBurnRate" min="0" max="20" step="0.5" value="0" oninput="updateSlider('cpBurnRate','cpBurnVal')">
-              <span class="cp-slider-value" id="cpBurnVal">0%</span>
+          <div class="cp-section-title"><em class="icon">📊</em> Token Economics</div>
+          <div class="cp-econ-row">
+            <div class="cp-econ-item">
+              <label class="cp-label">Burn Rate</label>
+              <div class="cp-econ-slider">
+                <input type="range" class="cp-slider" id="cpBurnRate" min="0" max="20" step="0.5" value="0" oninput="updateSlider('cpBurnRate','cpBurnVal')">
+                <span class="cp-slider-value" id="cpBurnVal">0%</span>
+              </div>
+              <span class="cp-econ-hint">Auto-burn per transfer</span>
+            </div>
+            <div class="cp-econ-item">
+              <label class="cp-label">Transfer Fee</label>
+              <div class="cp-econ-slider">
+                <input type="range" class="cp-slider" id="cpFeeRate" min="0" max="20" step="0.5" value="0" oninput="updateSlider('cpFeeRate','cpFeeVal')">
+                <span class="cp-slider-value" id="cpFeeVal">0%</span>
+              </div>
+              <span class="cp-econ-hint">Fee to issuer per transfer</span>
             </div>
           </div>
-          <div class="cp-hint">Percentage of tokens automatically burned on every transfer. Creates deflationary pressure.</div>
-          <div class="cp-slider-row" style="margin-top:14px">
-            <div class="cp-slider-label">Transfer Fee</div>
-            <div class="cp-slider-wrap">
-              <input type="range" class="cp-slider" id="cpFeeRate" min="0" max="20" step="0.5" value="0" oninput="updateSlider('cpFeeRate','cpFeeVal')">
-              <span class="cp-slider-value" id="cpFeeVal">0%</span>
-            </div>
-          </div>
-          <div class="cp-hint">Percentage of every transfer sent to the token issuer as a fee. Creates passive revenue.</div>
         </div>
 
         <!-- Metadata -->
@@ -234,15 +255,19 @@
           <div class="cp-section-title"><em class="icon">🖼️</em> Metadata</div>
           <div class="cp-row">
             <div class="cp-field" style="grid-column:1/-1">
-              <label class="cp-label">Token Logo URL</label>
-              <input class="cp-input" id="cpUri" placeholder="https://yoursite.com/logo.png">
+              <label class="cp-label">Token Logo</label>
+              <div class="logo-input-row">
+                <input class="cp-input logo-url-input" id="cpUri" placeholder="Paste URL or browse a file...">
+                <label class="logo-browse-btn" for="cpLogoFile">Browse</label>
+                <input type="file" id="cpLogoFile" accept="image/*" style="display:none" onchange="handleLogoUpload(this)">
+              </div>
               <div class="logo-preview-wrap" id="logoPreviewWrap" style="display:none">
                 <img id="logoPreview" class="logo-preview-img" alt="Token logo preview">
                 <button class="logo-remove-btn" onclick="removeLogoPreview()" title="Clear">&times;</button>
               </div>
+              <div class="logo-upload-status" id="logoUploadStatus" style="display:none"></div>
             </div>
           </div>
-          <div class="cp-hint">Upload an image or paste a URL for your token logo. Uploaded images are hosted via imgbb (free).</div>
         </div>
 
       </div><!-- end customizePanel -->
@@ -874,6 +899,47 @@
         </div>
 
       </div><!-- end manage-info-card -->
+
+      <!-- Airdrop Tool (always visible) -->
+      <div class="manage-action-card airdrop-standalone">
+        <div class="manage-action-hdr">
+          <span class="manage-action-icon">📡</span> Airdrop Tool
+        </div>
+        <div class="manage-action-body">
+          <div class="airdrop-layout">
+            <div class="airdrop-left">
+              <div class="manage-field">
+                <label>Token Denom</label>
+                <input type="text" class="manage-input" id="airdropDenom" placeholder="e.g. mytoken-testcore1abc...">
+              </div>
+              <div class="manage-field">
+                <label>Amount per address</label>
+                <input type="number" class="manage-input" id="airdropAmount" placeholder="e.g. 100" step="any" min="0">
+              </div>
+              <div class="manage-field">
+                <label>Recipient Addresses <span class="airdrop-count" id="airdropAddrCount">0</span></label>
+                <textarea class="manage-input airdrop-textarea" id="airdropAddresses" placeholder="Paste wallet addresses — one per line or comma-separated" oninput="airdropParseAddresses()"></textarea>
+              </div>
+            </div>
+            <div class="airdrop-right">
+              <div class="airdrop-preview" id="airdropPreview">
+                <div class="airdrop-preview-title">Airdrop Preview</div>
+                <div class="airdrop-preview-row"><span>Recipients</span><b id="airdropPreviewCount">0</b></div>
+                <div class="airdrop-preview-row"><span>Amount each</span><b id="airdropPreviewEach">0</b></div>
+                <div class="airdrop-preview-row total"><span>Total tokens</span><b id="airdropPreviewTotal">0</b></div>
+              </div>
+              <button class="manage-exec-btn airdrop" id="airdropExecuteBtn" onclick="airdropExecute()">Send Airdrop</button>
+              <div class="airdrop-progress" id="airdropProgress" style="display:none">
+                <div class="dex-demo-bar-wrap"><div class="dex-demo-bar" id="airdropProgressBar" style="width:0%"></div></div>
+                <span class="airdrop-progress-text" id="airdropProgressText">0 / 0</span>
+              </div>
+              <div class="airdrop-log" id="airdropLog"></div>
+            </div>
+          </div>
+          <div class="airdrop-result" id="airdropResult" style="display:none"></div>
+        </div>
+      </div>
+
     </div><!-- end manage-wrap -->
 
     <!-- Subscriptions Tab -->
@@ -1198,6 +1264,7 @@
 <script src="js/swarm.js?v=11"></script>
 <script src="js/auth.js?v=10"></script>
 <script src="js/subscriptions.js?v=1"></script>
+<script src="js/airdrop.js?v=1"></script>
 <script>
 // ── Inspiration ticker ──
 (function(){
