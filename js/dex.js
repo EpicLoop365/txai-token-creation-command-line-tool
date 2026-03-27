@@ -348,6 +348,8 @@ function dexLoadOrderbook(){
   const addr = dexGetActiveAddress();
   if(addr) dexFetchBalances(addr);
   dexUpdateAddWalletBtn();
+  // Initialize price chart with sample data for this pair
+  setTimeout(() => dexLoadSamplePriceData(0.001), 300);
 }
 
 async function dexFetchOrderbook(){
@@ -361,6 +363,13 @@ async function dexFetchOrderbook(){
     dexUpdatePairStats(data);
     dexDrawDepthChart();
     dexDetectFills(data);
+    // If chart has no data yet, seed it with the mid-price from orderbook
+    if (dexPriceData.length === 0 && (data.bids?.length || data.asks?.length)) {
+      const bestBid = data.bids?.[0]?.price ? parseFloat(data.bids[0].price) : 0;
+      const bestAsk = data.asks?.[0]?.price ? parseFloat(data.asks[0].price) : 0;
+      const mid = bestBid && bestAsk ? (bestBid + bestAsk) / 2 : bestBid || bestAsk || 0.001;
+      if (mid > 0) dexLoadSamplePriceData(mid);
+    }
   } catch(err){ console.error('DEX orderbook fetch error:', err); }
 }
 
@@ -1054,6 +1063,78 @@ function dexAddFillToChart(price, quantity) {
   const vol = { time: t, value: q, color: p >= open ? 'rgba(34,197,94,.4)' : 'rgba(239,68,68,.4)' };
   dexVolData.push(vol);
   dexPriceVolSeries.update(vol);
+}
+
+function dexLoadSamplePriceData(midPrice) {
+  if (!dexPriceChart) dexInitPriceChart();
+  if (!dexPriceSeries) return;
+
+  const mp = parseFloat(midPrice) || 0.001;
+  const now = Math.floor(Date.now() / 1000);
+  const candleCount = 80;
+  const interval = 300; // 5-min candles
+  const startTime = now - candleCount * interval;
+
+  // Dramatic price story: accumulation → breakout → consolidation → second leap → selloff → recovery
+  const phases = [
+    { start: 0,  end: 15, base: 0.45, drift: 0.008, vol: 0.02, volMult: 0.6 },   // quiet accumulation
+    { start: 15, end: 22, base: 0.45, drift: 0.06,  vol: 0.03, volMult: 1.5 },    // breakout rally
+    { start: 22, end: 32, base: 0.85, drift: 0.003, vol: 0.025, volMult: 0.8 },   // consolidation
+    { start: 32, end: 38, base: 0.85, drift: 0.05,  vol: 0.035, volMult: 2.0 },   // second leap
+    { start: 38, end: 48, base: 1.3,  drift: 0.002, vol: 0.02, volMult: 0.7 },    // high plateau
+    { start: 48, end: 55, base: 1.3,  drift: -0.07, vol: 0.05, volMult: 2.5 },    // dramatic selloff
+    { start: 55, end: 65, base: 0.7,  drift: 0.003, vol: 0.03, volMult: 1.0 },    // capitulation base
+    { start: 65, end: 73, base: 0.7,  drift: 0.03,  vol: 0.025, volMult: 1.2 },   // recovery bounce
+    { start: 73, end: 80, base: 0.95, drift: 0.005, vol: 0.02, volMult: 0.9 },    // settling near mid
+  ];
+
+  const candles = [];
+  const vols = [];
+  let price = mp * 0.45;
+
+  for (let i = 0; i < candleCount; i++) {
+    const t = startTime + i * interval;
+    const phase = phases.find(p => i >= p.start && i < p.end) || phases[phases.length - 1];
+    const target = mp * phase.base;
+    const volatility = mp * phase.vol;
+
+    const open = price;
+    const drift = (target - price) * 0.15 + phase.drift * mp * (Math.random() - 0.3);
+    const move = drift + (Math.random() - 0.5) * volatility;
+    const close = Math.max(open + move, mp * 0.1);
+
+    const wickUp = Math.random() * volatility * 0.8;
+    const wickDown = Math.random() * volatility * 0.8;
+    const high = Math.max(open, close) + wickUp;
+    const low = Math.max(Math.min(open, close) - wickDown, mp * 0.05);
+
+    price = close;
+
+    candles.push({
+      time: t,
+      open: +open.toPrecision(6),
+      high: +high.toPrecision(6),
+      low: +low.toPrecision(6),
+      close: +close.toPrecision(6),
+    });
+
+    // Volume spikes during breakouts and selloffs
+    const baseVol = 80 + Math.random() * 200;
+    const spikeVol = baseVol * phase.volMult + (Math.abs(move) / volatility) * 400;
+    vols.push({
+      time: t,
+      value: +spikeVol.toFixed(0),
+      color: close >= open ? 'rgba(34,197,94,.35)' : 'rgba(239,68,68,.35)',
+    });
+  }
+
+  dexPriceData = candles;
+  dexVolData = vols;
+  dexFillSequence = candleCount;
+  dexPriceSeries.setData(candles);
+  dexPriceVolSeries.setData(vols);
+  dexPriceChart.timeScale().fitContent();
+  document.getElementById('dexPriceEmpty').style.display = 'none';
 }
 
 function dexResetPriceChart() {
