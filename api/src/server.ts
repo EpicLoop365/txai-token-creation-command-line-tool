@@ -1368,6 +1368,86 @@ app.post("/api/dex/prepare-wallets", async (req, res) => {
 });
 
 // ─── DEX DEMO: Reset stuck demo lock ────────────────────────────────────────
+// ─── Agent Wallet Balance ─────────────────────────────────────────────────
+app.get("/api/agent-balance", async (_req, res) => {
+  try {
+    if (!process.env.AGENT_MNEMONIC) {
+      res.status(500).json({ error: "No agent mnemonic configured" });
+      return;
+    }
+    const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
+    const wallet = await importWallet(process.env.AGENT_MNEMONIC, networkName);
+    const client = await TxClient.connectWithWallet(wallet);
+    const bals = await client.getBalances(client.address);
+    const quoteDenom = "utestcore";
+    const txBal = bals.find((b: { denom: string }) => b.denom === quoteDenom);
+    const rawAmount = txBal ? parseInt(txBal.amount) : 0;
+    res.json({
+      address: client.address,
+      balanceRaw: rawAmount,
+      balanceTX: (rawAmount / 1e6).toFixed(2),
+      sufficient: rawAmount >= 500_000_000,
+      minRequired: "500 TX",
+    });
+    client.disconnect();
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+// ─── Fund Agent Wallet (faucet) ───────────────────────────────────────────
+app.post("/api/agent-fund", async (_req, res) => {
+  try {
+    if (!process.env.AGENT_MNEMONIC) {
+      res.status(500).json({ error: "No agent mnemonic configured" });
+      return;
+    }
+    const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
+    const wallet = await importWallet(process.env.AGENT_MNEMONIC, networkName);
+    const client = await TxClient.connectWithWallet(wallet);
+
+    // Check balance before
+    let bals = await client.getBalances(client.address);
+    const quoteDenom = "utestcore";
+    let txBal = bals.find((b: { denom: string }) => b.denom === quoteDenom);
+    const beforeAmount = txBal ? parseInt(txBal.amount) : 0;
+
+    // Try faucet
+    const results: string[] = [];
+    let successCount = 0;
+    for (let i = 0; i < 3; i++) {
+      try {
+        await requestFaucet(client.address, networkName);
+        results.push(`Request ${i + 1}: success`);
+        successCount++;
+      } catch {
+        results.push(`Request ${i + 1}: rate limited`);
+        break;
+      }
+      if (i < 2) await new Promise(r => setTimeout(r, 6000));
+    }
+
+    // Wait for balance to update
+    await new Promise(r => setTimeout(r, 4000));
+    bals = await client.getBalances(client.address);
+    txBal = bals.find((b: { denom: string }) => b.denom === quoteDenom);
+    const afterAmount = txBal ? parseInt(txBal.amount) : 0;
+
+    res.json({
+      address: client.address,
+      beforeTX: (beforeAmount / 1e6).toFixed(2),
+      afterTX: (afterAmount / 1e6).toFixed(2),
+      addedTX: ((afterAmount - beforeAmount) / 1e6).toFixed(2),
+      faucetResults: results,
+      successCount,
+      sufficient: afterAmount >= 500_000_000,
+    });
+    client.disconnect();
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
 app.post("/api/dex/reset-demo", (_req, res) => {
   resetDemoLock();
   res.json({ success: true, message: "Demo lock reset" });

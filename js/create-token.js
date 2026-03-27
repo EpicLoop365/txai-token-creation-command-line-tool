@@ -72,6 +72,8 @@ function switchTab(tab){
   // Scroll active tab into view
   const activeTab = document.querySelector('.chat-tab.active');
   if(activeTab) activeTab.scrollIntoView({behavior:'smooth',block:'nearest',inline:'nearest'});
+  // Show/hide agent wallet bar
+  if(typeof showAgentBar === 'function') showAgentBar(tab);
 }
 
 

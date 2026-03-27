@@ -1175,6 +1175,37 @@ footer{
   .global-wallet-bar{flex-wrap:wrap;justify-content:center;gap:8px;padding:8px 14px}
 }
 
+/* Agent Wallet Status Bar */
+.agent-wallet-bar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:8px 20px;margin-bottom:12px;
+  background:linear-gradient(135deg,rgba(124,58,237,.06),rgba(37,99,235,.04));
+  border:1px solid rgba(124,58,237,.15);border-radius:10px;
+  gap:12px;
+}
+.agent-wallet-left{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.agent-wallet-label{
+  font-family:var(--mono);font-size:.7rem;font-weight:700;
+  color:var(--purple);text-transform:uppercase;letter-spacing:.06em;
+}
+.agent-wallet-balance{
+  font-family:var(--mono);font-size:.82rem;font-weight:600;color:var(--text);
+}
+.agent-wallet-status{
+  font-size:.72rem;padding:2px 8px;border-radius:6px;font-weight:600;
+}
+.agent-wallet-status.ok{background:rgba(34,197,94,.12);color:#22c55e}
+.agent-wallet-status.low{background:rgba(239,68,68,.12);color:#ef4444}
+.agent-wallet-status.loading{background:rgba(139,92,246,.1);color:var(--purple)}
+.agent-wallet-right{display:flex;align-items:center;gap:8px}
+.agent-topup-btn{
+  padding:6px 14px;border-radius:8px;font-size:.75rem;font-weight:600;
+  background:var(--purple);color:#fff;border:none;cursor:pointer;
+  transition:all .2s;
+}
+.agent-topup-btn:hover{opacity:.85;transform:translateY(-1px)}
+.agent-topup-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+
 /* ===== TOKEN MANAGER TAB ===== */
 .manage-wrap{display:none;padding:20px 0;max-width:900px;margin:0 auto}
 .manage-wrap.show{display:block}
@@ -1477,11 +1508,12 @@ footer{
 .dex-add-wallet-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
 
 .dex-demo-overlay{
-  position:fixed;top:0;right:0;bottom:0;
-  width:440px;z-index:1000;
-  background:rgba(0,0,0,.6);backdrop-filter:blur(8px);
+  position:fixed;top:64px;right:0;bottom:0;
+  width:440px;z-index:90;
+  background:#0d1117;backdrop-filter:blur(8px);
   display:flex;flex-direction:column;
   box-shadow:-4px 0 24px rgba(0,0,0,.5);
+  border-left:1px solid #30363d;
   animation:slideInRight .3s ease;
 }
 @keyframes slideInRight{from{transform:translateX(100%)}to{transform:translateX(0)}}

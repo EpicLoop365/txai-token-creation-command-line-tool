@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/styles.css?v=14">
+<link rel="stylesheet" href="css/styles.css?v=15">
 </head>
 <body>
 
@@ -104,6 +104,18 @@
           <button class="gw-fund-btn" onclick="fundWallet()" title="Get free testnet TX tokens">Fund Wallet</button>
           <button class="dex-disconnect-btn" onclick="globalDisconnectWallet()">Disconnect</button>
         </div>
+      </div>
+    </div>
+
+    <!-- Agent Wallet Status (shown on DEX/Swarm tabs) -->
+    <div class="agent-wallet-bar" id="agentWalletBar" style="display:none">
+      <div class="agent-wallet-left">
+        <span class="agent-wallet-label">Agent Wallet</span>
+        <span class="agent-wallet-balance" id="agentWalletBal">Checking...</span>
+        <span class="agent-wallet-status" id="agentWalletStatus"></span>
+      </div>
+      <div class="agent-wallet-right">
+        <button class="agent-topup-btn" id="agentTopupBtn" onclick="agentTopUp()">Top Up (Faucet)</button>
       </div>
     </div>
 
@@ -1349,6 +1361,74 @@
 <script src="js/swarm.js?v=11"></script>
 <script src="js/auth.js?v=10"></script>
 <script>
+// ── Agent wallet status bar ──
+const AGENT_BAR_TABS = ['dex','swarm'];
+let _agentBalCache = null;
+
+function showAgentBar(tab) {
+  const bar = document.getElementById('agentWalletBar');
+  if (!bar) return;
+  bar.style.display = AGENT_BAR_TABS.includes(tab) ? 'flex' : 'none';
+  if (AGENT_BAR_TABS.includes(tab) && !_agentBalCache) checkAgentBalance();
+}
+
+async function checkAgentBalance() {
+  const balEl = document.getElementById('agentWalletBal');
+  const statusEl = document.getElementById('agentWalletStatus');
+  if (!balEl) return;
+  balEl.textContent = 'Checking...';
+  statusEl.className = 'agent-wallet-status loading';
+  statusEl.textContent = '';
+  try {
+    const res = await fetch('/api/agent-balance');
+    const data = await res.json();
+    _agentBalCache = data;
+    balEl.textContent = data.balanceTX + ' TX';
+    if (data.sufficient) {
+      statusEl.className = 'agent-wallet-status ok';
+      statusEl.textContent = 'Ready';
+    } else {
+      statusEl.className = 'agent-wallet-status low';
+      statusEl.textContent = 'Low — top up needed';
+    }
+  } catch {
+    balEl.textContent = 'Error';
+    statusEl.className = 'agent-wallet-status low';
+    statusEl.textContent = 'Could not check';
+  }
+}
+
+async function agentTopUp() {
+  const btn = document.getElementById('agentTopupBtn');
+  const balEl = document.getElementById('agentWalletBal');
+  const statusEl = document.getElementById('agentWalletStatus');
+  btn.disabled = true;
+  btn.textContent = 'Requesting...';
+  statusEl.className = 'agent-wallet-status loading';
+  statusEl.textContent = 'Faucet in progress...';
+  try {
+    const res = await fetch('/api/agent-fund', { method: 'POST' });
+    const data = await res.json();
+    _agentBalCache = data;
+    balEl.textContent = data.afterTX + ' TX';
+    if (data.sufficient) {
+      statusEl.className = 'agent-wallet-status ok';
+      statusEl.textContent = 'Ready — added ' + data.addedTX + ' TX';
+    } else if (parseFloat(data.addedTX) > 0) {
+      statusEl.className = 'agent-wallet-status low';
+      statusEl.textContent = 'Added ' + data.addedTX + ' TX — still low';
+    } else {
+      statusEl.className = 'agent-wallet-status low';
+      statusEl.textContent = 'Faucet rate limited — try again later';
+    }
+  } catch {
+    statusEl.className = 'agent-wallet-status low';
+    statusEl.textContent = 'Top up failed';
+  }
+  btn.disabled = false;
+  btn.textContent = 'Top Up (Faucet)';
+}
+
 // Tab bar scroll arrows + fade indicators
 (function(){
   const bar = document.getElementById('chatTabBar');
