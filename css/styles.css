@@ -1710,6 +1710,11 @@ footer{
   padding:1px 5px;border-radius:3px;margin-left:4px;vertical-align:middle;
   font-weight:700;letter-spacing:.5px;
 }
+.demo-tif-badge{
+  display:inline-block;background:#0ea5e9;color:#fff;font-size:0.55rem;
+  padding:1px 4px;border-radius:3px;margin-left:3px;vertical-align:middle;
+  font-weight:700;letter-spacing:.5px;
+}
 .demo-side-buy{color:#22c55e;font-weight:700;font-size:.78rem}
 .demo-side-sell{color:#ef4444;font-weight:700;font-size:.78rem}
 .demo-price{color:#a78bfa;font-family:'Space Mono',monospace;font-weight:600}

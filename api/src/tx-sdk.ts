@@ -601,7 +601,7 @@ export async function requestFaucet(
   }
 }
 
-// ─── DEX ENUMS ───────────────────────────────────────────────────────────────
+// ─── DEX ENUMS & CONSTANTS ──────────────────────────────────────────────────
 
 export enum DexSide {
   BUY = 1,
@@ -614,12 +614,26 @@ export enum DexOrderType {
 }
 
 export enum DexTimeInForce {
-  GTC = 1,
-  IOC = 2,
-  FOK = 3,
+  GTC = 1,   // Good Till Cancel — sits on book until filled or cancelled
+  IOC = 2,   // Immediate or Cancel — fill what you can, cancel the rest
+  FOK = 3,   // Fill or Kill — fill entire order or nothing
+}
+
+// Coreum DEX module address (escrows tokens for sell orders)
+// Derived: sha256("dex")[:20] → bech32
+export const DEX_MODULE_ADDRESS_TESTNET = "testcore1n58mly6f7er0zs6swtetqgfqs36jaarq7y4dx0";
+export const DEX_MODULE_ADDRESS_MAINNET = "core1n58mly6f7er0zs6swtetqgfqs36jaarqgswsfe";
+
+export function getDexModuleAddress(networkName: NetworkName): string {
+  return networkName === "mainnet" ? DEX_MODULE_ADDRESS_MAINNET : DEX_MODULE_ADDRESS_TESTNET;
 }
 
 // ─── DEX OPERATIONS ──────────────────────────────────────────────────────────
+
+export interface GoodTil {
+  goodTilBlockHeight?: number;   // expire at this block height
+  goodTilBlockTime?: string;     // expire at this timestamp (RFC3339)
+}
 
 export interface PlaceOrderParams {
   baseDenom: string;
@@ -629,6 +643,7 @@ export interface PlaceOrderParams {
   price?: string;
   quantity: string;
   timeInForce?: DexTimeInForce;
+  goodTil?: GoodTil;
 }
 
 export async function placeOrder(
@@ -636,21 +651,29 @@ export async function placeOrder(
   params: PlaceOrderParams
 ): Promise<TransactionResult & { orderId: string }> {
   const orderId = `ord-${Date.now()}-${Math.random().toString(16).slice(2, 6)}`;
-  const msg = {
-    typeUrl: "/coreum.dex.v1.MsgPlaceOrder",
-    value: {
-      sender: client.address,
-      type: params.orderType,
-      id: orderId,
-      baseDenom: params.baseDenom,
-      quoteDenom: params.quoteDenom,
-      price: params.price ?? "",
-      quantity: params.quantity,
-      side: params.side,
-      timeInForce: params.timeInForce ?? DexTimeInForce.GTC,
-    },
+  const value: Record<string, unknown> = {
+    sender: client.address,
+    type: params.orderType,
+    id: orderId,
+    baseDenom: params.baseDenom,
+    quoteDenom: params.quoteDenom,
+    price: params.price ?? "",
+    quantity: params.quantity,
+    side: params.side,
+    timeInForce: params.timeInForce ?? DexTimeInForce.GTC,
   };
-  console.log(`[placeOrder] ${DexSide[params.side]} order: ${orderId}`);
+
+  // Add goodTil if specified (for GTC orders with expiry)
+  if (params.goodTil) {
+    const gt: Record<string, unknown> = {};
+    if (params.goodTil.goodTilBlockHeight) gt.goodTilBlockHeight = params.goodTil.goodTilBlockHeight;
+    if (params.goodTil.goodTilBlockTime) gt.goodTilBlockTime = params.goodTil.goodTilBlockTime;
+    value.goodTil = gt;
+  }
+
+  const msg = { typeUrl: "/coreum.dex.v1.MsgPlaceOrder", value };
+  const tif = DexTimeInForce[params.timeInForce ?? DexTimeInForce.GTC] || "GTC";
+  console.log(`[placeOrder] ${DexSide[params.side]} ${tif} order: ${orderId}, price=${params.price}, qty=${params.quantity}`);
   const result = await client.signAndBroadcastMsg(msg, 500000);
   return { ...result, orderId };
 }

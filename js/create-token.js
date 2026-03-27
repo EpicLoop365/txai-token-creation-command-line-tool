@@ -56,7 +56,17 @@ function switchTab(tab){
   } else if(tab === 'manage'){
     tabManage.classList.add('active');
     manageWrap.classList.add('show');
-    document.getElementById('manageTokenDenom').focus();
+    // Auto-load last token denom if manage field is empty
+    const manageInput = document.getElementById('manageTokenDenom');
+    if(manageInput && !manageInput.value.trim()){
+      const tokens = typeof txdbGetTokens === 'function' ? txdbGetTokens() : [];
+      if(tokens.length > 0){
+        manageInput.value = tokens[0].denom;
+        // Auto-load the token info
+        if(typeof loadManageToken === 'function') setTimeout(() => loadManageToken(), 200);
+      }
+    }
+    manageInput.focus();
   } else if(tab === 'auth'){
     tabAuth.classList.add('active');
     authWrap.classList.add('show');
@@ -150,10 +160,38 @@ const chatStarterPool = {
 };
 
 function updateChatStarters(tab) {
-  const pool = chatStarterPool[tab] || chatStarterPool.create;
-  // Pick 4 random starters from the pool
-  const shuffled = [...pool].sort(() => Math.random() - 0.5);
-  const picked = shuffled.slice(0, 4);
+  let pool = chatStarterPool[tab] || chatStarterPool.create;
+
+  // Context-aware starters: inject token-specific questions on manage/dex tabs
+  if (tab === 'manage' || tab === 'dex') {
+    const tokens = typeof txdbGetTokens === 'function' ? txdbGetTokens() : [];
+    if (tokens.length > 0) {
+      const t = tokens[0]; // most recently created token
+      const sym = (t.symbol || t.name || 'token').toUpperCase();
+      const feat = t.features || {};
+      const contextStarters = [];
+
+      if (tab === 'manage') {
+        contextStarters.push({ icon: '📋', label: `Manage ${sym}`, prompt: `How do I manage my ${sym} token? What operations are available?` });
+        if (feat.burning) contextStarters.push({ icon: '🔥', label: `Burn ${sym}`, prompt: `How do I burn some ${sym} tokens to reduce supply?` });
+        if (feat.minting) contextStarters.push({ icon: '📈', label: `Mint more ${sym}`, prompt: `When should I mint more ${sym} tokens?` });
+        if (feat.freezing) contextStarters.push({ icon: '❄️', label: `Freeze ${sym}`, prompt: `How does freezing work for ${sym}? When would I freeze an account?` });
+        if (feat.whitelisting) contextStarters.push({ icon: '🔒', label: `${sym} whitelist`, prompt: `How do I manage the whitelist for ${sym}? Who should I whitelist?` });
+        if (feat.clawback) contextStarters.push({ icon: '🔄', label: `Clawback ${sym}`, prompt: `How does clawback work for ${sym}? When would I recover tokens?` });
+      } else if (tab === 'dex') {
+        contextStarters.push({ icon: '📊', label: `Trade ${sym}`, prompt: `How do I trade ${sym} on the DEX?` });
+        contextStarters.push({ icon: '💧', label: `${sym} liquidity`, prompt: `How do I add liquidity for ${sym} on the DEX?` });
+      }
+
+      if (contextStarters.length > 0) {
+        // Mix context-specific starters with generic ones
+        pool = [...contextStarters, ...pool];
+      }
+    }
+  }
+
+  // Pick 4 random starters from the pool (prioritize first items = context-aware)
+  const picked = pool.length <= 4 ? pool : pool.slice(0, Math.min(6, pool.length)).sort(() => Math.random() - 0.5).slice(0, 4);
   const container = document.querySelector('.chat-sidebar .chat-starters');
   if (!container) return;
   container.innerHTML = picked.map(s =>

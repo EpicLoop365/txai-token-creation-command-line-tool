@@ -26,6 +26,8 @@ import {
   queryOrdersByCreator,
   getTokenInfo,
   setWhitelistedLimit,
+  getDexModuleAddress,
+  DexTimeInForce,
   TxClient,
   NetworkName,
   NETWORKS,
@@ -357,14 +359,26 @@ export async function runDexDemo(config: DemoConfig): Promise<void> {
 
     const [mmA, mmB, taker] = agents;
 
-    // ── Phase 4.5: Whitelist agent wallets if token has whitelisting ──
+    // ── Phase 4.5: Whitelist agent wallets + DEX module if token has whitelisting ──
     if (abortSignal?.aborted) throw new Error("Demo aborted");
     try {
       const tokenInfo = await getTokenInfo(baseDenom, networkName);
       const features = tokenInfo.features || [];
       if (features.includes("whitelisting")) {
-        emit("phase", { phase: "whitelist", message: `Whitelisting agent wallets for ${tokenSymbol}...` });
+        emit("phase", { phase: "whitelist", message: `Whitelisting agents + DEX module for ${tokenSymbol}...` });
         const whitelistAmount = toRaw(10000); // generous limit
+
+        // Whitelist the DEX module address (critical: DEX escrows tokens for sell orders)
+        const dexModuleAddr = getDexModuleAddress(networkName);
+        try {
+          await setWhitelistedLimit(agentClient, baseDenom, dexModuleAddr, toRaw(100000));
+          emit("log", { message: `✅ Whitelisted DEX module (${dexModuleAddr.slice(0,16)}...)` });
+          await sleep(2000);
+        } catch (wlErr) {
+          emit("log", { message: `⚠️ DEX module whitelist: ${(wlErr as Error).message.slice(0, 100)}` });
+        }
+
+        // Whitelist each agent wallet
         for (const agent of agents) {
           try {
             await setWhitelistedLimit(agentClient, baseDenom, agent.address, whitelistAmount);
@@ -456,36 +470,38 @@ export async function runDexDemo(config: DemoConfig): Promise<void> {
       side: 1 | 2,
       price: number,
       quantity: number,
-      overlap: boolean
+      overlap: boolean,
+      tif: DexTimeInForce = DexTimeInForce.GTC,
     ) => {
       const priceStr = formatPrice(price);
       const sideStr = side === 1 ? "buy" : "sell";
+      const tifLabel = tif === DexTimeInForce.IOC ? "IOC" : tif === DexTimeInForce.FOK ? "FOK" : "GTC";
       try {
         const result = await placeOrder(client, {
           baseDenom,
           quoteDenom: QUOTE_DENOM,
           side,
-          orderType: 1,
+          orderType: 1, // LIMIT
           price: priceStr,
           quantity: toRaw(quantity),
-          timeInForce: 1,
+          timeInForce: tif,
         } as any);
         placedCount++;
         emit("order", {
           agent: agentName, side: sideStr, price: priceStr, priceDisplay: price,
           quantity, symbol: tokenSymbol, orderId: result.orderId,
           txHash: result.txHash, status: result.success ? "placed" : "failed",
-          error: result.error, overlap,
+          error: result.error, overlap, timeInForce: tifLabel,
         });
         return result;
       } catch (err) {
         errorCount++;
         const errMsg = (err as Error).message.slice(0, 200);
-        console.error(`[dex-demo] Order error (${agentName} ${sideStr} ${quantity} @ ${priceStr}): ${errMsg}`);
+        console.error(`[dex-demo] Order error (${agentName} ${sideStr} ${quantity} @ ${priceStr} ${tifLabel}): ${errMsg}`);
         emit("order", {
           agent: agentName, side: sideStr, price: priceStr, priceDisplay: price,
           quantity, symbol: tokenSymbol, status: "error",
-          error: errMsg, overlap,
+          error: errMsg, overlap, timeInForce: tifLabel,
         });
         return null;
       }
@@ -532,12 +548,20 @@ export async function runDexDemo(config: DemoConfig): Promise<void> {
                      : phase.volMult > 1.0 ? 8 + Math.floor(Math.random() * 18)
                      : 5 + Math.floor(Math.random() * 12);
 
+      // Vary timeInForce: mostly GTC, some IOC during volatility, occasional FOK
+      let tif = DexTimeInForce.GTC;
+      if (phase.volMult > 2.0 && Math.random() > 0.5) {
+        tif = DexTimeInForce.IOC; // Immediate-or-Cancel during breakouts/selloffs
+      } else if (i % 25 === 0 && i > 0) {
+        tif = DexTimeInForce.FOK; // Fill-or-Kill every 25th trade
+      }
+
       // MM-A places a buy at targetPrice → sits on book
-      await placeAndEmit(mmA.client!, mmA.name, 1, targetPrice, baseQty, true);
+      await placeAndEmit(mmA.client!, mmA.name, 1, targetPrice, baseQty, true, tif);
       await sleep(PAINT_DELAY);
 
       // MM-B places a sell at same price → matches → fill!
-      const sellResult = await placeAndEmit(mmB.client!, mmB.name, 2, targetPrice, baseQty, true);
+      const sellResult = await placeAndEmit(mmB.client!, mmB.name, 2, targetPrice, baseQty, true, tif);
       if (sellResult?.success) {
         fillCount++;
         emit("fill", {
@@ -550,22 +574,27 @@ export async function runDexDemo(config: DemoConfig): Promise<void> {
           buyer: mmA.name,
           seller: mmB.name,
           txHash: sellResult.txHash,
+          timeInForce: tif === DexTimeInForce.IOC ? "IOC" : tif === DexTimeInForce.FOK ? "FOK" : "GTC",
         });
       }
 
-      // Every 20 trades, let Taker add a depth order to keep book interesting
-      if (i > 0 && i % 20 === 0) {
+      // Every 15 trades, Taker adds depth or sweeps with IOC for variety
+      if (i > 0 && i % 15 === 0) {
         const takerSide = Math.random() > 0.5 ? 1 : 2;
+        const aggressive = Math.random() > 0.6; // 40% aggressive IOC sweeps
         const offset = takerSide === 1
-          ? targetPrice * (0.85 + Math.random() * 0.1)  // bid below
-          : targetPrice * (1.05 + Math.random() * 0.1); // ask above
+          ? targetPrice * (aggressive ? 1.0 : (0.85 + Math.random() * 0.1))
+          : targetPrice * (aggressive ? 1.0 : (1.05 + Math.random() * 0.1));
         const takerPrice = Math.round(offset * 1e6) / 1e6;
-        await placeAndEmit(taker.client!, taker.name, takerSide as 1 | 2, takerPrice, 30 + Math.floor(Math.random() * 40), false);
+        const takerTif = aggressive ? DexTimeInForce.IOC : DexTimeInForce.GTC;
+        await placeAndEmit(
+          taker.client!, taker.name, takerSide as 1 | 2, takerPrice,
+          20 + Math.floor(Math.random() * 30), aggressive, takerTif
+        );
       }
 
       // Progress update every 10 candles
       if (i > 0 && i % 10 === 0) {
-        const pct = 40 + Math.floor((i / trajectory.length) * 50);
         emit("phase", {
           phase: "fills",
           message: `Candle ${i}/${PAINT_CANDLES} — ${phase.desc}`,
@@ -575,18 +604,19 @@ export async function runDexDemo(config: DemoConfig): Promise<void> {
       if (i < trajectory.length - 1) await sleep(PAINT_DELAY);
     }
 
-    // ── Phase 7: Taker Sweep ──
-    emit("phase", { phase: "taker", message: "Taker sweeping remaining orders..." });
+    // ── Phase 7: Taker Sweep (aggressive IOC orders) ──
+    emit("phase", { phase: "taker", message: "Taker sweeping with IOC orders..." });
 
-    // Taker buys aggressively (sweeps some asks)
     const lastPrice = trajectory[trajectory.length - 1];
+
+    // Taker buys aggressively (IOC sweep of asks)
     const takerBuyPrice = Math.round(lastPrice * 1.3 * 1e6) / 1e6;
-    await placeAndEmit(taker.client!, taker.name, 1, takerBuyPrice, 50, false);
+    await placeAndEmit(taker.client!, taker.name, 1, takerBuyPrice, 50, false, DexTimeInForce.IOC);
     await sleep(ORDER_DELAY);
 
-    // Taker sells aggressively (sweeps some bids)
+    // Taker sells aggressively (IOC sweep of bids)
     const takerSellPrice = Math.round(lastPrice * 0.7 * 1e6) / 1e6;
-    await placeAndEmit(taker.client!, taker.name, 2, takerSellPrice, 50, false);
+    await placeAndEmit(taker.client!, taker.name, 2, takerSellPrice, 50, false, DexTimeInForce.IOC);
 
     // ── Phase 8: Final Summary ──
     await sleep(5000);
