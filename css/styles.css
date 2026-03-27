@@ -1487,6 +1487,19 @@ footer{
   padding:1px 5px;border-radius:3px;margin-left:4px;vertical-align:middle;
   font-weight:700;letter-spacing:.5px;
 }
+.demo-side-buy{color:#22c55e;font-weight:700;font-size:.78rem}
+.demo-side-sell{color:#ef4444;font-weight:700;font-size:.78rem}
+.demo-price{color:#a78bfa;font-family:'Space Mono',monospace;font-weight:600}
+.demo-fill-tag{
+  display:inline-block;background:#22c55e;color:#000;font-size:.58rem;
+  padding:1px 5px;border-radius:3px;font-weight:800;letter-spacing:.5px;
+  vertical-align:middle;margin-right:2px;
+}
+.demo-taker-tag{
+  display:inline-block;background:#a855f7;color:#fff;font-size:.58rem;
+  padding:1px 5px;border-radius:3px;font-weight:800;letter-spacing:.5px;
+  vertical-align:middle;margin-right:2px;
+}
 
 /* Summary */
 .dex-demo-summary{
@@ -1553,6 +1566,29 @@ footer{
   cursor:pointer;transition:all .2s;
 }
 .dex-deposit-add-btn:hover{transform:scale(1.05);box-shadow:0 0 12px rgba(34,197,94,.4)}
+
+/* Swarm config panel */
+.swarm-config-field{margin-bottom:20px}
+.swarm-strategy-cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
+.swarm-strat-card{
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  padding:14px 10px;background:#161b22;border:2px solid #30363d;border-radius:10px;
+  cursor:pointer;transition:all .25s;font-family:var(--sans);color:#c9d1d9;text-align:center;
+}
+.swarm-strat-card:hover{border-color:#484f58;background:#1c2128}
+.swarm-strat-card.active{
+  border-color:#7c3aed;background:rgba(124,58,237,.1);
+  box-shadow:0 0 16px rgba(124,58,237,.2);
+}
+.swarm-strat-icon{font-size:1.4rem}
+.swarm-strat-name{font-weight:700;font-size:.88rem}
+.swarm-strat-tip{font-size:.7rem;color:#8b949e;line-height:1.3}
+.swarm-intensity-label{
+  font-weight:700;font-size:.9rem;color:#a855f7;min-width:70px;
+}
+.swarm-intensity-info{
+  margin-top:6px;font-size:.76rem;color:#8b949e;
+}
 
 .dex-deposit-address-row{
   display:flex;gap:8px;align-items:center;

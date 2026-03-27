@@ -1006,8 +1006,8 @@ async function dexStartDemo() {
     const checkData = await checkRes.json();
 
     if (checkData.ready) {
-      // Agent has tokens — launch demo directly
-      dexLaunchDemoOverlay();
+      // Agent has tokens — show config panel
+      dexShowSwarmConfig();
     } else {
       // Agent doesn't have tokens — show deposit modal
       dexDepositBaseDenom = dexBaseDenom;
@@ -1067,10 +1067,10 @@ async function dexCheckAndStart() {
     const data = await res.json();
 
     if (data.ready) {
-      status.textContent = 'Tokens received! Launching demo...';
+      status.textContent = 'Tokens received! Configuring swarm...';
       status.className = 'dex-deposit-status success';
       document.getElementById('dexDepositModal').style.display = 'none';
-      dexLaunchDemoOverlay();
+      dexShowSwarmConfig();
     } else {
       const held = data.tokensHeld || 0;
       const needed = data.tokensNeeded || 7000;
@@ -1083,6 +1083,40 @@ async function dexCheckAndStart() {
     status.className = 'dex-deposit-status error';
     btn.disabled = false;
   }
+}
+
+/* ── Swarm Config Panel ── */
+let dexSelectedStrategy = 'market-maker';
+
+function dexShowSwarmConfig() {
+  const symbol = dexBaseDenom.split('-')[0].toUpperCase();
+  document.getElementById('swarmConfigToken').textContent = symbol;
+  document.getElementById('swarmIntensity').value = '2';
+  dexUpdateIntensityLabel();
+  document.getElementById('dexSwarmConfigModal').style.display = 'flex';
+}
+
+function dexSelectStrategy(btn) {
+  document.querySelectorAll('.swarm-strat-card').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+  dexSelectedStrategy = btn.dataset.strat;
+}
+
+function dexUpdateIntensityLabel() {
+  const val = parseInt(document.getElementById('swarmIntensity').value);
+  const labels = { 1: 'Light', 2: 'Standard', 3: 'Heavy' };
+  const infos = {
+    1: '~15 orders &bull; 3 overlap fills &bull; 3 agents',
+    2: '~25 orders &bull; 6 overlap fills &bull; 3 agents',
+    3: '~40 orders &bull; 10 overlap fills &bull; 3 agents',
+  };
+  document.getElementById('swarmIntensityLabel').textContent = labels[val];
+  document.getElementById('swarmIntensityInfo').innerHTML = infos[val];
+}
+
+function dexConfirmSwarmLaunch() {
+  document.getElementById('dexSwarmConfigModal').style.display = 'none';
+  dexLaunchDemoOverlay();
 }
 
 function dexLaunchDemoOverlay() {
@@ -1241,8 +1275,9 @@ function dexDemoProcessEvent(event, data) {
       const statusIcon = data.status === 'placed' ? '✅' : data.status === 'error' ? '❌' : '⚠️';
       const overlap = data.overlap ? ' <span class="demo-overlap-badge">MATCH</span>' : '';
       const tx = data.txHash ? txLink(data.txHash) : '';
+      const sideClass = data.side === 'buy' ? 'demo-side-buy' : 'demo-side-sell';
       dexDemoLog(data.status === 'error' ? 'error' : 'order',
-        `${sideIcon} ${statusIcon} ${data.agent?.split(' ')[0] || '?'}: ${data.side?.toUpperCase()} <b>${data.quantity || '?'} ${data.symbol || ''}</b> @ ${data.priceDisplay || data.price} TX${overlap}${tx}`);
+        `${sideIcon} ${statusIcon} <span class="${sideClass}">${data.side?.toUpperCase()}</span> <b>${data.quantity || '?'} ${data.symbol || ''}</b> @ <span class="demo-price">${data.priceDisplay || data.price} TX</span>${overlap}${tx}`);
 
       // Update order count
       if (data.agent?.includes('Maker A')) {
@@ -1262,12 +1297,13 @@ function dexDemoProcessEvent(event, data) {
     }
 
     case 'fill':
-      dexDemoLog('fill', `⚡ FILL: <b>${data.buyQty || data.quantity} ${data.symbol}</b> @ ${data.priceDisplay} TX — ${data.buyer} ↔ ${data.seller}${txLink(data.txHash)}`);
+      dexDemoLog('fill', `⚡ <span class="demo-fill-tag">FILL</span> <b>${data.buyQty || data.quantity} ${data.symbol}</b> @ <span class="demo-price">${data.priceDisplay} TX</span> — ${data.buyer} ↔ ${data.seller}${txLink(data.txHash)}`);
       break;
 
     case 'taker':
       const takerIcon = data.action === 'buy' ? '🟢' : '🔴';
-      dexDemoLog('taker', `${takerIcon} Taker ${data.action?.toUpperCase()}: <b>${data.quantity || '?'}</b> @ ${data.price}${txLink(data.txHash)}`);
+      const takerClass = data.action === 'buy' ? 'demo-side-buy' : 'demo-side-sell';
+      dexDemoLog('taker', `${takerIcon} <span class="demo-taker-tag">TAKER</span> <span class="${takerClass}">${data.action?.toUpperCase()}</span> <b>${data.quantity || '?'} ${data.symbol || ''}</b> @ <span class="demo-price">${data.price} TX</span>${txLink(data.txHash)}`);
       dexDemoOrderCounts.Taker++;
       document.getElementById('demoOrdersTaker').textContent = dexDemoOrderCounts.Taker;
       break;

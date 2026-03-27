@@ -356,6 +356,55 @@
       </div>
 
       <!-- Live Demo Overlay -->
+      <!-- Swarm Config Panel (shown before launch) -->
+      <div class="dex-deposit-overlay" id="dexSwarmConfigModal" style="display:none">
+        <div class="dex-deposit-panel" style="max-width:480px">
+          <div class="dex-deposit-header">
+            <h3>🤖 Configure Agent Swarm</h3>
+            <button class="dex-demo-close" onclick="document.getElementById('dexSwarmConfigModal').style.display='none'">✕</button>
+          </div>
+          <div class="dex-deposit-body">
+            <p style="color:var(--text-dim);font-size:.88rem;margin-bottom:20px">
+              AI agents will populate the <b id="swarmConfigToken">TOKEN</b> orderbook on the live DEX.
+            </p>
+
+            <div class="swarm-config-field">
+              <label class="auth-label">Strategy</label>
+              <div class="swarm-strategy-cards">
+                <button class="swarm-strat-card active" data-strat="market-maker" onclick="dexSelectStrategy(this)">
+                  <span class="swarm-strat-icon">📊</span>
+                  <span class="swarm-strat-name">Market Maker</span>
+                  <span class="swarm-strat-tip">Buy & sell orders around a fair price with overlap fills</span>
+                </button>
+                <button class="swarm-strat-card" data-strat="stress-test" onclick="dexSelectStrategy(this)">
+                  <span class="swarm-strat-icon">⚡</span>
+                  <span class="swarm-strat-name">Stress Test</span>
+                  <span class="swarm-strat-tip">Rapid fire orders to test throughput & fills</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="swarm-config-field">
+              <label class="auth-label">Intensity</label>
+              <div style="display:flex;align-items:center;gap:12px">
+                <input type="range" class="cp-slider" id="swarmIntensity" min="1" max="3" step="1" value="2"
+                  oninput="dexUpdateIntensityLabel()">
+                <span class="swarm-intensity-label" id="swarmIntensityLabel">Standard</span>
+              </div>
+              <div class="swarm-intensity-info" id="swarmIntensityInfo">
+                ~25 orders &bull; 6 overlap fills &bull; 3 agents
+              </div>
+            </div>
+
+            <div style="text-align:center;margin-top:20px">
+              <button class="dex-deposit-check-btn" onclick="dexConfirmSwarmLaunch()" style="padding:14px 36px;font-size:.95rem">
+                🚀 Launch Swarm
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="dex-demo-overlay" id="dexDemoOverlay" style="display:none">
         <div class="dex-demo-panel">
           <div class="dex-demo-header">
