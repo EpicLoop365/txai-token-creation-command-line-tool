@@ -437,11 +437,13 @@ footer{
 
 /* ===== CUSTOMIZE PANEL ===== */
 .customize-toggle{
-  display:flex;align-items:center;gap:8px;margin:16px 0 0;cursor:pointer;
-  font-family:var(--mono);font-size:.8rem;color:var(--text-dim);
+  display:flex;align-items:center;gap:8px;margin:18px 0 0;cursor:pointer;
+  font-family:var(--mono);font-size:.9rem;font-weight:600;color:var(--text-main);
   transition:color .2s;user-select:none;
+  padding:10px 16px;background:var(--bg2);border:1px solid var(--border);
+  border-radius:var(--radius);
 }
-.customize-toggle:hover{color:var(--purple)}
+.customize-toggle:hover{color:var(--purple);border-color:var(--purple)}
 .customize-toggle .arrow{transition:transform .2s;display:inline-block}
 .customize-toggle .arrow.open{transform:rotate(90deg)}
 
