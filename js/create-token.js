@@ -5,11 +5,13 @@ function switchTab(tab){
   const tabCreate = document.getElementById('tabCreate');
   const tabChat = document.getElementById('tabChat');
   const tabDex = document.getElementById('tabDex');
+  const tabSwarm = document.getElementById('tabSwarm');
   const tabNft = document.getElementById('tabNft');
   const tabManage = document.getElementById('tabManage');
   const createWrap = document.getElementById('createModeWrap');
   const chatWrap = document.getElementById('chatWrap');
   const dexWrap = document.getElementById('dexWrap');
+  const swarmWrap = document.getElementById('swarmWrap');
   const nftWrap = document.getElementById('nftWrap');
   const manageWrap = document.getElementById('manageWrap');
 
@@ -17,14 +19,16 @@ function switchTab(tab){
   tabCreate.classList.remove('active');
   tabChat.classList.remove('active');
   tabDex.classList.remove('active');
+  tabSwarm.classList.remove('active');
   tabNft.classList.remove('active');
   tabManage.classList.remove('active');
   createWrap.style.display = 'none';
   chatWrap.classList.remove('show');
   dexWrap.classList.remove('show');
+  swarmWrap.classList.remove('show');
   nftWrap.classList.remove('show');
   manageWrap.classList.remove('show');
-  // Reset container width when leaving DEX
+  // Reset container width when leaving DEX/Swarm
   dexWrap.closest('.container').style.maxWidth = '';
   chatMode = false;
 
@@ -42,6 +46,10 @@ function switchTab(tab){
     if(!dexAgentWallet) dexFetchWallet();
     if(!document.getElementById('dexPairSelect').options.length || document.getElementById('dexPairSelect').options.length <= 1) dexFetchPairs();
     setTimeout(() => dexDrawDepthChart(), 100);
+  } else if(tab === 'swarm'){
+    tabSwarm.classList.add('active');
+    swarmWrap.classList.add('show');
+    swarmWrap.closest('.container').style.maxWidth = '1440px';
   } else if(tab === 'nft'){
     tabNft.classList.add('active');
     nftWrap.classList.add('show');

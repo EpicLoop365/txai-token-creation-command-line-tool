@@ -1493,3 +1493,255 @@ footer{
 }
 .add-token-field .dex-deposit-address-row{margin-bottom:0}
 .add-token-field .dex-deposit-address-row code{font-size:.74rem}
+
+/* ===== AI AGENT SWARM TAB ===== */
+.swarm-wrap{display:none;flex-direction:column;gap:28px;padding:20px 0}
+.swarm-wrap.show{display:flex}
+
+/* Hero */
+.swarm-hero{
+  background:linear-gradient(135deg,rgba(124,58,237,.1),rgba(37,99,235,.08));
+  border:1px solid rgba(124,58,237,.25);border-radius:16px;
+  padding:48px 40px;text-align:center;position:relative;overflow:hidden;
+}
+.swarm-hero::before{
+  content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;
+  background:radial-gradient(circle at 30% 50%,rgba(124,58,237,.06) 0%,transparent 50%),
+             radial-gradient(circle at 70% 50%,rgba(37,99,235,.06) 0%,transparent 50%);
+  animation:swarmPulse 8s ease-in-out infinite;
+}
+@keyframes swarmPulse{
+  0%,100%{transform:scale(1);opacity:.5}
+  50%{transform:scale(1.1);opacity:1}
+}
+.swarm-hero-icon{font-size:3rem;margin-bottom:12px;position:relative}
+.swarm-hero-title{
+  font-size:1.8rem;font-weight:800;margin:0 0 12px;position:relative;
+  background:linear-gradient(135deg,#7c3aed,#3b82f6);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+}
+.swarm-hero-subtitle{
+  color:#8b949e;font-size:.92rem;max-width:600px;margin:0 auto 28px;
+  line-height:1.6;position:relative;
+}
+.swarm-hero-stats{
+  display:flex;justify-content:center;gap:32px;position:relative;
+}
+.swarm-hero-stat{
+  background:rgba(13,17,23,.6);border:1px solid #30363d;border-radius:10px;
+  padding:16px 28px;text-align:center;
+}
+.swarm-hero-stat-value{
+  display:block;font-size:1.5rem;font-weight:800;color:#e6edf3;
+}
+.swarm-hero-stat-label{
+  display:block;font-size:.72rem;color:#8b949e;margin-top:4px;
+  text-transform:uppercase;letter-spacing:.5px;
+}
+
+/* Section Titles */
+.swarm-section-title{
+  font-size:1.1rem;font-weight:700;color:#e6edf3;margin:0 0 16px;
+}
+
+/* Template Grid */
+.swarm-template-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;
+}
+.swarm-template-card{
+  background:#0d1117;border:1px solid #30363d;border-radius:12px;
+  padding:24px;cursor:pointer;transition:all .3s;position:relative;overflow:hidden;
+}
+.swarm-template-card:hover{
+  border-color:#7c3aed;transform:translateY(-3px);
+  box-shadow:0 8px 32px rgba(124,58,237,.15);
+}
+.swarm-template-card.selected{
+  border-color:#7c3aed;box-shadow:0 0 20px rgba(124,58,237,.2);
+}
+.swarm-template-card.soon{opacity:.55;cursor:default}
+.swarm-template-card.soon:hover{transform:none;box-shadow:none;border-color:#30363d}
+.swarm-card-accent{height:3px;border-radius:3px;margin-bottom:16px}
+.swarm-card-accent.green{background:linear-gradient(90deg,#22c55e,#16a34a)}
+.swarm-card-accent.purple{background:linear-gradient(90deg,#7c3aed,#a855f7)}
+.swarm-card-accent.amber{background:linear-gradient(90deg,#f59e0b,#d97706)}
+.swarm-card-accent.blue{background:linear-gradient(90deg,#3b82f6,#2563eb)}
+.swarm-card-icon{font-size:2rem;margin-bottom:8px}
+.swarm-template-card h4{margin:0 0 8px;font-size:1rem;color:#e6edf3}
+.swarm-card-desc{color:#8b949e;font-size:.82rem;line-height:1.5;margin:0 0 14px}
+.swarm-card-meta{
+  display:flex;gap:12px;font-size:.72rem;color:#58a6ff;margin-bottom:16px;flex-wrap:wrap;
+}
+.swarm-soon-badge{
+  position:absolute;top:12px;right:12px;
+  background:rgba(124,58,237,.2);color:#a855f7;
+  font-size:.65rem;font-weight:700;padding:3px 8px;border-radius:4px;
+  letter-spacing:.5px;transition:all .3s;
+}
+.swarm-launch-btn{
+  background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;
+  border:none;border-radius:8px;padding:10px 20px;cursor:pointer;
+  font-size:.82rem;font-weight:600;width:100%;
+  transition:transform .15s,box-shadow .15s;
+}
+.swarm-launch-btn:hover{transform:scale(1.02);box-shadow:0 4px 16px rgba(34,197,94,.3)}
+
+/* Launch Config Panel */
+.swarm-launch-panel{
+  background:#0d1117;border:1px solid #30363d;border-radius:12px;padding:24px;
+}
+.swarm-launch-config{display:flex;flex-direction:column;gap:16px}
+.swarm-config-row label{
+  display:block;font-size:.78rem;color:#8b949e;margin-bottom:6px;
+  font-weight:600;text-transform:uppercase;letter-spacing:.5px;
+}
+.swarm-config-input-row{display:flex;gap:8px}
+.swarm-input{
+  flex:1;background:#161b22;border:1px solid #30363d;border-radius:8px;
+  padding:10px 14px;color:#e6edf3;font-size:.85rem;
+  font-family:'Fira Code','SF Mono',monospace;
+}
+.swarm-input:focus{border-color:#7c3aed;outline:none;box-shadow:0 0 0 2px rgba(124,58,237,.2)}
+.swarm-load-btn{
+  background:#21262d;color:#e6edf3;border:1px solid #30363d;border-radius:8px;
+  padding:10px 18px;cursor:pointer;font-weight:600;font-size:.82rem;
+  transition:all .15s;
+}
+.swarm-load-btn:hover{background:#30363d;border-color:#7c3aed}
+.swarm-config-summary{
+  background:#161b22;border:1px solid #21262d;border-radius:8px;padding:16px;
+}
+.swarm-config-item{
+  display:flex;justify-content:space-between;padding:6px 0;
+  border-bottom:1px solid #21262d;font-size:.82rem;
+}
+.swarm-config-item:last-child{border-bottom:none}
+.swarm-config-label{color:#8b949e;font-weight:600}
+.swarm-config-value{color:#c9d1d9;text-align:right;max-width:60%}
+.swarm-deploy-btn{
+  background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;
+  border:none;border-radius:10px;padding:14px 32px;cursor:pointer;
+  font-size:1rem;font-weight:700;align-self:center;
+  transition:transform .15s,box-shadow .15s;
+}
+.swarm-deploy-btn:hover{transform:scale(1.03);box-shadow:0 0 24px rgba(124,58,237,.4)}
+.swarm-deploy-btn:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none}
+
+/* Token Info (inside launch panel) */
+.swarm-token-ready{
+  background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.3);
+  border-radius:8px;padding:14px;color:#c9d1d9;font-size:.85rem;line-height:1.6;
+}
+.swarm-ready-badge{
+  display:inline-block;background:#22c55e;color:#000;font-size:.65rem;
+  font-weight:800;padding:2px 8px;border-radius:4px;margin-right:8px;
+  letter-spacing:.5px;
+}
+.swarm-token-deposit{
+  background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3);
+  border-radius:8px;padding:14px;color:#c9d1d9;font-size:.85rem;line-height:1.8;
+}
+.swarm-deposit-badge{
+  display:inline-block;background:#f59e0b;color:#000;font-size:.65rem;
+  font-weight:800;padding:2px 8px;border-radius:4px;margin-right:8px;
+  letter-spacing:.5px;
+}
+.swarm-deposit-addr{
+  display:flex;gap:8px;align-items:center;margin:8px 0;
+  background:#161b22;border:1px solid #30363d;border-radius:6px;padding:8px 12px;
+}
+.swarm-deposit-addr code{
+  flex:1;font-size:.75rem;color:#7c3aed;word-break:break-all;
+  font-family:'Fira Code','SF Mono',monospace;
+}
+.swarm-copy-btn{
+  background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;
+  border:none;border-radius:5px;padding:4px 10px;cursor:pointer;
+  font-size:.72rem;font-weight:600;
+}
+.swarm-check-again-btn{
+  display:inline-block;margin-top:8px;background:#21262d;color:#e6edf3;
+  border:1px solid #30363d;border-radius:6px;padding:6px 14px;
+  cursor:pointer;font-size:.78rem;font-weight:600;
+}
+.swarm-check-again-btn:hover{border-color:#7c3aed}
+.swarm-loading{color:#58a6ff}
+.swarm-error{color:#ef4444}
+
+/* Live Monitor */
+.swarm-monitor{
+  background:#0d1117;border:1px solid #30363d;border-radius:12px;overflow:hidden;
+}
+.swarm-monitor-header{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:16px 20px;border-bottom:1px solid #30363d;
+  background:linear-gradient(135deg,rgba(124,58,237,.08),rgba(37,99,235,.05));
+}
+.swarm-monitor-header h3{margin:0;font-size:1rem;color:#e6edf3}
+.swarm-monitor-header-right{display:flex;align-items:center;gap:12px}
+.swarm-timer{
+  font-family:'Fira Code','SF Mono',monospace;font-size:.9rem;
+  color:#7c3aed;font-weight:600;
+}
+.swarm-stop-btn{
+  background:#21262d;color:#8b949e;border:1px solid #30363d;
+  border-radius:6px;width:28px;height:28px;cursor:pointer;
+  font-size:.9rem;display:flex;align-items:center;justify-content:center;
+}
+.swarm-stop-btn:hover{color:#ef4444;border-color:#ef4444}
+
+/* Reuse DEX demo agent card / progress / timeline / summary styles */
+.swarm-agents{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:16px 20px;
+}
+.swarm-agent-card{
+  background:#161b22;border:1px solid #21262d;border-radius:8px;padding:12px;
+}
+.swarm-agent-card.agent-buyer{border-top:3px solid #22c55e}
+.swarm-agent-card.agent-seller{border-top:3px solid #ef4444}
+.swarm-agent-card.agent-taker{border-top:3px solid #7c3aed}
+.swarm-progress{padding:12px 20px}
+.swarm-phase{font-size:.82rem;color:#8b949e;margin-bottom:6px}
+.swarm-timeline{
+  max-height:350px;overflow-y:auto;padding:12px 20px;
+  font-family:'Fira Code','SF Mono',monospace;font-size:.75rem;
+  background:#0a0e14;border-top:1px solid #21262d;
+}
+.swarm-summary{
+  padding:16px 20px;border-top:1px solid #30363d;
+  background:rgba(34,197,94,.05);
+}
+
+/* History */
+.swarm-history{
+  background:#0d1117;border:1px solid #30363d;border-radius:12px;padding:20px;
+}
+.swarm-history-empty{
+  color:#8b949e;font-size:.85rem;text-align:center;padding:20px;
+}
+.swarm-history-row{
+  display:flex;align-items:center;gap:16px;padding:10px 12px;
+  border-bottom:1px solid #21262d;font-size:.82rem;
+}
+.swarm-history-row:last-child{border-bottom:none}
+.swarm-history-token{font-weight:700;color:#e6edf3;min-width:80px}
+.swarm-history-status{font-size:.75rem;min-width:90px}
+.swarm-history-status.success{color:#22c55e}
+.swarm-history-status.running{color:#f59e0b}
+.swarm-history-status.failed{color:#ef4444}
+.swarm-history-duration{color:#8b949e;min-width:60px}
+.swarm-history-orders{color:#58a6ff;min-width:70px}
+.swarm-history-fills{color:#a855f7;min-width:50px}
+.swarm-history-time{color:#8b949e;margin-left:auto;font-size:.72rem}
+
+@media(max-width:768px){
+  .swarm-hero{padding:28px 20px}
+  .swarm-hero-title{font-size:1.3rem}
+  .swarm-hero-stats{flex-direction:column;gap:12px;align-items:center}
+  .swarm-template-grid{grid-template-columns:1fr}
+  .swarm-agents{grid-template-columns:1fr}
+  .swarm-config-item{flex-direction:column;gap:4px}
+  .swarm-config-value{text-align:left;max-width:100%}
+  .swarm-history-row{flex-wrap:wrap;gap:8px}
+}

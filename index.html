@@ -36,6 +36,7 @@
       <button class="chat-tab active" id="tabCreate" onclick="switchTab('create')">🚀 Create Smart Token</button>
       <button class="chat-tab" id="tabChat" onclick="switchTab('chat')">💬 Smart Token Advisor Chat</button>
       <button class="chat-tab" id="tabDex" onclick="switchTab('dex')">📊 Exchange (Order Book)</button>
+      <button class="chat-tab" id="tabSwarm" onclick="switchTab('swarm')">🤖 AI Agent Swarm</button>
       <button class="chat-tab" id="tabNft" onclick="switchTab('nft')">🎨 Create Smart NFT</button>
       <button class="chat-tab" id="tabManage" onclick="switchTab('manage')">⚙️ Manage Smart Token</button>
     </div>
@@ -731,6 +732,216 @@
 
     </div><!-- end nft-wrap -->
 
+    <!-- ===== AI AGENT SWARM TAB ===== -->
+    <div class="swarm-wrap" id="swarmWrap">
+
+      <!-- Hero Section -->
+      <div class="swarm-hero">
+        <div class="swarm-hero-icon">🤖</div>
+        <h2 class="swarm-hero-title">AI Agent Swarms on Blockchain</h2>
+        <p class="swarm-hero-subtitle">
+          Deploy coordinated AI agents that execute real on-chain trades autonomously.
+          Each agent has its own wallet, funds itself, and operates independently on the Coreum DEX.
+        </p>
+        <div class="swarm-hero-stats">
+          <div class="swarm-hero-stat">
+            <span class="swarm-hero-stat-value">3</span>
+            <span class="swarm-hero-stat-label">Agent Types</span>
+          </div>
+          <div class="swarm-hero-stat">
+            <span class="swarm-hero-stat-value">23+</span>
+            <span class="swarm-hero-stat-label">Orders Per Run</span>
+          </div>
+          <div class="swarm-hero-stat">
+            <span class="swarm-hero-stat-value">100%</span>
+            <span class="swarm-hero-stat-label">On-Chain</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Swarm Templates -->
+      <div class="swarm-templates">
+        <h3 class="swarm-section-title">Swarm Strategies</h3>
+        <div class="swarm-template-grid">
+
+          <!-- Market Maker Swarm (ACTIVE) -->
+          <div class="swarm-template-card active" data-template="market-maker" onclick="swarmSelectTemplate('market-maker')">
+            <div class="swarm-card-accent green"></div>
+            <div class="swarm-card-icon">📈</div>
+            <h4>Market Maker Swarm</h4>
+            <p class="swarm-card-desc">
+              3 AI agents create a full orderbook for your token — buy walls, sell walls,
+              overlapping fills, and taker sweeps. Real liquidity in minutes.
+            </p>
+            <div class="swarm-card-meta">
+              <span>🤖 3 Agents</span>
+              <span>⏱️ ~3 min</span>
+              <span>🔗 Coreum DEX</span>
+            </div>
+            <button class="swarm-launch-btn">Launch Swarm</button>
+          </div>
+
+          <!-- Smart NFT Swarm (COMING SOON) -->
+          <div class="swarm-template-card soon" data-template="nft-minter" onclick="swarmSelectTemplate('nft-minter')">
+            <div class="swarm-card-accent purple"></div>
+            <span class="swarm-soon-badge">COMING SOON</span>
+            <div class="swarm-card-icon">🎨</div>
+            <h4>Smart NFT Swarm</h4>
+            <p class="swarm-card-desc">
+              AI agents mint, list, and trade NFT collections autonomously.
+              Dynamic pricing, rarity-based strategies, and automated floor management.
+            </p>
+            <div class="swarm-card-meta">
+              <span>🤖 4 Agents</span>
+              <span>⏱️ ~5 min</span>
+              <span>🔗 Coreum NFT</span>
+            </div>
+          </div>
+
+          <!-- Arbitrage Swarm (COMING SOON) -->
+          <div class="swarm-template-card soon" data-template="arbitrage" onclick="swarmSelectTemplate('arbitrage')">
+            <div class="swarm-card-accent amber"></div>
+            <span class="swarm-soon-badge">COMING SOON</span>
+            <div class="swarm-card-icon">⚡</div>
+            <h4>Arbitrage Swarm</h4>
+            <p class="swarm-card-desc">
+              Multi-agent cross-pair arbitrage. Monitors price discrepancies across
+              trading pairs and executes profitable trades in real-time.
+            </p>
+            <div class="swarm-card-meta">
+              <span>🤖 5 Agents</span>
+              <span>⏱️ Continuous</span>
+              <span>🔗 Multi-Pair</span>
+            </div>
+          </div>
+
+          <!-- Sentiment Trader (COMING SOON) -->
+          <div class="swarm-template-card soon" data-template="sentiment" onclick="swarmSelectTemplate('sentiment')">
+            <div class="swarm-card-accent blue"></div>
+            <span class="swarm-soon-badge">COMING SOON</span>
+            <div class="swarm-card-icon">🧠</div>
+            <h4>Sentiment Trader</h4>
+            <p class="swarm-card-desc">
+              AI-powered sentiment analysis drives autonomous trading decisions.
+              Agents analyze market signals and coordinate entries and exits.
+            </p>
+            <div class="swarm-card-meta">
+              <span>🤖 3 Agents</span>
+              <span>⏱️ Continuous</span>
+              <span>🔗 AI + DEX</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Launch Configuration Panel (hidden until template selected) -->
+      <div class="swarm-launch-panel" id="swarmLaunchPanel" style="display:none">
+        <h3 class="swarm-section-title">Configure & Deploy</h3>
+        <div class="swarm-launch-config">
+          <div class="swarm-config-row">
+            <label>Token Denom</label>
+            <div class="swarm-config-input-row">
+              <input type="text" id="swarmTokenDenom" placeholder="e.g. mytoken-testcore1abc..." class="swarm-input">
+              <button class="swarm-load-btn" onclick="swarmLoadToken()">Load Token</button>
+            </div>
+          </div>
+          <div id="swarmTokenInfo" style="display:none"></div>
+          <div class="swarm-config-summary">
+            <div class="swarm-config-item">
+              <span class="swarm-config-label">Strategy</span>
+              <span class="swarm-config-value">Market Maker</span>
+            </div>
+            <div class="swarm-config-item">
+              <span class="swarm-config-label">Agents</span>
+              <span class="swarm-config-value">Market Maker A (Buyer) + Market Maker B (Seller) + Taker Bot</span>
+            </div>
+            <div class="swarm-config-item">
+              <span class="swarm-config-label">Orders</span>
+              <span class="swarm-config-value">12 buy limits + 11 sell limits + 6 overlapping fills + 2 taker sweeps</span>
+            </div>
+            <div class="swarm-config-item">
+              <span class="swarm-config-label">Funding</span>
+              <span class="swarm-config-value">Auto-funded from testnet faucet (~600 TX per agent)</span>
+            </div>
+          </div>
+          <button class="swarm-deploy-btn" id="swarmDeployBtn" onclick="swarmDeploy()" disabled>
+            🚀 Deploy Swarm
+          </button>
+        </div>
+      </div>
+
+      <!-- Live Swarm Monitor (hidden until running) -->
+      <div class="swarm-monitor" id="swarmMonitor" style="display:none">
+        <div class="swarm-monitor-header">
+          <h3>🤖 Live Swarm — <span id="swarmMonitorTitle">TOKEN</span></h3>
+          <div class="swarm-monitor-header-right">
+            <span class="swarm-timer" id="swarmTimer">00:00</span>
+            <button class="swarm-stop-btn" onclick="swarmStop()">✕</button>
+          </div>
+        </div>
+
+        <!-- Agent Cards -->
+        <div class="swarm-agents">
+          <div class="swarm-agent-card agent-buyer">
+            <div class="agent-role">🟢 Market Maker A</div>
+            <div class="agent-label">BUYER</div>
+            <div class="agent-addr" id="swarmAddrA">Creating wallet...</div>
+            <div class="agent-stats">
+              <span>Balance: <b id="swarmBalA">--</b></span>
+              <span>Orders: <b id="swarmOrdersA">0</b></span>
+            </div>
+          </div>
+          <div class="swarm-agent-card agent-seller">
+            <div class="agent-role">🔴 Market Maker B</div>
+            <div class="agent-label">SELLER</div>
+            <div class="agent-addr" id="swarmAddrB">Creating wallet...</div>
+            <div class="agent-stats">
+              <span>Balance: <b id="swarmBalB">--</b></span>
+              <span>Orders: <b id="swarmOrdersB">0</b></span>
+            </div>
+          </div>
+          <div class="swarm-agent-card agent-taker">
+            <div class="agent-role">🟣 Taker Bot</div>
+            <div class="agent-label">MARKET TAKER</div>
+            <div class="agent-addr" id="swarmAddrTaker">Creating wallet...</div>
+            <div class="agent-stats">
+              <span>Balance: <b id="swarmBalTaker">--</b></span>
+              <span>Orders: <b id="swarmOrdersTaker">0</b></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Progress -->
+        <div class="swarm-progress">
+          <div class="swarm-phase" id="swarmPhase">Initializing...</div>
+          <div class="dex-demo-bar-wrap">
+            <div class="dex-demo-bar" id="swarmBar" style="width:0%"></div>
+          </div>
+        </div>
+
+        <!-- Timeline -->
+        <div class="swarm-timeline" id="swarmTimeline">
+          <div class="demo-log-entry info">Swarm starting...</div>
+        </div>
+
+        <!-- Summary -->
+        <div class="swarm-summary" id="swarmSummary" style="display:none">
+          <div class="demo-summary-title">Swarm Complete!</div>
+          <div class="demo-summary-grid" id="swarmSummaryGrid"></div>
+        </div>
+      </div>
+
+      <!-- Swarm History -->
+      <div class="swarm-history">
+        <h3 class="swarm-section-title">Run History</h3>
+        <div id="swarmHistoryList">
+          <div class="swarm-history-empty">No swarm runs yet. Deploy your first swarm above!</div>
+        </div>
+      </div>
+
+    </div><!-- end swarm-wrap -->
+
     <!-- ===== MANAGE TAB ===== -->
     <div class="manage-wrap" id="manageWrap">
 
@@ -941,6 +1152,7 @@
 <script src="js/create-nft.js?v=5"></script>
 <script src="js/dex.js?v=5"></script>
 <script src="js/manage.js?v=5"></script>
+<script src="js/swarm.js?v=5"></script>
 <script src="js/auth.js?v=5"></script>
 
 </body>
