@@ -1,0 +1,1311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TXAI Smart Token Studio - Create Smart Tokens with Plain English</title>
+<meta name="description" content="Create Smart Tokens with plain English. Powered by Claude AI + TX Agent SDK on the TX blockchain.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css?v=5">
+</head>
+<body>
+
+
+<!-- Nav -->
+<nav>
+  <div class="inner">
+    <div class="logo"><span>&gt;_</span> TXAI</div>
+    <div class="links">
+<a href="https://github.com/EpicLoop365/txai-token-creation-command-line-tool" target="_blank" class="gh-btn">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+        GitHub
+      </a>
+    </div>
+  </div>
+</nav>
+
+
+<!-- Interactive Demo -->
+<section id="demo">
+  <div class="container">
+
+    <!-- Tab Bar: Create vs Chat -->
+    <div class="chat-tab-bar reveal">
+      <button class="chat-tab active" id="tabCreate" onclick="switchTab('create')">🚀 Create Smart Token</button>
+      <button class="chat-tab" id="tabChat" onclick="switchTab('chat')">💬 Smart Token Advisor Chat</button>
+      <button class="chat-tab" id="tabDex" onclick="switchTab('dex')">📊 Exchange (Order Book)</button>
+      <button class="chat-tab" id="tabSwarm" onclick="switchTab('swarm')">🤖 AI Agent Swarm</button>
+      <button class="chat-tab" id="tabNft" onclick="switchTab('nft')">🎨 Create Smart NFT</button>
+      <button class="chat-tab" id="tabManage" onclick="switchTab('manage')">⚙️ Manage Smart Token</button>
+      <button class="chat-tab" id="tabAuth" onclick="switchTab('auth')">🔐 Auth & Permissions</button>
+    </div>
+
+    <!-- Wallet Choice Modal -->
+    <div class="wallet-choice-overlay" id="walletChoiceOverlay" onclick="if(event.target===this)closeWalletChoice()">
+      <div class="wallet-choice-modal">
+        <div class="wallet-choice-title">How do you want to create this token?</div>
+        <div class="wallet-choice-subtitle">Choose who owns and controls the token after creation</div>
+        <div class="wallet-choice-cards">
+          <div class="wallet-choice-card" onclick="chooseWalletMode('agent')">
+            <div class="wc-icon">&#129302;</div>
+            <div class="wc-label">AI Agent Wallet</div>
+            <div class="wc-desc">Quick demo &mdash; the AI agent creates and owns the token. Great for testing and exploring.</div>
+            <span class="wc-badge free">No wallet needed</span>
+          </div>
+          <div class="wallet-choice-card recommended" onclick="chooseWalletMode('connect')">
+            <div class="wc-icon">&#128273;</div>
+            <div class="wc-label">Your Wallet</div>
+            <div class="wc-desc">Connect Keplr or Leap &mdash; you are the issuer. You can mint, burn, freeze &amp; manage the token.</div>
+            <span class="wc-badge own">You own the token</span>
+          </div>
+        </div>
+        <button class="wallet-choice-dismiss" onclick="closeWalletChoice()">Cancel</button>
+      </div>
+    </div>
+
+    <!-- Global Wallet Bar -->
+    <div class="global-wallet-bar reveal" id="globalWalletBar">
+      <div class="global-wallet-left">
+        <!-- Agent mode (default) -->
+        <div id="gwAgent">
+          <span class="dex-wallet-mode-badge agent">Demo Wallet</span>
+          <span class="global-wallet-hint">Try it free — no wallet needed</span>
+        </div>
+        <!-- Connected mode (hidden) -->
+        <div id="gwConnected" style="display:none">
+          <span class="dex-wallet-mode-badge connected" id="gwProviderBadge">Keplr</span>
+          <span class="global-wallet-addr" id="gwAddr"></span>
+          <span class="global-wallet-hint" id="gwHint">You are the token issuer</span>
+        </div>
+      </div>
+      <div class="global-wallet-right">
+        <!-- Disconnected: Connect button -->
+        <div id="gwActions" style="display:flex;align-items:center;gap:8px">
+          <button class="gw-fund-btn" onclick="fundWallet()" title="Get free testnet TX tokens">Fund Agent</button>
+          <button class="dex-connect-btn" onclick="globalShowWalletOptions()">Connect Wallet</button>
+          <div class="dex-wallet-dropdown" id="gwDropdown">
+            <button class="dex-wallet-opt" onclick="globalConnectWallet('keplr')">
+              <img src="https://raw.githubusercontent.com/nicolaracco/kepler-ui/main/packages/icons/src/icons/keplr-logo.svg" alt="Keplr" onerror="this.style.display='none'">
+              Keplr Wallet
+            </button>
+            <button class="dex-wallet-opt" onclick="globalConnectWallet('leap')">
+              <img src="https://assets.leapwallet.io/logos/leap-cosmos-logo.svg" alt="Leap" onerror="this.style.display='none'">
+              Leap Wallet
+            </button>
+          </div>
+        </div>
+        <!-- Connected: Fund + Disconnect buttons -->
+        <div id="gwDisconnectWrap" style="display:none">
+          <button class="gw-fund-btn" onclick="fundWallet()" title="Get free testnet TX tokens">Fund Wallet</button>
+          <button class="dex-disconnect-btn" onclick="globalDisconnectWallet()">Disconnect</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Create Mode (existing) -->
+    <div id="createModeWrap">
+    <div class="mode-toggle-wrap reveal">
+      <div class="mode-toggle" id="modeToggle" onclick="toggleMode()">
+        <div class="mode-toggle-slider live" id="modeSlider"></div>
+        <div class="mode-toggle-option" id="optSim">Simulated</div>
+        <div class="mode-toggle-option active" id="optLive">Live</div>
+      </div>
+      <div class="mode-badge-testnet visible" id="testnetBadge"><span class="dot-g"></span> Testnet</div>
+    </div>
+
+    <div class="demo-error" id="demoError"></div>
+
+    <div class="demo-input-wrap reveal live-glow" id="demoInputWrap">
+
+      <!-- Creation Mode Picker -->
+      <div class="create-mode-picker" id="createModePicker">
+        <button class="create-mode-card active" id="createModeQuick" onclick="setCreateMode('quick')">
+          <span class="create-mode-icon">&#9889;</span>
+          <span class="create-mode-label">Quick Create</span>
+          <span class="create-mode-desc">Describe in plain English, AI handles the rest</span>
+        </button>
+        <button class="create-mode-card" id="createModeCustom" onclick="setCreateMode('custom')">
+          <span class="create-mode-icon">&#128736;&#65039;</span>
+          <span class="create-mode-label">Custom Build</span>
+          <span class="create-mode-desc">Set every field yourself — full control</span>
+        </button>
+      </div>
+
+      <!-- Quick Create: AI prompt -->
+      <div id="quickCreateWrap">
+        <div class="demo-input-row">
+          <input type="text" class="demo-input" id="demoInput" placeholder='e.g. "a gaming token called GEMS with 5M supply, mintable and burnable"'>
+          <button class="demo-create-btn" id="demoBtn" onclick="runDemo()">Deploy Token (Testnet)</button>
+        </div>
+      </div>
+
+      <!-- Custom Build: manual fields -->
+      <div id="customCreateWrap" style="display:none">
+        <div class="customize-panel show" id="customizePanel">
+
+        <!-- Basics -->
+        <div class="cp-section">
+          <div class="cp-section-title"><em class="icon">📝</em> Basics</div>
+          <div class="cp-row">
+            <div class="cp-field">
+              <label class="cp-label">Token Name</label>
+              <input class="cp-input" id="cpName" placeholder="e.g. GameCoin">
+            </div>
+            <div class="cp-field">
+              <label class="cp-label">Symbol</label>
+              <input class="cp-input" id="cpSymbol" placeholder="e.g. GAME">
+            </div>
+          </div>
+          <div class="cp-row triple">
+            <div class="cp-field">
+              <label class="cp-label">Supply</label>
+              <input class="cp-input" id="cpSupply" type="number" placeholder="1000000" min="1">
+            </div>
+            <div class="cp-field">
+              <label class="cp-label">Decimals</label>
+              <input class="cp-input" id="cpDecimals" type="number" placeholder="6" min="0" max="18" value="6">
+            </div>
+            <div class="cp-field">
+              <label class="cp-label">Description</label>
+              <input class="cp-input" id="cpDesc" placeholder="Brief description...">
+            </div>
+          </div>
+        </div>
+
+        <!-- Features -->
+        <div class="cp-section">
+          <div class="cp-section-title"><em class="icon">⚙️</em> Features</div>
+          <div class="cp-features" id="cpFeatures">
+            <div class="cp-feature" data-feature="minting" onclick="toggleFeature(this)">
+              <div class="cp-feature-check"><svg viewBox="0 0 12 12" fill="none" stroke="var(--bg)" stroke-width="2"><path d="M2 6l3 3 5-5"/></svg></div>
+              <div><div class="cp-feature-label">Mintable</div><div class="cp-feature-tip">Expand supply later</div></div>
+            </div>
+            <div class="cp-feature" data-feature="burning" onclick="toggleFeature(this)">
+              <div class="cp-feature-check"><svg viewBox="0 0 12 12" fill="none" stroke="var(--bg)" stroke-width="2"><path d="M2 6l3 3 5-5"/></svg></div>
+              <div><div class="cp-feature-label">Burnable</div><div class="cp-feature-tip">Reduce supply</div></div>
+            </div>
+            <div class="cp-feature" data-feature="freezing" onclick="toggleFeature(this)">
+              <div class="cp-feature-check"><svg viewBox="0 0 12 12" fill="none" stroke="var(--bg)" stroke-width="2"><path d="M2 6l3 3 5-5"/></svg></div>
+              <div><div class="cp-feature-label">Freezable</div><div class="cp-feature-tip">Freeze accounts</div></div>
+            </div>
+            <div class="cp-feature" data-feature="whitelisting" onclick="toggleFeature(this)">
+              <div class="cp-feature-check"><svg viewBox="0 0 12 12" fill="none" stroke="var(--bg)" stroke-width="2"><path d="M2 6l3 3 5-5"/></svg></div>
+              <div><div class="cp-feature-label">Whitelist</div><div class="cp-feature-tip">Restrict holders</div></div>
+            </div>
+            <div class="cp-feature" data-feature="clawback" onclick="toggleFeature(this)">
+              <div class="cp-feature-check"><svg viewBox="0 0 12 12" fill="none" stroke="var(--bg)" stroke-width="2"><path d="M2 6l3 3 5-5"/></svg></div>
+              <div><div class="cp-feature-label">Clawback</div><div class="cp-feature-tip">Reclaim tokens</div></div>
+            </div>
+            <div class="cp-feature" data-feature="ibcEnabled" onclick="toggleFeature(this)">
+              <div class="cp-feature-check"><svg viewBox="0 0 12 12" fill="none" stroke="var(--bg)" stroke-width="2"><path d="M2 6l3 3 5-5"/></svg></div>
+              <div><div class="cp-feature-label">IBC</div><div class="cp-feature-tip">Cross-chain transfers</div></div>
+            </div>
+            <div class="cp-feature" data-feature="globalFreeze" onclick="toggleFeature(this)">
+              <div class="cp-feature-check"><svg viewBox="0 0 12 12" fill="none" stroke="var(--bg)" stroke-width="2"><path d="M2 6l3 3 5-5"/></svg></div>
+              <div><div class="cp-feature-label">Global Freeze</div><div class="cp-feature-tip">Emergency pause</div></div>
+            </div>
+            <div class="cp-feature" data-feature="governance" onclick="toggleFeature(this)">
+              <div class="cp-feature-check"><svg viewBox="0 0 12 12" fill="none" stroke="var(--bg)" stroke-width="2"><path d="M2 6l3 3 5-5"/></svg></div>
+              <div><div class="cp-feature-label">Governance</div><div class="cp-feature-tip">DAO voting</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Token Economics -->
+        <div class="cp-section">
+          <div class="cp-section-title"><em class="icon">💰</em> Token Economics</div>
+          <div class="cp-slider-row">
+            <div class="cp-slider-label">Burn Rate</div>
+            <div class="cp-slider-wrap">
+              <input type="range" class="cp-slider" id="cpBurnRate" min="0" max="20" step="0.5" value="0" oninput="updateSlider('cpBurnRate','cpBurnVal')">
+              <span class="cp-slider-value" id="cpBurnVal">0%</span>
+            </div>
+          </div>
+          <div class="cp-hint">Percentage of tokens automatically burned on every transfer. Creates deflationary pressure.</div>
+          <div class="cp-slider-row" style="margin-top:14px">
+            <div class="cp-slider-label">Transfer Fee</div>
+            <div class="cp-slider-wrap">
+              <input type="range" class="cp-slider" id="cpFeeRate" min="0" max="20" step="0.5" value="0" oninput="updateSlider('cpFeeRate','cpFeeVal')">
+              <span class="cp-slider-value" id="cpFeeVal">0%</span>
+            </div>
+          </div>
+          <div class="cp-hint">Percentage of every transfer sent to the token issuer as a fee. Creates passive revenue.</div>
+        </div>
+
+        <!-- Metadata -->
+        <div class="cp-section">
+          <div class="cp-section-title"><em class="icon">🖼️</em> Metadata</div>
+          <div class="cp-row">
+            <div class="cp-field" style="grid-column:1/-1">
+              <label class="cp-label">Token Logo URL</label>
+              <input class="cp-input" id="cpUri" placeholder="https://yoursite.com/logo.png">
+              <div class="logo-preview-wrap" id="logoPreviewWrap" style="display:none">
+                <img id="logoPreview" class="logo-preview-img" alt="Token logo preview">
+                <button class="logo-remove-btn" onclick="removeLogoPreview()" title="Clear">&times;</button>
+              </div>
+            </div>
+          </div>
+          <div class="cp-hint">Upload an image or paste a URL for your token logo. Uploaded images are hosted via imgbb (free).</div>
+        </div>
+
+      </div><!-- end customizePanel -->
+        <button class="demo-create-btn custom-deploy-btn" id="demoBtnCustom" onclick="runDemo()">Deploy Token (Testnet)</button>
+      </div><!-- end customCreateWrap -->
+
+      <div class="demo-disclaimer visible" id="demoDisclaimer">Tokens are deployed on TX testnet. No real value.</div>
+    </div>
+
+    <div class="demo-processing" id="demoProcessing">
+      <div class="processing-header">
+        <div class="processing-spinner"></div>
+        <div class="processing-title">Claude AI Processing</div>
+      </div>
+      <div class="processing-stream" id="demoStream"></div>
+    </div>
+
+    <div class="token-card" id="tokenCard">
+      <div class="tc-header">
+        <div class="tc-badge" id="tcBadge">
+          <div class="tc-badge-icon" id="tcIcon"></div>
+          <div>
+            <div class="tc-badge-name" id="tcName"></div>
+            <div class="tc-badge-sym" id="tcSym"></div>
+          </div>
+        </div>
+        <span class="tc-deployed"><span class="dot-live"></span> Deployed on TX</span>
+      </div>
+      <div class="tc-body">
+        <div class="tc-stats" id="tcStats"></div>
+        <div class="tc-features" id="tcFeatures"></div>
+        <div class="tc-cli">
+          <code id="tcCmd"></code>
+          <button class="tc-copy" onclick="copyCmd()">Copy</button>
+        </div>
+        <div class="tc-json-wrap">
+          <div class="tc-json-bar"><span>config.json</span><button class="tc-copy" onclick="copyJson()">Copy JSON</button></div>
+          <div class="tc-json" id="tcJson"></div>
+        </div>
+        <div class="tc-explorer">
+          <div class="tc-explorer-icon">&#9889;</div>
+          <div class="tc-explorer-text">
+            Token deployed successfully!<br>
+            <a href="#" onclick="return false">View on TX Explorer &#8599;</a>
+          </div>
+        </div>
+      </div>
+    </div>
+    </div><!-- end createModeWrap -->
+
+    <!-- Chat Mode -->
+    <div class="chat-wrap" id="chatWrap">
+      <div class="chat-messages" id="chatMessages">
+        <div class="chat-welcome">
+          <div class="chat-welcome-icon">💬</div>
+          <div class="chat-welcome-title">Smart Token Advisor</div>
+          <div class="chat-welcome-sub">Tell me about your project and I'll help you design the perfect Smart Token — name, supply, features, and strategy.</div>
+          <div class="chat-starters">
+            <button class="chat-starter" onclick="chatFromStarter('I want to create a loyalty program for my coffee shop')">☕ Loyalty Program</button>
+            <button class="chat-starter" onclick="chatFromStarter('I need a governance token for my DAO')">🏛️ DAO Governance</button>
+            <button class="chat-starter" onclick="chatFromStarter('Help me create a gaming token')">🎮 Gaming Token</button>
+            <button class="chat-starter" onclick="chatFromStarter('I want to tokenize event tickets')">🎫 Event Tickets</button>
+          </div>
+        </div>
+      </div>
+      <div class="chat-input-row">
+        <input type="text" class="chat-input" id="chatInput" placeholder="Tell me about your token project..." onkeydown="if(event.key==='Enter')sendChatMessage()">
+        <button class="chat-send-btn" id="chatSendBtn" onclick="sendChatMessage()">Send →</button>
+      </div>
+    </div>
+
+    <!-- DEX Mode -->
+    <div class="dex-wrap" id="dexWrap">
+
+      <!-- Pair Bar -->
+      <div class="dex-pair-bar">
+        <div class="dex-pair-select-wrap">
+          <select class="dex-pair-select" id="dexPairSelect" onchange="dexOnPairSelect()">
+            <option value="">-- Select Pair --</option>
+          </select>
+        </div>
+        <span class="dex-pair-or">or</span>
+        <input type="text" class="dex-pair-manual" id="dexBaseDenom" placeholder="Paste denom (e.g. mytoken-testcore1...)">
+        <button class="dex-pair-load" onclick="dexLoadOrderbook()">Load</button>
+        <button class="dex-demo-btn" onclick="dexStartDemo()" title="Populate this token's orderbook with AI agents">🤖 Populate Orderbook</button>
+        <button class="dex-add-wallet-btn" id="dexAddWalletBtn" onclick="dexAddTokenToWallet()" title="Add this token to your Leap/Keplr wallet" style="display:none">➕ Add to Wallet</button>
+
+        <div class="dex-stats-strip">
+          <div class="dex-stat"><span class="dex-stat-label">Last Price</span><span class="dex-stat-value" id="dexStatLast">--</span></div>
+          <div class="dex-stat"><span class="dex-stat-label">Spread</span><span class="dex-stat-value purple" id="dexStatSpread">--</span></div>
+          <div class="dex-stat"><span class="dex-stat-label">Best Bid</span><span class="dex-stat-value green" id="dexStatBid">--</span></div>
+          <div class="dex-stat"><span class="dex-stat-label">Best Ask</span><span class="dex-stat-value red" id="dexStatAsk">--</span></div>
+          <div class="dex-stat"><span class="dex-stat-label">Orders</span><span class="dex-stat-value" id="dexStatCount">0</span></div>
+          <div class="dex-live-badge"><span class="dex-live-dot" id="dexLiveDot"></span><span id="dexLiveText">Idle</span></div>
+        </div>
+
+      </div>
+
+      <!-- Processing Overlay -->
+      <div class="dex-proc" id="dexProc">
+        <div class="dex-proc-hdr">
+          <div class="dex-proc-spinner"></div>
+          <div class="dex-proc-title">Processing Order...</div>
+        </div>
+        <div class="dex-proc-stream" id="dexProcStream"></div>
+      </div>
+
+      <!-- Live Demo Overlay -->
+      <!-- Swarm Config Panel (shown before launch) -->
+      <div class="dex-deposit-overlay" id="dexSwarmConfigModal" style="display:none">
+        <div class="dex-deposit-panel" style="max-width:480px">
+          <div class="dex-deposit-header">
+            <h3>🤖 Configure Agent Swarm</h3>
+            <button class="dex-demo-close" onclick="document.getElementById('dexSwarmConfigModal').style.display='none'">✕</button>
+          </div>
+          <div class="dex-deposit-body">
+            <p style="color:var(--text-dim);font-size:.88rem;margin-bottom:20px">
+              AI agents will populate the <b id="swarmConfigToken">TOKEN</b> orderbook on the live DEX.
+            </p>
+
+            <div class="swarm-config-field">
+              <label class="auth-label">Strategy</label>
+              <div class="swarm-strategy-cards">
+                <button class="swarm-strat-card active" data-strat="market-maker" onclick="dexSelectStrategy(this)">
+                  <span class="swarm-strat-icon">📊</span>
+                  <span class="swarm-strat-name">Market Maker</span>
+                  <span class="swarm-strat-tip">Buy & sell orders around a fair price with overlap fills</span>
+                </button>
+                <button class="swarm-strat-card" data-strat="stress-test" onclick="dexSelectStrategy(this)">
+                  <span class="swarm-strat-icon">⚡</span>
+                  <span class="swarm-strat-name">Stress Test</span>
+                  <span class="swarm-strat-tip">Rapid fire orders to test throughput & fills</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="swarm-config-field">
+              <label class="auth-label">Intensity</label>
+              <div style="display:flex;align-items:center;gap:12px">
+                <input type="range" class="cp-slider" id="swarmIntensity" min="1" max="3" step="1" value="2"
+                  oninput="dexUpdateIntensityLabel()">
+                <span class="swarm-intensity-label" id="swarmIntensityLabel">Standard</span>
+              </div>
+              <div class="swarm-intensity-info" id="swarmIntensityInfo">
+                ~25 orders &bull; 6 overlap fills &bull; 3 agents
+              </div>
+            </div>
+
+            <div style="text-align:center;margin-top:20px">
+              <button class="dex-deposit-check-btn" onclick="dexConfirmSwarmLaunch()" style="padding:14px 36px;font-size:.95rem">
+                🚀 Launch Swarm
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="dex-demo-overlay" id="dexDemoOverlay" style="display:none">
+        <div class="dex-demo-panel">
+          <div class="dex-demo-header">
+            <h3>🤖 AI Agent Swarm — Populating <span id="dexDemoTokenName">Token</span></h3>
+            <div class="dex-demo-header-right">
+              <span class="dex-demo-timer" id="dexDemoTimer">00:00</span>
+              <button class="dex-demo-close" onclick="dexStopDemo()">✕</button>
+            </div>
+          </div>
+
+          <!-- Agent Cards -->
+          <div class="dex-demo-agents">
+            <div class="dex-demo-agent-card agent-buyer" id="dexDemoAgentA">
+              <div class="agent-role">🟢 Market Maker A</div>
+              <div class="agent-label">BUYER</div>
+              <div class="agent-addr" id="demoAddrA">Creating wallet...</div>
+              <div class="agent-stats">
+                <span>Balance: <b id="demoBalA">--</b></span>
+                <span>Orders: <b id="demoOrdersA">0</b></span>
+              </div>
+            </div>
+            <div class="dex-demo-agent-card agent-seller" id="dexDemoAgentB">
+              <div class="agent-role">🔴 Market Maker B</div>
+              <div class="agent-label">SELLER</div>
+              <div class="agent-addr" id="demoAddrB">Creating wallet...</div>
+              <div class="agent-stats">
+                <span>Balance: <b id="demoBalB">--</b></span>
+                <span>Orders: <b id="demoOrdersB">0</b></span>
+              </div>
+            </div>
+            <div class="dex-demo-agent-card agent-taker" id="dexDemoAgentTaker">
+              <div class="agent-role">🟣 Taker Bot</div>
+              <div class="agent-label">MARKET TAKER</div>
+              <div class="agent-addr" id="demoAddrTaker">Creating wallet...</div>
+              <div class="agent-stats">
+                <span>Balance: <b id="demoBalTaker">--</b></span>
+                <span>Orders: <b id="demoOrdersTaker">0</b></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Progress & Timeline -->
+          <div class="dex-demo-progress">
+            <div class="dex-demo-phase" id="dexDemoPhase">Initializing...</div>
+            <div class="dex-demo-bar-wrap">
+              <div class="dex-demo-bar" id="dexDemoBar" style="width:0%"></div>
+            </div>
+          </div>
+
+          <div class="dex-demo-timeline" id="dexDemoTimeline">
+            <div class="demo-log-entry info">Demo starting — 3 AI agents will create a full orderbook...</div>
+          </div>
+
+          <!-- Summary (shown at end) -->
+          <div class="dex-demo-summary" id="dexDemoSummary" style="display:none">
+            <div class="demo-summary-title">Demo Complete!</div>
+            <div class="demo-summary-grid" id="demoSummaryGrid"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Deposit Modal (shown when agent doesn't hold the token) -->
+      <div class="dex-deposit-overlay" id="dexDepositModal" style="display:none">
+        <div class="dex-deposit-panel">
+          <div class="dex-deposit-header">
+            <h3>📦 Token Deposit Required</h3>
+            <button class="dex-demo-close" onclick="dexCloseDeposit()">✕</button>
+          </div>
+          <div class="dex-deposit-body">
+            <p class="dex-deposit-desc">
+              The AI trading agents need <b><span id="dexDepositAmount">7,000</span>
+              <span id="dexDepositSymbol">TOKEN</span></b> to populate your orderbook.
+            </p>
+
+            <!-- Step-by-step instructions -->
+            <div class="dex-deposit-steps">
+              <div class="dex-deposit-step">
+                <span class="dex-deposit-step-num">1</span>
+                <div class="dex-deposit-step-text">
+                  <strong>Add token to your wallet</strong> so you can see your balance
+                  <button class="dex-deposit-add-btn" id="dexDepositAddBtn" onclick="dexDepositAddToWallet()">➕ Add to Wallet</button>
+                </div>
+              </div>
+              <div class="dex-deposit-step">
+                <span class="dex-deposit-step-num">2</span>
+                <div class="dex-deposit-step-text">
+                  <strong>Send tokens</strong> to the agent address below
+                  <div class="dex-deposit-address-row">
+                    <code id="dexDepositAddress">testcore1...</code>
+                    <button class="dex-deposit-copy" onclick="dexCopyDepositAddr()">📋 Copy</button>
+                  </div>
+                </div>
+              </div>
+              <div class="dex-deposit-step">
+                <span class="dex-deposit-step-num">3</span>
+                <div class="dex-deposit-step-text">
+                  <strong>Click below</strong> to verify deposit & launch the swarm
+                </div>
+              </div>
+            </div>
+
+            <p class="dex-deposit-note">
+              After the demo completes, unused tokens will be returned to your wallet automatically.
+            </p>
+            <div class="dex-deposit-actions">
+              <button class="dex-deposit-check-btn" id="dexDepositCheckBtn" onclick="dexCheckAndStart()">
+                🟢 Check & Start Demo
+              </button>
+              <div class="dex-deposit-status" id="dexDepositStatus"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Terminal Grid -->
+      <div class="dex-terminal">
+
+        <!-- LEFT: Orderbook -->
+        <div class="dex-terminal-panel p-orderbook">
+          <div class="dex-panel-hdr">
+            Orderbook
+            <span id="dexObStatus" style="font-size:.6rem;font-weight:500;text-transform:none;letter-spacing:0">
+              <span class="dex-status-dot idle"></span> Idle
+            </span>
+          </div>
+          <div style="padding:0;flex:1;display:flex;flex-direction:column;overflow:hidden">
+            <div class="dex-ob-hdr">
+              <span>Price</span>
+              <span>Amount</span>
+              <span>Total</span>
+            </div>
+            <div class="dex-ob-asks" id="dexAskRows"></div>
+            <div class="dex-ob-spread" id="dexSpreadRow" style="display:none">
+              <span>Spread:</span> <span class="sv" id="dexSpreadVal">--</span> <span class="sp" id="dexSpreadPct"></span>
+            </div>
+            <div class="dex-ob-bids" id="dexBidRows"></div>
+            <div class="dex-ob-empty" id="dexObEmpty">Select a pair or enter a denom to begin trading.</div>
+          </div>
+        </div>
+
+        <!-- CENTER: Depth / AI Advisor -->
+        <div class="dex-terminal-panel p-center">
+          <div class="dex-center-tabs">
+            <button class="dex-center-tab active" onclick="dexSetCenterTab('depth')">Depth</button>
+            <button class="dex-center-tab" onclick="dexSetCenterTab('advisor')">AI Advisor</button>
+          </div>
+          <div class="dex-center-content">
+            <!-- Depth Chart Pane -->
+            <div class="dex-center-pane active" id="dexDepthPane">
+              <canvas class="dex-depth-canvas" id="dexDepthCanvas"></canvas>
+            </div>
+            <!-- AI Advisor Pane -->
+            <div class="dex-center-pane" id="dexAdvisorPane">
+              <div class="dex-chat-messages" id="dexChatMessages">
+                <div class="dex-chat-msg">
+                  <div class="dex-chat-avatar ai">AI</div>
+                  <div class="dex-chat-bubble ai">I'm your AI trading advisor for the TX orderbook. Ask about strategies, or describe an order in natural language.</div>
+                </div>
+              </div>
+              <div class="dex-chat-input-row">
+                <input type="text" class="dex-chat-input" id="dexChatInput" placeholder="Ask about trading or describe an order..." onkeydown="if(event.key==='Enter')dexSendChat()">
+                <button class="dex-chat-send" id="dexChatSendBtn" onclick="dexSendChat()">Send</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT: Order Form -->
+        <div class="dex-terminal-panel p-order-form">
+          <div class="dex-panel-hdr">Place Order</div>
+          <div class="dex-panel-body">
+            <div class="dex-side-tabs">
+              <button class="dex-side-tab buy active" onclick="dexSetSide('buy')">Buy</button>
+              <button class="dex-side-tab sell" onclick="dexSetSide('sell')">Sell</button>
+            </div>
+
+            <div class="dex-type-tabs">
+              <button class="dex-type-tab active" onclick="dexSetOrderType('limit')">Limit</button>
+              <button class="dex-type-tab" onclick="dexSetOrderType('market')">Market</button>
+            </div>
+
+            <div class="dex-form-group" id="dexPriceGroup">
+              <label class="dex-form-label">Price (TX)</label>
+              <input type="number" class="dex-form-input" id="dexPrice" placeholder="0.00" step="any" oninput="dexUpdateTotal()">
+            </div>
+
+            <div class="dex-form-group">
+              <label class="dex-form-label">Amount (Token)</label>
+              <input type="number" class="dex-form-input" id="dexQty" placeholder="0.00" step="any" oninput="dexUpdateTotal()">
+            </div>
+
+            <div class="dex-pct-btns">
+              <button class="dex-pct-btn" onclick="dexSetPct(25)">25%</button>
+              <button class="dex-pct-btn" onclick="dexSetPct(50)">50%</button>
+              <button class="dex-pct-btn" onclick="dexSetPct(75)">75%</button>
+              <button class="dex-pct-btn" onclick="dexSetPct(100)">100%</button>
+            </div>
+
+            <div class="dex-total">
+              <span class="lbl">Total</span>
+              <span id="dexTotalDisplay">0.00 TX</span>
+            </div>
+
+            <button class="dex-place-btn buy" id="dexPlaceBtn" onclick="dexPlaceOrder()" disabled>
+              Place Buy Order
+            </button>
+
+            <div class="dex-balance-info">
+              Available: <span class="val" id="dexAvailBalance">--</span>
+            </div>
+
+            <div class="dex-wallet-info">
+              <span class="dex-wallet-mode-badge agent" id="dexModeBadge">Agent</span>
+              <span id="dexWalletAddr">Loading...</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- BOTTOM-LEFT: Trade History -->
+        <div class="dex-terminal-panel p-history">
+          <div class="dex-panel-hdr">Trade History</div>
+          <div style="padding:0;flex:1;overflow-y:auto">
+            <div class="dex-trade-row header">
+              <span>Price</span><span class="t-amt">Amount</span><span class="t-time">Time</span>
+            </div>
+            <div id="dexTradeHistory">
+              <div class="dex-trade-empty">Monitoring for trades...</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- BOTTOM-RIGHT: Open Orders / Session History -->
+        <div class="dex-terminal-panel p-orders">
+          <div class="dex-orders-tabs">
+            <button class="dex-orders-tab active" onclick="dexSetOrdersTab('open')">Open Orders</button>
+            <button class="dex-orders-tab" onclick="dexSetOrdersTab('session')">Session History</button>
+          </div>
+          <div style="flex:1;overflow-y:auto">
+            <div class="dex-orders-pane active" id="dexOpenOrdersPane">
+              <div id="dexMyOrdersBody">
+                <div class="dex-no-orders">No open orders</div>
+              </div>
+            </div>
+            <div class="dex-orders-pane" id="dexSessionPane">
+              <div id="dexSessionHistory">
+                <div class="dex-no-orders">No orders placed this session</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- end dex-terminal -->
+
+    </div>
+
+    <!-- ===== NFT TAB ===== -->
+    <div class="nft-wrap" id="nftWrap">
+
+      <!-- Create Collection -->
+      <div class="nft-section">
+        <h3 class="nft-section-title">🎨 Create Smart NFT</h3>
+        <p class="nft-section-desc">Issue a new NFT class on the TX blockchain with native features like royalties, freezing, and soulbound.</p>
+
+        <div class="nft-form-grid">
+          <div class="nft-field">
+            <label>Collection Symbol <span class="nft-required">*</span></label>
+            <input type="text" class="nft-input" id="nftSymbol" placeholder="e.g. PUNKS" maxlength="20">
+          </div>
+          <div class="nft-field">
+            <label>Collection Name <span class="nft-required">*</span></label>
+            <input type="text" class="nft-input" id="nftName" placeholder="e.g. CryptoPunks Collection">
+          </div>
+          <div class="nft-field nft-field-full">
+            <label>Description</label>
+            <textarea class="nft-input nft-textarea" id="nftDescription" placeholder="Describe your NFT collection..." rows="2"></textarea>
+          </div>
+          <div class="nft-field">
+            <label>URI (metadata link)</label>
+            <input type="text" class="nft-input" id="nftUri" placeholder="https://...">
+          </div>
+          <div class="nft-field">
+            <label>Royalty Rate (%)</label>
+            <input type="number" class="nft-input" id="nftRoyalty" placeholder="e.g. 5" min="0" max="100" step="0.1">
+          </div>
+        </div>
+
+        <!-- Features -->
+        <div class="nft-features-bar">
+          <label class="nft-feature-toggle">
+            <input type="checkbox" id="nftFeatBurning" checked> <span>🔥 Burning</span>
+          </label>
+          <label class="nft-feature-toggle">
+            <input type="checkbox" id="nftFeatFreezing"> <span>❄️ Freezing</span>
+          </label>
+          <label class="nft-feature-toggle">
+            <input type="checkbox" id="nftFeatWhitelisting"> <span>✅ Whitelisting</span>
+          </label>
+          <label class="nft-feature-toggle">
+            <input type="checkbox" id="nftFeatDisableSending"> <span>🚫 Disable Sending</span>
+          </label>
+          <label class="nft-feature-toggle">
+            <input type="checkbox" id="nftFeatSoulbound"> <span>🔗 Soulbound</span>
+          </label>
+        </div>
+
+        <button class="nft-create-btn" id="nftCreateBtn" onclick="nftIssueClass()">
+          <span id="nftCreateBtnText">🚀 Create Collection</span>
+          <span id="nftCreateSpinner" class="nft-spinner" style="display:none"></span>
+        </button>
+
+        <!-- Result -->
+        <div class="nft-result" id="nftCreateResult" style="display:none">
+          <div class="nft-result-icon" id="nftCreateResultIcon">✓</div>
+          <div class="nft-result-msg" id="nftCreateResultMsg"></div>
+          <div class="nft-result-classid" id="nftCreateResultClassId"></div>
+          <a class="nft-result-link" id="nftCreateResultLink" target="_blank">View on Explorer</a>
+        </div>
+      </div>
+
+      <!-- Divider -->
+      <div class="nft-divider"></div>
+
+      <!-- Mint NFTs -->
+      <div class="nft-section">
+        <h3 class="nft-section-title">⚡ Mint NFTs</h3>
+        <p class="nft-section-desc">Mint individual NFTs into an existing collection.</p>
+
+        <div class="nft-form-grid">
+          <div class="nft-field">
+            <label>Class ID <span class="nft-required">*</span></label>
+            <input type="text" class="nft-input" id="nftMintClassId" placeholder="symbol-testcore1...">
+          </div>
+          <div class="nft-field">
+            <label>NFT ID <span class="nft-required">*</span></label>
+            <input type="text" class="nft-input" id="nftMintId" placeholder="e.g. nft-001">
+          </div>
+          <div class="nft-field">
+            <label>Metadata URI</label>
+            <input type="text" class="nft-input" id="nftMintUri" placeholder="https://...metadata.json">
+          </div>
+          <div class="nft-field">
+            <label>Recipient (optional)</label>
+            <input type="text" class="nft-input" id="nftMintRecipient" placeholder="testcore1... (default: issuer)">
+          </div>
+        </div>
+
+        <!-- Batch Mint -->
+        <div class="nft-batch-bar">
+          <label class="nft-batch-label">
+            <input type="checkbox" id="nftBatchMode" onchange="nftToggleBatch()"> Batch Mint
+          </label>
+          <div class="nft-batch-fields" id="nftBatchFields" style="display:none">
+            <label>Count</label>
+            <input type="number" class="nft-input nft-input-sm" id="nftBatchCount" value="10" min="1" max="100">
+            <label>ID Prefix</label>
+            <input type="text" class="nft-input nft-input-sm" id="nftBatchPrefix" value="nft-" placeholder="nft-">
+          </div>
+        </div>
+
+        <button class="nft-create-btn nft-mint-btn" id="nftMintBtn" onclick="nftMintToken()">
+          <span id="nftMintBtnText">⚡ Mint NFT</span>
+          <span id="nftMintSpinner" class="nft-spinner" style="display:none"></span>
+        </button>
+
+        <!-- Mint Result -->
+        <div class="nft-result" id="nftMintResult" style="display:none">
+          <div class="nft-result-icon" id="nftMintResultIcon">✓</div>
+          <div class="nft-result-msg" id="nftMintResultMsg"></div>
+          <a class="nft-result-link" id="nftMintResultLink" target="_blank">View on Explorer</a>
+        </div>
+      </div>
+
+      <!-- Divider -->
+      <div class="nft-divider"></div>
+
+      <!-- Browse NFTs -->
+      <div class="nft-section">
+        <h3 class="nft-section-title">🔍 Browse NFTs</h3>
+
+        <div class="nft-browse-bar">
+          <input type="text" class="nft-input" id="nftBrowseInput" placeholder="Enter Class ID or wallet address..." style="flex:1">
+          <button class="nft-browse-btn" onclick="nftBrowse()">Search</button>
+        </div>
+
+        <!-- Class Info Card -->
+        <div class="nft-class-card" id="nftClassCard" style="display:none">
+          <div class="nft-class-header">
+            <div class="nft-class-name" id="nftClassName">--</div>
+            <div class="nft-class-id" id="nftClassId">--</div>
+          </div>
+          <div class="nft-class-meta">
+            <span id="nftClassIssuer">Issuer: --</span>
+            <span id="nftClassRoyalty">Royalty: --</span>
+          </div>
+          <div class="nft-class-features" id="nftClassFeatures"></div>
+        </div>
+
+        <!-- NFT Grid -->
+        <div class="nft-grid" id="nftGrid"></div>
+
+        <!-- Empty State -->
+        <div class="nft-empty" id="nftEmpty" style="display:none">
+          No NFTs found.
+        </div>
+      </div>
+
+    </div><!-- end nft-wrap -->
+
+    <!-- ===== AI AGENT SWARM TAB ===== -->
+    <div class="swarm-wrap" id="swarmWrap">
+
+      <!-- Hero Section -->
+      <div class="swarm-hero">
+        <div class="swarm-hero-icon">🤖</div>
+        <h2 class="swarm-hero-title">AI Agent Swarms on Blockchain</h2>
+        <p class="swarm-hero-subtitle">
+          Deploy coordinated AI agents that execute real on-chain trades autonomously.
+          Each agent has its own wallet, funds itself, and operates independently on the Coreum DEX.
+        </p>
+        <div class="swarm-hero-stats">
+          <div class="swarm-hero-stat">
+            <span class="swarm-hero-stat-value">3</span>
+            <span class="swarm-hero-stat-label">Agent Types</span>
+          </div>
+          <div class="swarm-hero-stat">
+            <span class="swarm-hero-stat-value">23+</span>
+            <span class="swarm-hero-stat-label">Orders Per Run</span>
+          </div>
+          <div class="swarm-hero-stat">
+            <span class="swarm-hero-stat-value">100%</span>
+            <span class="swarm-hero-stat-label">On-Chain</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Swarm Templates -->
+      <div class="swarm-templates">
+        <h3 class="swarm-section-title">Swarm Strategies</h3>
+        <div class="swarm-template-grid">
+
+          <!-- Market Maker Swarm (ACTIVE) -->
+          <div class="swarm-template-card active" data-template="market-maker" onclick="swarmSelectTemplate('market-maker')">
+            <div class="swarm-card-accent green"></div>
+            <div class="swarm-card-icon">📈</div>
+            <h4>Market Maker Swarm</h4>
+            <p class="swarm-card-desc">
+              3 AI agents create a full orderbook for your token — buy walls, sell walls,
+              overlapping fills, and taker sweeps. Real liquidity in minutes.
+            </p>
+            <div class="swarm-card-meta">
+              <span>🤖 3 Agents</span>
+              <span>⏱️ ~3 min</span>
+              <span>🔗 Coreum DEX</span>
+            </div>
+            <button class="swarm-launch-btn">Launch Swarm</button>
+          </div>
+
+          <!-- Smart NFT Swarm (COMING SOON) -->
+          <div class="swarm-template-card soon" data-template="nft-minter" onclick="swarmSelectTemplate('nft-minter')">
+            <div class="swarm-card-accent purple"></div>
+            <span class="swarm-soon-badge">COMING SOON</span>
+            <div class="swarm-card-icon">🎨</div>
+            <h4>Smart NFT Swarm</h4>
+            <p class="swarm-card-desc">
+              AI agents mint, list, and trade NFT collections autonomously.
+              Dynamic pricing, rarity-based strategies, and automated floor management.
+            </p>
+            <div class="swarm-card-meta">
+              <span>🤖 4 Agents</span>
+              <span>⏱️ ~5 min</span>
+              <span>🔗 Coreum NFT</span>
+            </div>
+          </div>
+
+          <!-- Arbitrage Swarm (COMING SOON) -->
+          <div class="swarm-template-card soon" data-template="arbitrage" onclick="swarmSelectTemplate('arbitrage')">
+            <div class="swarm-card-accent amber"></div>
+            <span class="swarm-soon-badge">COMING SOON</span>
+            <div class="swarm-card-icon">⚡</div>
+            <h4>Arbitrage Swarm</h4>
+            <p class="swarm-card-desc">
+              Multi-agent cross-pair arbitrage. Monitors price discrepancies across
+              trading pairs and executes profitable trades in real-time.
+            </p>
+            <div class="swarm-card-meta">
+              <span>🤖 5 Agents</span>
+              <span>⏱️ Continuous</span>
+              <span>🔗 Multi-Pair</span>
+            </div>
+          </div>
+
+          <!-- Sentiment Trader (COMING SOON) -->
+          <div class="swarm-template-card soon" data-template="sentiment" onclick="swarmSelectTemplate('sentiment')">
+            <div class="swarm-card-accent blue"></div>
+            <span class="swarm-soon-badge">COMING SOON</span>
+            <div class="swarm-card-icon">🧠</div>
+            <h4>Sentiment Trader</h4>
+            <p class="swarm-card-desc">
+              AI-powered sentiment analysis drives autonomous trading decisions.
+              Agents analyze market signals and coordinate entries and exits.
+            </p>
+            <div class="swarm-card-meta">
+              <span>🤖 3 Agents</span>
+              <span>⏱️ Continuous</span>
+              <span>🔗 AI + DEX</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Launch Configuration Panel (hidden until template selected) -->
+      <div class="swarm-launch-panel" id="swarmLaunchPanel" style="display:none">
+        <h3 class="swarm-section-title">Configure & Deploy</h3>
+        <div class="swarm-launch-config">
+          <div class="swarm-config-row">
+            <label>Token Denom</label>
+            <div class="swarm-config-input-row">
+              <input type="text" id="swarmTokenDenom" placeholder="e.g. mytoken-testcore1abc..." class="swarm-input">
+              <button class="swarm-load-btn" onclick="swarmLoadToken()">Load Token</button>
+            </div>
+          </div>
+          <div id="swarmTokenInfo" style="display:none"></div>
+          <div class="swarm-config-summary">
+            <div class="swarm-config-item">
+              <span class="swarm-config-label">Strategy</span>
+              <span class="swarm-config-value">Market Maker</span>
+            </div>
+            <div class="swarm-config-item">
+              <span class="swarm-config-label">Agents</span>
+              <span class="swarm-config-value">Market Maker A (Buyer) + Market Maker B (Seller) + Taker Bot</span>
+            </div>
+            <div class="swarm-config-item">
+              <span class="swarm-config-label">Orders</span>
+              <span class="swarm-config-value">12 buy limits + 11 sell limits + 6 overlapping fills + 2 taker sweeps</span>
+            </div>
+            <div class="swarm-config-item">
+              <span class="swarm-config-label">Funding</span>
+              <span class="swarm-config-value">Auto-funded from testnet faucet (~600 TX per agent)</span>
+            </div>
+          </div>
+          <button class="swarm-deploy-btn" id="swarmDeployBtn" onclick="swarmDeploy()" disabled>
+            🚀 Deploy Swarm
+          </button>
+        </div>
+      </div>
+
+      <!-- Live Swarm Monitor (hidden until running) -->
+      <div class="swarm-monitor" id="swarmMonitor" style="display:none">
+        <div class="swarm-monitor-header">
+          <h3>🤖 Live Swarm — <span id="swarmMonitorTitle">TOKEN</span></h3>
+          <div class="swarm-monitor-header-right">
+            <span class="swarm-timer" id="swarmTimer">00:00</span>
+            <button class="swarm-stop-btn" onclick="swarmStop()">✕</button>
+          </div>
+        </div>
+
+        <!-- Agent Cards -->
+        <div class="swarm-agents">
+          <div class="swarm-agent-card agent-buyer">
+            <div class="agent-role">🟢 Market Maker A</div>
+            <div class="agent-label">BUYER</div>
+            <div class="agent-addr" id="swarmAddrA">Creating wallet...</div>
+            <div class="agent-stats">
+              <span>Balance: <b id="swarmBalA">--</b></span>
+              <span>Orders: <b id="swarmOrdersA">0</b></span>
+            </div>
+          </div>
+          <div class="swarm-agent-card agent-seller">
+            <div class="agent-role">🔴 Market Maker B</div>
+            <div class="agent-label">SELLER</div>
+            <div class="agent-addr" id="swarmAddrB">Creating wallet...</div>
+            <div class="agent-stats">
+              <span>Balance: <b id="swarmBalB">--</b></span>
+              <span>Orders: <b id="swarmOrdersB">0</b></span>
+            </div>
+          </div>
+          <div class="swarm-agent-card agent-taker">
+            <div class="agent-role">🟣 Taker Bot</div>
+            <div class="agent-label">MARKET TAKER</div>
+            <div class="agent-addr" id="swarmAddrTaker">Creating wallet...</div>
+            <div class="agent-stats">
+              <span>Balance: <b id="swarmBalTaker">--</b></span>
+              <span>Orders: <b id="swarmOrdersTaker">0</b></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Progress -->
+        <div class="swarm-progress">
+          <div class="swarm-phase" id="swarmPhase">Initializing...</div>
+          <div class="dex-demo-bar-wrap">
+            <div class="dex-demo-bar" id="swarmBar" style="width:0%"></div>
+          </div>
+        </div>
+
+        <!-- Timeline -->
+        <div class="swarm-timeline" id="swarmTimeline">
+          <div class="demo-log-entry info">Swarm starting...</div>
+        </div>
+
+        <!-- Summary -->
+        <div class="swarm-summary" id="swarmSummary" style="display:none">
+          <div class="demo-summary-title">Swarm Complete!</div>
+          <div class="demo-summary-grid" id="swarmSummaryGrid"></div>
+        </div>
+      </div>
+
+      <!-- Swarm History -->
+      <div class="swarm-history">
+        <h3 class="swarm-section-title">Run History</h3>
+        <div id="swarmHistoryList">
+          <div class="swarm-history-empty">No swarm runs yet. Deploy your first swarm above!</div>
+        </div>
+      </div>
+
+    </div><!-- end swarm-wrap -->
+
+    <!-- ===== MANAGE TAB ===== -->
+    <div class="manage-wrap" id="manageWrap">
+
+      <!-- Token Selector -->
+      <div class="manage-select-bar">
+        <div class="manage-select-group">
+          <label class="manage-label">Token Denom</label>
+          <input type="text" class="manage-input" id="manageTokenDenom" placeholder="Paste token denom (e.g. mytoken-testcore1...)">
+        </div>
+        <button class="manage-load-btn" id="manageLoadBtn" onclick="manageLoadToken()">Load Token</button>
+      </div>
+
+      <!-- Token Info Card -->
+      <div class="manage-info-card" id="manageInfoCard" style="display:none">
+        <div class="manage-info-header">
+          <div class="manage-token-name" id="manageTokenName">--</div>
+          <div class="manage-token-denom" id="manageTokenDenomDisplay">--</div>
+          <div class="manage-issuer" id="manageIssuer">Issuer: --</div>
+        </div>
+
+        <div class="manage-stats">
+          <div class="manage-stat">
+            <span class="manage-stat-label">Total Supply</span>
+            <span class="manage-stat-value" id="manageSupply">--</span>
+          </div>
+          <div class="manage-stat">
+            <span class="manage-stat-label">Precision</span>
+            <span class="manage-stat-value" id="managePrecision">--</span>
+          </div>
+          <div class="manage-stat">
+            <span class="manage-stat-label">Burn Rate</span>
+            <span class="manage-stat-value" id="manageBurnRate">--</span>
+          </div>
+          <div class="manage-stat">
+            <span class="manage-stat-label">Commission</span>
+            <span class="manage-stat-value" id="manageCommission">--</span>
+          </div>
+          <div class="manage-stat">
+            <span class="manage-stat-label">Globally Frozen</span>
+            <span class="manage-stat-value" id="manageGlobalFrozen">--</span>
+          </div>
+        </div>
+
+        <!-- Feature Badges -->
+        <div class="manage-features" id="manageFeatures"></div>
+
+        <!-- Issuer Actions -->
+        <div class="manage-issuer-notice" id="manageIssuerNotice" style="display:none">
+          <span class="manage-notice-icon">⚠️</span>
+          You are not the issuer of this token. Management actions are disabled.
+        </div>
+
+        <!-- Action Panels -->
+        <div class="manage-actions" id="manageActions">
+
+          <!-- Mint -->
+          <div class="manage-action-card" id="manageActionMint" style="display:none">
+            <div class="manage-action-hdr">
+              <span class="manage-action-icon">🪙</span> Mint Tokens
+            </div>
+            <div class="manage-action-body">
+              <div class="manage-field-row">
+                <div class="manage-field">
+                  <label>Amount (human)</label>
+                  <input type="number" class="manage-input" id="manageMintAmt" placeholder="e.g. 1000" step="any">
+                </div>
+                <div class="manage-field">
+                  <label>Recipient (optional)</label>
+                  <input type="text" class="manage-input" id="manageMintRecipient" placeholder="testcore1... (defaults to issuer)">
+                </div>
+              </div>
+              <button class="manage-exec-btn mint" onclick="manageExecMint()">Mint</button>
+            </div>
+          </div>
+
+          <!-- Burn -->
+          <div class="manage-action-card" id="manageActionBurn" style="display:none">
+            <div class="manage-action-hdr">
+              <span class="manage-action-icon">🔥</span> Burn Tokens
+            </div>
+            <div class="manage-action-body">
+              <div class="manage-field-row">
+                <div class="manage-field">
+                  <label>Amount (human)</label>
+                  <input type="number" class="manage-input" id="manageBurnAmt" placeholder="e.g. 500" step="any">
+                </div>
+              </div>
+              <button class="manage-exec-btn burn" onclick="manageExecBurn()">Burn</button>
+            </div>
+          </div>
+
+          <!-- Freeze Account -->
+          <div class="manage-action-card" id="manageActionFreeze" style="display:none">
+            <div class="manage-action-hdr">
+              <span class="manage-action-icon">❄️</span> Freeze / Unfreeze Account
+            </div>
+            <div class="manage-action-body">
+              <div class="manage-field-row">
+                <div class="manage-field">
+                  <label>Account Address</label>
+                  <input type="text" class="manage-input" id="manageFreezeAccount" placeholder="testcore1...">
+                </div>
+                <div class="manage-field">
+                  <label>Amount (human)</label>
+                  <input type="number" class="manage-input" id="manageFreezeAmt" placeholder="e.g. 1000" step="any">
+                </div>
+              </div>
+              <div class="manage-btn-row">
+                <button class="manage-exec-btn freeze" onclick="manageExecFreeze()">Freeze</button>
+                <button class="manage-exec-btn unfreeze" onclick="manageExecUnfreeze()">Unfreeze</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Global Freeze -->
+          <div class="manage-action-card" id="manageActionGlobalFreeze" style="display:none">
+            <div class="manage-action-hdr">
+              <span class="manage-action-icon">🌐</span> Global Freeze
+            </div>
+            <div class="manage-action-body">
+              <p class="manage-action-desc">Freeze or unfreeze all transfers of this token globally.</p>
+              <div class="manage-btn-row">
+                <button class="manage-exec-btn freeze" onclick="manageExecGlobalFreeze()">Global Freeze</button>
+                <button class="manage-exec-btn unfreeze" onclick="manageExecGlobalUnfreeze()">Global Unfreeze</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Clawback -->
+          <div class="manage-action-card" id="manageActionClawback" style="display:none">
+            <div class="manage-action-hdr">
+              <span class="manage-action-icon">🔙</span> Clawback Tokens
+            </div>
+            <div class="manage-action-body">
+              <div class="manage-field-row">
+                <div class="manage-field">
+                  <label>From Account</label>
+                  <input type="text" class="manage-input" id="manageClawbackAccount" placeholder="testcore1...">
+                </div>
+                <div class="manage-field">
+                  <label>Amount (human)</label>
+                  <input type="number" class="manage-input" id="manageClawbackAmt" placeholder="e.g. 500" step="any">
+                </div>
+              </div>
+              <button class="manage-exec-btn clawback" onclick="manageExecClawback()">Clawback</button>
+            </div>
+          </div>
+
+          <!-- Whitelist -->
+          <div class="manage-action-card" id="manageActionWhitelist" style="display:none">
+            <div class="manage-action-hdr">
+              <span class="manage-action-icon">📋</span> Whitelist Account
+            </div>
+            <div class="manage-action-body">
+              <div class="manage-field-row">
+                <div class="manage-field">
+                  <label>Account Address</label>
+                  <input type="text" class="manage-input" id="manageWhitelistAccount" placeholder="testcore1...">
+                </div>
+                <div class="manage-field">
+                  <label>Limit Amount (human)</label>
+                  <input type="number" class="manage-input" id="manageWhitelistAmt" placeholder="e.g. 10000" step="any">
+                </div>
+              </div>
+              <button class="manage-exec-btn whitelist" onclick="manageExecWhitelist()">Set Whitelist Limit</button>
+            </div>
+          </div>
+
+        </div><!-- end manage-actions -->
+
+        <!-- TX Result -->
+        <div class="manage-result" id="manageResult" style="display:none">
+          <div class="manage-result-icon" id="manageResultIcon">✓</div>
+          <div class="manage-result-msg" id="manageResultMsg">Success</div>
+          <a class="manage-result-link" id="manageResultLink" target="_blank">View on Explorer</a>
+        </div>
+
+      </div><!-- end manage-info-card -->
+    </div><!-- end manage-wrap -->
+
+    <!-- ===== AUTH & PERMISSIONS TAB ===== -->
+    <div class="auth-wrap" id="authWrap">
+
+      <!-- Toggle Bar: Grants Given / Grants Received -->
+      <div class="auth-toggle-bar">
+        <button class="auth-toggle-btn active" id="authToggleGranter" onclick="authToggleView('granter')">Grants Given</button>
+        <button class="auth-toggle-btn" id="authToggleGrantee" onclick="authToggleView('grantee')">Grants Received</button>
+      </div>
+
+      <p class="auth-revoke-hint" id="authRevokeHint">Click <strong>Revoke</strong> on any grant to remove the permission.</p>
+
+      <!-- Grants List -->
+      <div class="auth-grants-list" id="authGrantsList">
+        <div class="auth-empty">Connect a wallet or use the agent wallet to view permissions.</div>
+      </div>
+
+      <!-- Create Grant Form -->
+      <div class="auth-create-section">
+        <h3 class="auth-create-title">Create New Grant</h3>
+
+        <div class="auth-form-row">
+          <label class="auth-label">Grantee Address</label>
+          <input type="text" class="auth-input" id="authGrantee" placeholder="testcore1... (address to grant permission to)">
+        </div>
+
+        <div class="auth-form-row">
+          <label class="auth-label">Permission Type</label>
+          <select class="auth-select" id="authGrantType" onchange="authOnTypeChange()">
+            <option value="send">Send Tokens</option>
+            <option value="dex-place">Place DEX Orders</option>
+            <option value="dex-cancel">Cancel DEX Orders</option>
+            <option value="mint">Mint Tokens</option>
+            <option value="burn">Burn Tokens</option>
+            <option value="freeze">Freeze Account</option>
+            <option value="nft-mint">Mint NFT</option>
+            <option value="custom">Custom Message Type...</option>
+          </select>
+        </div>
+
+        <!-- Custom message input (hidden by default) -->
+        <div class="auth-form-row" id="authCustomMsgRow" style="display:none">
+          <label class="auth-label">Message Type URL</label>
+          <input type="text" class="auth-input" id="authCustomMsg" placeholder="/cosmos.bank.v1beta1.MsgSend">
+        </div>
+
+        <!-- Spend limit fields (only for Send) -->
+        <div class="auth-send-limit-fields" id="authSendLimitFields" style="display:flex">
+          <div class="auth-form-row auth-half">
+            <label class="auth-label">Spend Limit (optional)</label>
+            <input type="number" class="auth-input" id="authSpendLimit" placeholder="e.g. 1000">
+          </div>
+          <div class="auth-form-row auth-half">
+            <label class="auth-label">Denom</label>
+            <input type="text" class="auth-input" id="authSpendDenom" placeholder="utestcore" value="utestcore">
+          </div>
+        </div>
+
+        <div class="auth-form-row">
+          <label class="auth-label">Expiration (days)</label>
+          <input type="number" class="auth-input auth-short" id="authExpiration" value="365" min="1" max="3650">
+        </div>
+
+        <button class="auth-grant-btn" id="authGrantBtn" onclick="authCreateGrant()">🔐 Create Grant</button>
+
+        <!-- Result display -->
+        <div class="auth-result" id="authResult" style="display:none"></div>
+      </div>
+
+    </div><!-- end auth-wrap -->
+
+  </div>
+</section>
+
+
+<!-- Footer -->
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-left">Built with <span>Claude AI</span> + TX Agent SDK</div>
+      <div class="footer-links">
+        <a href="https://github.com/EpicLoop365/txai-token-creation-command-line-tool" target="_blank">GitHub</a>
+        <a href="https://docs.coreum.dev" target="_blank">TX Docs</a>
+        <a href="https://www.anthropic.com" target="_blank">Anthropic</a>
+      </div>
+    </div>
+    <div style="text-align:center;margin-top:28px">
+      <div class="footer-badge">&#9889; Powered by Anthropic</div>
+    </div>
+  </div>
+</footer>
+
+
+<!-- Modular JavaScript -->
+<script src="js/txdb.js?v=5"></script>
+<script src="js/config.js?v=5"></script>
+<script src="js/wallet.js?v=5"></script>
+<script src="js/chat.js?v=5"></script>
+<script src="js/create-token.js?v=5"></script>
+<script src="js/create-nft.js?v=5"></script>
+<script src="js/dex.js?v=5"></script>
+<script src="js/manage.js?v=5"></script>
+<script src="js/swarm.js?v=5"></script>
+<script src="js/auth.js?v=5"></script>
+
+</body>
+</html>
