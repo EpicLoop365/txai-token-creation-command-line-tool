@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/styles.css?v=17">
+<link rel="stylesheet" href="css/styles.css?v=18">
 <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
 </head>
 <body>
@@ -32,17 +32,16 @@
 <section id="demo">
   <div class="container">
 
-    <!-- Tab Bar: Create vs Chat -->
+    <!-- Tab Bar -->
     <div class="tab-bar-wrap reveal">
       <button class="tab-scroll-arrow tab-arrow-left" id="tabArrowL" onclick="scrollTabs(-200)" style="display:none">‹</button>
       <div class="chat-tab-bar" id="chatTabBar">
-        <button class="chat-tab active" id="tabCreate" onclick="switchTab('create')">🚀 Create Smart Token</button>
-        <button class="chat-tab" id="tabChat" onclick="switchTab('chat')">💬 Smart Token Advisor Chat</button>
-        <button class="chat-tab" id="tabDex" onclick="switchTab('dex')">📊 Exchange (Order Book)</button>
-        <button class="chat-tab" id="tabSwarm" onclick="switchTab('swarm')">🤖 AI Agent Swarm</button>
-        <button class="chat-tab" id="tabNft" onclick="switchTab('nft')">🎨 Create Smart NFT</button>
-        <button class="chat-tab" id="tabManage" onclick="switchTab('manage')">⚙️ Manage Smart Token</button>
-        <button class="chat-tab" id="tabAuth" onclick="switchTab('auth')">🔐 Auth & Permissions</button>
+        <button class="chat-tab active" id="tabCreate" onclick="switchTab('create')">🚀 Create</button>
+        <button class="chat-tab" id="tabManage" onclick="switchTab('manage')">⚙️ Manage</button>
+        <button class="chat-tab" id="tabDex" onclick="switchTab('dex')">📊 Exchange</button>
+        <button class="chat-tab" id="tabSwarm" onclick="switchTab('swarm')">🤖 Swarm</button>
+        <button class="chat-tab" id="tabAuth" onclick="switchTab('auth')">🔐 Auth</button>
+        <button class="chat-tab" id="tabNft" onclick="switchTab('nft')">🎨 NFT</button>
       </div>
       <button class="tab-scroll-arrow tab-arrow-right" id="tabArrowR" onclick="scrollTabs(200)">›</button>
     </div>
@@ -119,6 +118,10 @@
         <button class="agent-topup-btn" id="agentTopupBtn" onclick="agentTopUp()">Top Up (Faucet)</button>
       </div>
     </div>
+
+    <!-- App Layout: Main content + Chat sidebar -->
+    <div class="app-layout" id="appLayout">
+    <div class="app-main">
 
     <!-- Create Mode (existing) -->
     <div id="createModeWrap">
@@ -332,27 +335,6 @@
       </div>
     </div>
     </div><!-- end createModeWrap -->
-
-    <!-- Chat Mode -->
-    <div class="chat-wrap" id="chatWrap">
-      <div class="chat-messages" id="chatMessages">
-        <div class="chat-welcome">
-          <div class="chat-welcome-icon">💬</div>
-          <div class="chat-welcome-title">Smart Token Advisor</div>
-          <div class="chat-welcome-sub">Tell me about your project and I'll help you design the perfect Smart Token — name, supply, features, and strategy.</div>
-          <div class="chat-starters">
-            <button class="chat-starter" onclick="chatFromStarter('I want to create a loyalty program for my coffee shop')">☕ Loyalty Program</button>
-            <button class="chat-starter" onclick="chatFromStarter('I need a governance token for my DAO')">🏛️ DAO Governance</button>
-            <button class="chat-starter" onclick="chatFromStarter('Help me create a gaming token')">🎮 Gaming Token</button>
-            <button class="chat-starter" onclick="chatFromStarter('I want to tokenize event tickets')">🎫 Event Tickets</button>
-          </div>
-        </div>
-      </div>
-      <div class="chat-input-row">
-        <input type="text" class="chat-input" id="chatInput" placeholder="Tell me about your token project..." onkeydown="if(event.key==='Enter')sendChatMessage()">
-        <button class="chat-send-btn" id="chatSendBtn" onclick="sendChatMessage()">Send →</button>
-      </div>
-    </div>
 
     <!-- DEX Mode -->
     <div class="dex-wrap" id="dexWrap">
@@ -1369,6 +1351,37 @@
 
     </div><!-- end auth-wrap -->
 
+    </div><!-- end app-main -->
+
+    <!-- Persistent Chat Sidebar -->
+    <div class="chat-sidebar" id="chatSidebar">
+      <div class="chat-sidebar-header">
+        <span class="chat-sidebar-title">💬 AI Advisor</span>
+        <button class="chat-sidebar-toggle" id="chatSidebarToggle" onclick="toggleChatSidebar()" title="Collapse chat">◁</button>
+      </div>
+      <div class="chat-sidebar-body" id="chatSidebarBody">
+        <div class="chat-messages" id="chatMessages">
+          <div class="chat-welcome">
+            <div class="chat-welcome-icon">💬</div>
+            <div class="chat-welcome-title">Ask me anything</div>
+            <div class="chat-welcome-sub">I know everything about this platform — how to create tokens, set up compliance, run the AI swarm, trade on the DEX, and more. How can I help?</div>
+            <div class="chat-starters">
+              <button class="chat-starter" onclick="chatFromStarter('What can I build with TXAI?')">🚀 What can I build?</button>
+              <button class="chat-starter" onclick="chatFromStarter('Help me design a token for my project')">🪙 Design a token</button>
+              <button class="chat-starter" onclick="chatFromStarter('How does the AI agent swarm work?')">🤖 How does the swarm work?</button>
+              <button class="chat-starter" onclick="chatFromStarter('What smart token features should I use?')">⚙️ Token features guide</button>
+            </div>
+          </div>
+        </div>
+        <div class="chat-input-row">
+          <input type="text" class="chat-input" id="chatInput" placeholder="Ask about tokens, features, strategy..." onkeydown="if(event.key==='Enter')sendChatMessage()">
+          <button class="chat-send-btn" id="chatSendBtn" onclick="sendChatMessage()">→</button>
+        </div>
+      </div>
+    </div>
+
+    </div><!-- end app-layout -->
+
   </div>
 </section>
 
@@ -1396,7 +1409,7 @@
 <script src="js/config.js?v=10"></script>
 <script src="js/wallet.js?v=10"></script>
 <script src="js/chat.js?v=10"></script>
-<script src="js/create-token.js?v=10"></script>
+<script src="js/create-token.js?v=11"></script>
 <script src="js/create-nft.js?v=10"></script>
 <script src="js/dex.js?v=12"></script>
 <script src="js/manage.js?v=10"></script>

@@ -3,14 +3,12 @@
 /* Tab Switching */
 function switchTab(tab){
   const tabCreate = document.getElementById('tabCreate');
-  const tabChat = document.getElementById('tabChat');
   const tabDex = document.getElementById('tabDex');
   const tabSwarm = document.getElementById('tabSwarm');
   const tabNft = document.getElementById('tabNft');
   const tabManage = document.getElementById('tabManage');
   const tabAuth = document.getElementById('tabAuth');
   const createWrap = document.getElementById('createModeWrap');
-  const chatWrap = document.getElementById('chatWrap');
   const dexWrap = document.getElementById('dexWrap');
   const swarmWrap = document.getElementById('swarmWrap');
   const nftWrap = document.getElementById('nftWrap');
@@ -19,14 +17,12 @@ function switchTab(tab){
 
   // Reset all tabs
   tabCreate.classList.remove('active');
-  tabChat.classList.remove('active');
   tabDex.classList.remove('active');
   tabSwarm.classList.remove('active');
   tabNft.classList.remove('active');
   tabManage.classList.remove('active');
   tabAuth.classList.remove('active');
   createWrap.style.display = 'none';
-  chatWrap.classList.remove('show');
   dexWrap.classList.remove('show');
   swarmWrap.classList.remove('show');
   nftWrap.classList.remove('show');
@@ -36,16 +32,17 @@ function switchTab(tab){
   dexWrap.closest('.container').style.maxWidth = '';
   chatMode = false;
 
-  if(tab === 'chat'){
-    chatMode = true;
-    tabChat.classList.add('active');
-    chatWrap.classList.add('show');
-    document.getElementById('chatInput').focus();
-  } else if(tab === 'dex'){
+  // Auto-collapse/expand chat sidebar based on tab
+  const chatSidebar = document.getElementById('chatSidebar');
+  if(tab === 'dex' || tab === 'swarm'){
+    if(chatSidebar) chatSidebar.classList.add('collapsed');
+  } else {
+    if(chatSidebar) chatSidebar.classList.remove('collapsed');
+  }
+
+  if(tab === 'dex'){
     tabDex.classList.add('active');
     dexWrap.classList.add('show');
-    // Expand container for trading terminal
-    dexWrap.closest('.container').style.maxWidth = '1440px';
     // Auto-fetch wallet and pairs on first load
     if(!dexAgentWallet) dexFetchWallet();
     if(!document.getElementById('dexPairSelect').options.length || document.getElementById('dexPairSelect').options.length <= 1) dexFetchPairs();
@@ -53,7 +50,6 @@ function switchTab(tab){
   } else if(tab === 'swarm'){
     tabSwarm.classList.add('active');
     swarmWrap.classList.add('show');
-    swarmWrap.closest('.container').style.maxWidth = '1440px';
   } else if(tab === 'nft'){
     tabNft.classList.add('active');
     nftWrap.classList.add('show');
@@ -76,6 +72,12 @@ function switchTab(tab){
   if(typeof showAgentBar === 'function') showAgentBar(tab);
 }
 
+
+/* Toggle Chat Sidebar */
+function toggleChatSidebar(){
+  const sidebar = document.getElementById('chatSidebar');
+  if(sidebar) sidebar.classList.toggle('collapsed');
+}
 
 /* Reset deploy buttons */
 function resetDeployBtns(){
