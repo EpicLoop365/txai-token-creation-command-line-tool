@@ -101,14 +101,27 @@ function sleep(ms: number): Promise<void> {
 // ─── Demo Logic ─────────────────────────────────────────────────────────────
 
 let demoRunning = false;
+let demoStartedAt = 0;
+const DEMO_MAX_DURATION = 5 * 60 * 1000; // 5 min safety timeout
 
 export function isDemoRunning(): boolean {
+  // Auto-reset if stuck for longer than max duration
+  if (demoRunning && Date.now() - demoStartedAt > DEMO_MAX_DURATION) {
+    console.warn("[dex-demo] Demo stuck — auto-resetting lock after 5 min timeout");
+    demoRunning = false;
+  }
   return demoRunning;
+}
+
+export function resetDemoLock(): void {
+  console.warn("[dex-demo] Manual demo lock reset");
+  demoRunning = false;
 }
 
 export async function runDexDemo(config: DemoConfig): Promise<void> {
   if (demoRunning) throw new Error("Demo already in progress");
   demoRunning = true;
+  demoStartedAt = Date.now();
 
   const { baseDenom, agentMnemonic, networkName, onEvent, abortSignal, returnAddress } = config;
   const tokenSymbol = baseDenom.split("-")[0].toUpperCase();

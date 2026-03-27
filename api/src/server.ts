@@ -1272,7 +1272,7 @@ app.post("/api/dex-chat", async (req, res) => {
 
 // ─── DEX: LIVE DEMO (SSE) ────────────────────────────────────────────────────
 
-import { runDexDemo, isDemoRunning, DEMO_TOKENS_NEEDED } from "./dex-demo";
+import { runDexDemo, isDemoRunning, resetDemoLock, DEMO_TOKENS_NEEDED } from "./dex-demo";
 
 // ─── DEX DEMO: Check if agent has enough tokens ─────────────────────────────
 app.post("/api/dex/check-demo-ready", async (req, res) => {
@@ -1315,6 +1315,12 @@ app.post("/api/dex/check-demo-ready", async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
   }
+});
+
+// ─── DEX DEMO: Reset stuck demo lock ────────────────────────────────────────
+app.post("/api/dex/reset-demo", (_req, res) => {
+  resetDemoLock();
+  res.json({ success: true, message: "Demo lock reset" });
 });
 
 // ─── DEX DEMO: Live SSE stream ──────────────────────────────────────────────

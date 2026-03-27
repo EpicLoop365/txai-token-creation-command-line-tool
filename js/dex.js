@@ -1163,6 +1163,18 @@ function dexLaunchDemoOverlay() {
   dexDemoFetchSSE(dexBaseDenom, returnAddr);
 }
 
+async function dexResetDemo() {
+  try {
+    await fetch(`${API_URL}/api/dex/reset-demo`, { method: 'POST' });
+    dexDemoLog('info', 'Demo lock reset. You can try again now.');
+    dexDemoRunning = false;
+    const btn = document.getElementById('dexDemoStartBtn');
+    if(btn) btn.disabled = false;
+  } catch(e) {
+    dexDemoLog('error', 'Reset failed: ' + e.message);
+  }
+}
+
 async function dexDemoFetchSSE(baseDenom, returnAddress) {
   try {
     const body = { baseDenom };
@@ -1175,7 +1187,12 @@ async function dexDemoFetchSSE(baseDenom, returnAddress) {
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({ error: 'Unknown error' }));
-      dexDemoLog('error', err.error || `HTTP ${res.status}`);
+      const msg = err.error || `HTTP ${res.status}`;
+      if (res.status === 429) {
+        dexDemoLog('error', msg + ' <button onclick="dexResetDemo()" style="margin-left:8px;padding:4px 12px;background:var(--purple);border:none;border-radius:4px;color:#fff;cursor:pointer;font-size:.78rem">Force Reset</button>');
+      } else {
+        dexDemoLog('error', msg);
+      }
       return;
     }
 
