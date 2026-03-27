@@ -1728,11 +1728,20 @@ app.get("/api/txdb/available", (req, res) => {
 // ─── START ───────────────────────────────────────────────────────────────────
 
 import { startFaucetBot } from "./faucet-bot";
+import { createServer } from "http";
+import { attachWebSocket } from "./ws-server";
 
-app.listen(PORT, () => {
+// Create HTTP server so we can attach WebSocket to it
+const server = createServer(app);
+
+// Attach WebSocket server at /ws
+attachWebSocket(server);
+
+server.listen(PORT, () => {
   const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
   console.log(`TXAI Smart Token Studio API on port ${PORT}`);
   console.log(`Network: ${networkName}`);
+  console.log(`WebSocket: ws://localhost:${PORT}/ws`);
 
   // Start faucet bot if enabled (set FAUCET_BOT=true on ONE instance only)
   if (process.env.FAUCET_BOT === "true") {

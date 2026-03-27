@@ -27,6 +27,9 @@ let dexPrevOrderbook = null;
 let dexTradeLog = [];
 let dexSessionLog = [];
 let dexBalances = {};
+let dexTimeInForce = 'GTC';
+let dexGoodTilUnit = 'minutes';
+let dexTickerData = { firstPrice: null, high: 0, low: Infinity, volume: 0, tradeCount: 0 };
 
 /* ---- Wallet Connection ---- */
 let walletMode = 'agent';          // 'agent' | 'keplr' | 'leap'

@@ -28,7 +28,8 @@ async function dexPlaceOrderWallet(){
         price: price || '0',
         quantity: quantityRaw,
         side: dexSide === 'buy' ? 1 : 2,
-        timeInForce: 1,
+        timeInForce: dexGetTifValue(),
+        ...(dexTimeInForce === 'GoodTil' ? { goodTil: dexGetGoodTil() } : {}),
       }
     };
 
@@ -134,7 +135,7 @@ function dexSetSide(side){
   document.querySelector(`.dex-side-tab.${side}`).classList.add('active');
   const btn = document.getElementById('dexPlaceBtn');
   btn.className = `dex-place-btn ${side}`;
-  btn.textContent = `Place ${side.charAt(0).toUpperCase() + side.slice(1)} Order`;
+  btn.textContent = 'Confirm Order';
   dexUpdateTotal();
   dexUpdateBalanceDisplay();
 }
@@ -147,20 +148,32 @@ function dexSetOrderType(type){
   dexUpdateTotal();
 }
 
-function dexSetCenterTab(tab){
-  document.querySelectorAll('.dex-center-tab').forEach(t => t.classList.remove('active'));
-  event.target.classList.add('active');
-  document.querySelectorAll('.dex-center-pane').forEach(p => p.classList.remove('active'));
-  if(tab === 'price'){
-    document.getElementById('dexPricePane').classList.add('active');
-    if(dexPriceChart) dexPriceChart.timeScale().fitContent();
-  } else if(tab === 'depth'){
-    document.getElementById('dexDepthPane').classList.add('active');
-    dexDrawDepthChart();
+/* Center tab removed — TradingView chart is the only center view (matching CoreDEX) */
+
+let dexObViewMode = 'both'; // 'both', 'bids', 'asks'
+
+function dexSetObView(mode, btn){
+  dexObViewMode = mode;
+  document.querySelectorAll('.dex-ob-mode').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const asksEl = document.getElementById('dexAskRows');
+  const bidsEl = document.getElementById('dexBidRows');
+  const spreadEl = document.getElementById('dexSpreadRow');
+  if(mode === 'both'){
+    asksEl.style.display = ''; bidsEl.style.display = ''; spreadEl.style.display = '';
+  } else if(mode === 'bids'){
+    asksEl.style.display = 'none'; bidsEl.style.display = ''; spreadEl.style.display = 'none';
   } else {
-    document.getElementById('dexAdvisorPane').classList.add('active');
-    document.getElementById('dexChatInput').focus();
+    asksEl.style.display = ''; bidsEl.style.display = 'none'; spreadEl.style.display = 'none';
   }
+}
+
+function dexSetInterval(btn, interval){
+  document.querySelectorAll('.dex-interval-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  // Store interval — future use for real OHLC data aggregation
+  window.dexChartInterval = interval;
+  console.log('[dex] Chart interval:', interval);
 }
 
 function dexSetOrdersTab(tab){
@@ -168,7 +181,35 @@ function dexSetOrdersTab(tab){
   event.target.classList.add('active');
   document.querySelectorAll('.dex-orders-pane').forEach(p => p.classList.remove('active'));
   if(tab === 'open') document.getElementById('dexOpenOrdersPane').classList.add('active');
-  else document.getElementById('dexSessionPane').classList.add('active');
+  else if(tab === 'all') { document.getElementById('dexAllOrdersPane').classList.add('active'); dexRenderAllOrders(); }
+}
+
+function dexRenderAllOrders(){
+  const body = document.getElementById('dexAllOrdersBody');
+  if(!dexSessionLog.length){
+    body.innerHTML = '<div class="dex-no-orders">No order history for this pair</div>';
+    return;
+  }
+  let html = '';
+  dexSessionLog.forEach(o => {
+    const sideColor = o.side === 'buy' ? '#25d695' : (o.side === 'sell' ? '#ff7386' : 'var(--text-muted)');
+    const statusClass = o.status === 'filled' || o.status === 'placed' ? 'filled' :
+                        o.status === 'open' || o.status === 'signing' ? 'open' :
+                        o.status === 'cancelled' ? 'cancelled' : 'failed';
+    const timeStr = o.time ? o.time.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'}) : '--';
+    const explorerLink = o.txHash
+      ? `<a href="https://explorer.testnet-1.tx.org/tx/transactions/${o.txHash}" target="_blank" class="dex-explorer-link" title="View on Explorer">↗</a>`
+      : '';
+    html += `<div class="dex-all-order-row">
+      <span style="color:${sideColor};font-weight:700;text-transform:uppercase">${o.side || '--'}</span>
+      <span style="color:var(--text-dim)">${(o.type || '--').toUpperCase()}</span>
+      <span>${o.price || '--'}</span>
+      <span>${o.qty || '--'}</span>
+      <span class="dex-all-order-status ${statusClass}">${o.status || '--'}</span>
+      <span style="color:var(--text-muted)">${timeStr} ${explorerLink}</span>
+    </div>`;
+  });
+  body.innerHTML = html;
 }
 
 function dexSetPct(pct){
@@ -188,6 +229,81 @@ function dexSetPct(pct){
     document.getElementById('dexQty').value = (avail * pct / 100).toFixed(6);
   }
   dexUpdateTotal();
+}
+
+/* ---- Advanced Order Settings ---- */
+function dexToggleAdvanced(){
+  const body = document.getElementById('dexAdvancedBody');
+  const arrow = document.getElementById('dexAdvancedArrow');
+  body.classList.toggle('open');
+  arrow.classList.toggle('open');
+}
+
+function dexOnTifChange(){
+  const sel = document.getElementById('dexTifSelect');
+  dexTimeInForce = sel.value;
+  const goodTilSection = document.getElementById('dexGoodTilSection');
+  goodTilSection.style.display = dexTimeInForce === 'GoodTil' ? 'block' : 'none';
+}
+
+function dexSetGoodTilUnit(btn, unit){
+  dexGoodTilUnit = unit;
+  document.querySelectorAll('.dex-goodtil-unit').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function dexGetTifValue(){
+  switch(dexTimeInForce){
+    case 'GTC': return 1;
+    case 'IOC': return 2;
+    case 'FOK': return 3;
+    case 'GoodTil': return 1; // GTC with goodTil field
+    default: return 1;
+  }
+}
+
+function dexGetGoodTil(){
+  const val = parseInt(document.getElementById('dexGoodTilValue').value) || 1;
+  let ms = val * 60 * 1000; // default minutes
+  if(dexGoodTilUnit === 'hours') ms = val * 60 * 60 * 1000;
+  if(dexGoodTilUnit === 'days') ms = val * 24 * 60 * 60 * 1000;
+  const expireTime = new Date(Date.now() + ms);
+  return { goodTilBlockTime: expireTime.toISOString() };
+}
+
+/* ---- Ticker / 24h Stats ---- */
+function dexUpdateTickerFromTrade(price, amount){
+  if(!dexTickerData.firstPrice) dexTickerData.firstPrice = price;
+  if(price > dexTickerData.high) dexTickerData.high = price;
+  if(price < dexTickerData.low) dexTickerData.low = price;
+  dexTickerData.volume += amount;
+  dexTickerData.tradeCount++;
+  dexRenderTicker(price);
+}
+
+function dexRenderTicker(lastPrice){
+  const td = dexTickerData;
+  if(!td.firstPrice) return;
+  const change = ((lastPrice - td.firstPrice) / td.firstPrice * 100);
+  const changeEl = document.getElementById('dexStat24hChange');
+  if(changeEl){
+    changeEl.textContent = (change >= 0 ? '+' : '') + change.toFixed(2) + '%';
+    changeEl.className = 'dex-stat-value ' + (change >= 0 ? 'positive' : 'negative');
+  }
+  const volEl = document.getElementById('dexStatVol');
+  if(volEl) volEl.textContent = td.volume.toLocaleString(undefined, {maximumFractionDigits:2});
+  const highEl = document.getElementById('dexStatHigh');
+  if(highEl) highEl.textContent = td.high > 0 ? td.high.toFixed(6) : '--';
+  const lowEl = document.getElementById('dexStatLow');
+  if(lowEl) lowEl.textContent = td.low < Infinity ? td.low.toFixed(6) : '--';
+}
+
+function dexResetTicker(){
+  dexTickerData = { firstPrice: null, high: 0, low: Infinity, volume: 0, tradeCount: 0 };
+  ['dexStat24hChange','dexStatVol','dexStatHigh','dexStatLow'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el){ el.textContent = '--'; el.className = 'dex-stat-value'; }
+  });
 }
 
 /* ---- Core Data ---- */
@@ -266,7 +382,8 @@ function dexOnPairSelect(){
   const val = document.getElementById('dexPairSelect').value;
   if(val){
     document.getElementById('dexBaseDenom').value = val;
-    dexLoadOrderbook();
+    dexBaseDenom = val;
+    dexAddMarketTab(val);
   }
 }
 
@@ -290,8 +407,8 @@ function dexAutoSelectToken(denom){
   // Set the base denom input too
   document.getElementById('dexBaseDenom').value = denom;
   dexBaseDenom = denom;
-  // Auto-load the orderbook so the user doesn't have to click Load
-  dexLoadOrderbook();
+  // Add market tab and load
+  dexAddMarketTab(denom);
 }
 
 async function dexFetchBalances(address){
@@ -314,14 +431,19 @@ async function dexFetchBalances(address){
 }
 
 function dexUpdateBalanceDisplay(){
-  const el = document.getElementById('dexAvailBalance');
-  if(dexSide === 'buy'){
-    const raw = parseFloat(dexBalances[DEX_QUOTE_DENOM]) || 0;
-    el.textContent = dexFmt(dexHuman(raw)) + ' ' + DEX_QUOTE_SYMBOL;
-  } else {
-    const raw = parseFloat(dexBalances[dexBaseDenom]) || 0;
+  // Update TX balance
+  const txEl = document.getElementById('dexAvailBalance');
+  const txRaw = parseFloat(dexBalances[DEX_QUOTE_DENOM]) || 0;
+  if(txEl) txEl.textContent = dexFmt(dexHuman(txRaw)) + ' TX';
+
+  // Update base token balance
+  const baseEl = document.getElementById('dexAssetBaseVal');
+  const baseLabelEl = document.getElementById('dexAssetBaseLabel');
+  if(baseEl && dexBaseDenom){
+    const baseRaw = parseFloat(dexBalances[dexBaseDenom]) || 0;
     const name = dexTokenName(dexBaseDenom);
-    el.textContent = dexFmt(dexHuman(raw)) + ' ' + name;
+    baseEl.textContent = dexFmt(dexHuman(baseRaw));
+    if(baseLabelEl) baseLabelEl.textContent = name;
   }
 }
 
@@ -332,30 +454,38 @@ function dexLoadOrderbook(){
   // sync the select if it has this value
   const sel = document.getElementById('dexPairSelect');
   if(sel.querySelector(`option[value="${denom}"]`)) sel.value = denom;
+
+  // Use WebSocket for real-time updates (1s, like CoreDEX)
+  if (typeof dexWsSubscribe === 'function') {
+    dexWsSubscribe(denom, DEX_QUOTE_DENOM);
+  }
+
+  // Also do initial REST fetch for immediate data + orders
   dexFetchOrderbook();
   dexFetchMyOrders();
+
+  // Keep a slower polling fallback for orders/balances (WS handles orderbook)
   if(dexRefreshTimer) clearInterval(dexRefreshTimer);
   dexRefreshTimer = setInterval(() => {
-    dexFetchOrderbook();
     dexFetchMyOrders();
     const addr = dexGetActiveAddress();
     if(addr) dexFetchBalances(addr);
   }, DEX_REFRESH_MS);
-  document.getElementById('dexObStatus').innerHTML = '<span class="dex-status-dot live"></span> Live';
+
+  // Update pair name display
+  const tokenSym = dexTokenName(denom);
+  const pairNameEl = document.getElementById('dexPairName');
+  if(pairNameEl) pairNameEl.textContent = tokenSym + ' / TX';
   // Show token logo
   const logoEl = document.getElementById('dexPairLogo');
   if(logoEl){
-    const tokenSym = dexTokenName(denom);
     const logoUrl = `https://api.multiavatar.com/${encodeURIComponent(tokenSym)}.svg`;
     logoEl.innerHTML = `<img src="${logoUrl}" alt="${tokenSym}" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.style.display='none'">`;
     logoEl.style.display = 'block';
   }
-  document.getElementById('dexLiveDot').classList.add('on');
-  document.getElementById('dexLiveText').textContent = 'Live';
   dexUpdateTotal();
   const addr = dexGetActiveAddress();
   if(addr) dexFetchBalances(addr);
-  dexUpdateAddWalletBtn();
   // Initialize price chart with sample data (skip during demo — agents paint live)
   if (!dexDemoRunning) setTimeout(() => dexLoadSamplePriceData(0.001), 300);
 }
@@ -420,6 +550,18 @@ function dexRenderOrderbook(data){
   const maxBidCum = bidCumul || 1;
   const maxCum = Math.max(maxAskCum, maxBidCum);
 
+  // Build cumulative data for tooltip (asks: from lowest price upward)
+  let askCumQtyH = 0, askCumTotalH = 0;
+  const askTooltipData = new Map();
+  asksSorted.forEach(o => {
+    const rawP = parseFloat(o.price) || 0;
+    const rawQ = parseFloat(o.quantity || o.remainingQuantity || o.amount || 0) / Math.pow(10, bDec);
+    askCumQtyH += rawQ;
+    askCumTotalH += rawP * rawQ;
+    const avgPrice = askCumQtyH > 0 ? askCumTotalH / askCumQtyH : rawP;
+    askTooltipData.set(o, { cumQty: askCumQtyH, cumTotal: askCumTotalH, avgPrice });
+  });
+
   // Render asks (display highest at top, lowest near spread)
   let askHTML = '';
   asks.forEach(o => {
@@ -428,13 +570,16 @@ function dexRenderOrderbook(data){
     const humanP = rawP;
     const humanQ = rawQ / Math.pow(10, bDec);
     const humanTotal = humanP * humanQ;
-    // Find cumulative for this row
     const idx = asksSorted.findIndex(a => a === o);
     const cum = idx >= 0 ? askCumuls[idx] : rawQ;
     const pct = (cum / maxCum) * 100;
-    askHTML += `<div class="dex-ob-row ask" onclick="dexFillPrice(${humanP})">
+    const tip = askTooltipData.get(o) || { avgPrice: humanP, cumQty: humanQ, cumTotal: humanTotal };
+    askHTML += `<div class="dex-ob-row ask" onclick="dexFillPrice(${humanP},${humanQ},'ask')">
       <span class="price">${dexFmt(humanP)}</span><span>${dexFmt(humanQ)}</span><span>${dexFmt(humanTotal)}</span>
-      <div class="dbar" style="width:${pct}%"></div></div>`;
+      <div class="dbar" style="width:${pct}%"></div>
+      <div class="dex-ob-tip"><span class="tip-label">Avg. Price</span> <span class="tip-val red">${dexFmt(tip.avgPrice)}</span><br>
+      <span class="tip-label">Sum</span> <span class="tip-val">${dexFmt(tip.cumQty)}</span><br>
+      <span class="tip-label">Total</span> <span class="tip-val purple">${dexFmt(tip.cumTotal)} TX</span></div></div>`;
   });
   askC.innerHTML = askHTML;
 
@@ -450,6 +595,18 @@ function dexRenderOrderbook(data){
     document.getElementById('dexSpreadPct').textContent = '';
   }
 
+  // Build cumulative data for bid tooltips (from highest price downward)
+  let bidCumQtyH = 0, bidCumTotalH = 0;
+  const bidTooltipData = [];
+  bids.forEach(o => {
+    const rawP = parseFloat(o.price) || 0;
+    const rawQ = parseFloat(o.quantity || o.remainingQuantity || o.amount || 0) / Math.pow(10, bDec);
+    bidCumQtyH += rawQ;
+    bidCumTotalH += rawP * rawQ;
+    const avgPrice = bidCumQtyH > 0 ? bidCumTotalH / bidCumQtyH : rawP;
+    bidTooltipData.push({ cumQty: bidCumQtyH, cumTotal: bidCumTotalH, avgPrice });
+  });
+
   // Render bids (highest near spread)
   let bidHTML = '';
   bids.forEach((o, i) => {
@@ -459,11 +616,18 @@ function dexRenderOrderbook(data){
     const humanQ = rawQ / Math.pow(10, bDec);
     const humanTotal = humanP * humanQ;
     const pct = (bidCumuls[i] / maxCum) * 100;
-    bidHTML += `<div class="dex-ob-row bid" onclick="dexFillPrice(${humanP})">
+    const tip = bidTooltipData[i] || { avgPrice: humanP, cumQty: humanQ, cumTotal: humanTotal };
+    bidHTML += `<div class="dex-ob-row bid" onclick="dexFillPrice(${humanP},${humanQ},'bid')">
       <span class="price">${dexFmt(humanP)}</span><span>${dexFmt(humanQ)}</span><span>${dexFmt(humanTotal)}</span>
-      <div class="dbar" style="width:${pct}%"></div></div>`;
+      <div class="dbar" style="width:${pct}%"></div>
+      <div class="dex-ob-tip"><span class="tip-label">Avg. Price</span> <span class="tip-val green">${dexFmt(tip.avgPrice)}</span><br>
+      <span class="tip-label">Sum</span> <span class="tip-val">${dexFmt(tip.cumQty)}</span><br>
+      <span class="tip-label">Total</span> <span class="tip-val purple">${dexFmt(tip.cumTotal)} TX</span></div></div>`;
   });
   bidC.innerHTML = bidHTML;
+
+  // Auto-scroll asks to bottom so lowest ask is visible near spread
+  requestAnimationFrame(() => { askC.scrollTop = askC.scrollHeight; });
 }
 
 function dexUpdatePairStats(data){
@@ -489,10 +653,18 @@ function dexUpdatePairStats(data){
   }
   const totalOrders = (data.asks || []).length + (data.bids || []).length;
   document.getElementById('dexStatCount').textContent = totalOrders;
+
+  // Update market tab price
+  const mid = bestAsk !== null && bestBid !== null ? (bestAsk + bestBid) / 2 : (bestBid || bestAsk || 0);
+  if (mid > 0 && dexBaseDenom) dexUpdateMarketTabPrice(dexBaseDenom, mid);
 }
 
-function dexFillPrice(price){
+function dexFillPrice(price, volume, fromSide){
   document.getElementById('dexPrice').value = price;
+  if(volume) document.getElementById('dexQty').value = volume;
+  // Clicking an ask row means you want to buy at that price, clicking a bid means sell
+  if(fromSide === 'ask') dexSetSide('buy');
+  else if(fromSide === 'bid') dexSetSide('sell');
   dexUpdateTotal();
 }
 
@@ -665,6 +837,7 @@ function dexDetectFills(newData){
         side: side,
         time: new Date()
       });
+      dexUpdateTickerFromTrade(humanP, humanQ);
     }
   });
 
@@ -686,6 +859,7 @@ function dexDetectFills(newData){
           side: side,
           time: new Date()
         });
+        dexUpdateTickerFromTrade(rawP, diffQ);
       }
     }
   });
@@ -701,10 +875,11 @@ function dexRenderTradeHistory(){
     return;
   }
   let html = '';
-  dexTradeLog.slice(0, 20).forEach(t => {
-    const color = t.side === 'buy' ? 'var(--green)' : '#ef4444';
+  dexTradeLog.slice(0, 30).forEach(t => {
+    const color = t.side === 'buy' ? '#25d695' : '#ff7386';
+    const sideClass = t.side === 'buy' ? 'buy' : 'sell';
     const timeStr = t.time.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
-    html += `<div class="dex-trade-row">
+    html += `<div class="dex-trade-row ${sideClass}">
       <span style="color:${color}">${dexFmt(t.price)}</span>
       <span class="t-amt">${dexFmt(t.amount)}</span>
       <span class="t-time">${timeStr}</span>
@@ -742,14 +917,13 @@ function dexRenderMyOrders(orders){
     const rawQty = parseFloat(o.quantity || o.remainingQuantity || o.amount || 0);
     const humanPrice = rawPrice;
     const humanQty = rawQty / Math.pow(10, DEX_DECIMALS);
+    const humanTotal = humanPrice * humanQty;
     const id = o.id || o.order_id || '';
-    const tokenName = dexTokenName(o.baseDenom || dexBaseDenom);
     html += `<div class="dex-order-row">
       <span class="dex-order-side ${sc}">${side}</span>
-      <div class="dex-order-det">
-        <span class="dex-order-price">${dexFmt(humanPrice)} ${DEX_QUOTE_SYMBOL}/${tokenName}</span>
-        <span class="dex-order-qty">Qty: ${dexFmt(humanQty)} ${tokenName}</span>
-      </div>
+      <span class="dex-order-price">${dexFmt(humanPrice)}</span>
+      <span class="dex-order-qty">${dexFmt(humanQty)}</span>
+      <span class="dex-order-total">${dexFmt(humanTotal)} TX</span>
       <button class="dex-cancel-btn" onclick="dexCancelOrder('${id}')">Cancel</button>
     </div>`;
   });
@@ -956,6 +1130,94 @@ function dexAppendMsg(role, text){
   container.scrollTop = container.scrollHeight;
 }
 
+/* ---- Multi-Pair Market Tabs (CoreDEX-style) ---- */
+let dexOpenMarkets = []; // { baseDenom, name, lastPrice }
+
+function dexAddMarketTab(baseDenom) {
+  if (!baseDenom) return;
+  // Don't add duplicates
+  if (dexOpenMarkets.find(m => m.baseDenom === baseDenom)) {
+    dexSetActiveMarket(baseDenom);
+    return;
+  }
+  const name = dexTokenName(baseDenom);
+  dexOpenMarkets.push({ baseDenom, name, lastPrice: null });
+  dexRenderMarketTabs();
+  dexSetActiveMarket(baseDenom);
+}
+
+function dexRemoveMarketTab(baseDenom, evt) {
+  if (evt) { evt.stopPropagation(); evt.preventDefault(); }
+  dexOpenMarkets = dexOpenMarkets.filter(m => m.baseDenom !== baseDenom);
+  dexRenderMarketTabs();
+  // If we removed the active pair, switch to the last remaining or clear
+  if (dexBaseDenom === baseDenom) {
+    if (dexOpenMarkets.length > 0) {
+      dexSetActiveMarket(dexOpenMarkets[dexOpenMarkets.length - 1].baseDenom);
+    } else {
+      dexBaseDenom = '';
+      document.getElementById('dexBaseDenom').value = '';
+      document.getElementById('dexPairName').textContent = 'TOKEN / TX';
+    }
+  }
+}
+
+function dexSetActiveMarket(baseDenom) {
+  document.getElementById('dexBaseDenom').value = baseDenom;
+  dexBaseDenom = baseDenom;
+  dexLoadOrderbook();
+  dexRenderMarketTabs();
+}
+
+function dexRenderMarketTabs() {
+  const container = document.getElementById('dexMarketTabs');
+  if (!container) return;
+  if (dexOpenMarkets.length === 0) {
+    container.innerHTML = '';
+    container.style.display = 'none';
+    return;
+  }
+  container.style.display = 'flex';
+  let html = '';
+  dexOpenMarkets.forEach(m => {
+    const isActive = m.baseDenom === dexBaseDenom;
+    const priceStr = m.lastPrice ? dexFmt(m.lastPrice) : '';
+    html += `<button class="dex-market-tab${isActive ? ' active' : ''}" onclick="dexSetActiveMarket('${m.baseDenom}')">
+      ${m.name}/TX${priceStr ? ` <span class="mt-price">${priceStr}</span>` : ''}
+      ${dexOpenMarkets.length > 1 ? `<span class="mt-close" onclick="dexRemoveMarketTab('${m.baseDenom}',event)">&times;</span>` : ''}
+    </button>`;
+  });
+  container.innerHTML = html;
+}
+
+// Update market tab prices when ticker updates
+function dexUpdateMarketTabPrice(baseDenom, price) {
+  const m = dexOpenMarkets.find(m => m.baseDenom === baseDenom);
+  if (m) {
+    m.lastPrice = price;
+    dexRenderMarketTabs();
+  }
+}
+
+/* ---- Network Selector ---- */
+function dexSwitchNetwork(network) {
+  const dotEl = document.getElementById('navNetDot');
+  if (dotEl) {
+    dotEl.className = 'nav-network-dot ' + network;
+  }
+  // Update config
+  if (network === 'mainnet') {
+    // Mainnet config
+    window._txNetwork = 'mainnet';
+    // Note: Would need to update API_URL, COREUM_REST, COREUM_CHAIN_ID etc.
+    // For now just show a notice
+    console.log('[dex] Switched to mainnet (requires API server on mainnet)');
+  } else {
+    window._txNetwork = 'testnet';
+    console.log('[dex] Switched to testnet');
+  }
+}
+
 /* ---- Utility ---- */
 function dexFmt(n){
   if(isNaN(n) || n === null || n === undefined) return '--';
@@ -997,33 +1259,59 @@ let dexPriceData = [];      // { time, open, high, low, close }
 let dexVolData = [];         // { time, value, color }
 let dexFillSequence = 0;    // monotonic counter for time axis during demo
 
+let dexUseTradingView = false; // true if full TradingView library loaded
+
 function dexInitPriceChart() {
   const wrap = document.getElementById('dexPriceChartWrap');
   if (!wrap) { console.warn('[price-chart] wrap not found'); return; }
+  document.getElementById('dexPriceEmpty').style.display = 'none';
+
+  // Try full TradingView charting_library first
+  if (typeof tvIsAvailable === 'function' && tvIsAvailable()) {
+    console.log('[price-chart] Using TradingView charting_library');
+    const symbol = dexBaseDenom ? (dexTokenName(dexBaseDenom) + '/TX') : 'TOKEN/TX';
+    const success = tvInitChart('dexPriceChartWrap', symbol);
+    if (success) {
+      dexUseTradingView = true;
+      dexPriceData = [];
+      dexVolData = [];
+      dexFillSequence = 0;
+      tvClearData();
+      // Hide our custom interval buttons — TV has its own
+      const intEl = document.getElementById('dexChartIntervals');
+      if (intEl) intEl.classList.add('tv-hidden');
+      return;
+    }
+  }
+
+  // Fallback to lightweight-charts
   if (!window.LightweightCharts) { console.warn('[price-chart] LightweightCharts not loaded'); return; }
+  dexUseTradingView = false;
+  // Show our custom interval buttons for lightweight-charts
+  const intEl2 = document.getElementById('dexChartIntervals');
+  if (intEl2) intEl2.classList.remove('tv-hidden');
 
   // Clear previous chart
   if (dexPriceChart) { dexPriceChart.remove(); dexPriceChart = null; }
-  document.getElementById('dexPriceEmpty').style.display = 'none';
 
   const w = wrap.clientWidth || wrap.offsetWidth || 600;
   const h = wrap.clientHeight || wrap.offsetHeight || 320;
-  console.log('[price-chart] init', w, 'x', h);
+  console.log('[price-chart] init lightweight-charts', w, 'x', h);
 
   dexPriceChart = LightweightCharts.createChart(wrap, {
     width: w,
     height: h,
-    layout: { background: { type: 'solid', color: '#0d0f14' }, textColor: '#8b949e', fontSize: 11 },
-    grid: { vertLines: { color: '#1a1d27' }, horzLines: { color: '#1a1d27' } },
+    layout: { background: { type: 'solid', color: '#101216' }, textColor: '#5e6773', fontSize: 11 },
+    grid: { vertLines: { color: '#1a1a1a' }, horzLines: { color: '#1a1a1a' } },
     crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
-    rightPriceScale: { borderColor: '#30363d' },
-    timeScale: { borderColor: '#30363d', timeVisible: true, secondsVisible: false },
+    rightPriceScale: { borderColor: '#1a1a1a' },
+    timeScale: { borderColor: '#1a1a1a', timeVisible: true, secondsVisible: false },
   });
 
   dexPriceSeries = dexPriceChart.addCandlestickSeries({
-    upColor: '#22c55e', downColor: '#ef4444',
-    borderUpColor: '#22c55e', borderDownColor: '#ef4444',
-    wickUpColor: '#22c55e', wickDownColor: '#ef4444',
+    upColor: '#25d695', downColor: '#d81d3c',
+    borderUpColor: '#25d695', borderDownColor: '#d81d3c',
+    wickUpColor: '#25d695', wickDownColor: '#d81d3c',
   });
 
   dexPriceVolSeries = dexPriceChart.addHistogramSeries({
@@ -1045,16 +1333,12 @@ function dexInitPriceChart() {
 }
 
 function dexAddFillToChart(price, quantity) {
-  if (!dexPriceSeries) { console.warn('[price-chart] no series yet'); return; }
   const p = parseFloat(price);
   const q = parseFloat(quantity || 0);
   if (!p || isNaN(p)) { console.warn('[price-chart] bad price:', price); return; }
-  console.log('[price-chart] fill', p, q);
 
   dexFillSequence++;
-  // Use seconds-based time: start at a fixed epoch + sequence
   const t = 1700000000 + dexFillSequence * 10;
-
   const last = dexPriceData.length > 0 ? dexPriceData[dexPriceData.length - 1] : null;
   const open = last ? last.close : p;
 
@@ -1064,18 +1348,28 @@ function dexAddFillToChart(price, quantity) {
     high: Math.max(open, p),
     low: Math.min(open, p),
     close: p,
+    volume: q,
   };
   dexPriceData.push(candle);
+
+  // Push to TradingView if active
+  if (dexUseTradingView && typeof tvAddBar === 'function') {
+    tvAddBar(candle);
+    return;
+  }
+
+  // Fallback to lightweight-charts
+  if (!dexPriceSeries) { console.warn('[price-chart] no series yet'); return; }
   dexPriceSeries.update(candle);
 
-  const vol = { time: t, value: q, color: p >= open ? 'rgba(34,197,94,.4)' : 'rgba(239,68,68,.4)' };
+  const vol = { time: t, value: q, color: p >= open ? 'rgba(37,214,149,.4)' : 'rgba(216,29,60,.4)' };
   dexVolData.push(vol);
   dexPriceVolSeries.update(vol);
 }
 
 function dexLoadSamplePriceData(midPrice) {
-  if (!dexPriceChart) dexInitPriceChart();
-  if (!dexPriceSeries) return;
+  if (!dexPriceChart && !dexUseTradingView) dexInitPriceChart();
+  if (!dexPriceSeries && !dexUseTradingView) return;
 
   const mp = parseFloat(midPrice) || 0.001;
   const now = Math.floor(Date.now() / 1000);
@@ -1139,9 +1433,16 @@ function dexLoadSamplePriceData(midPrice) {
   dexPriceData = candles;
   dexVolData = vols;
   dexFillSequence = candleCount;
-  dexPriceSeries.setData(candles);
-  dexPriceVolSeries.setData(vols);
-  dexPriceChart.timeScale().fitContent();
+
+  if (dexUseTradingView && typeof tvClearData === 'function') {
+    // Feed candles to TradingView
+    tvClearData();
+    candles.forEach(c => tvAddBar({ ...c, volume: vols.find(v => v.time === c.time)?.value || 0 }));
+  } else if (dexPriceSeries) {
+    dexPriceSeries.setData(candles);
+    dexPriceVolSeries.setData(vols);
+    dexPriceChart.timeScale().fitContent();
+  }
   document.getElementById('dexPriceEmpty').style.display = 'none';
 }
 
@@ -1149,6 +1450,9 @@ function dexResetPriceChart() {
   dexPriceData = [];
   dexVolData = [];
   dexFillSequence = 0;
+  if (dexUseTradingView && typeof tvClearData === 'function') {
+    tvClearData();
+  }
   if (dexPriceSeries) dexPriceSeries.setData([]);
   if (dexPriceVolSeries) dexPriceVolSeries.setData([]);
   document.getElementById('dexPriceEmpty').style.display = 'flex';
@@ -1548,9 +1852,9 @@ function dexDemoProcessEvent(event, data) {
       break;
 
     case 'funding':
-      const icon = data.success ? '💰' : '⚠️';
+      const fundIcon = data.success ? '💰' : '⚠️';
       dexDemoLog(data.success ? 'info' : 'warn',
-        `${icon} ${data.agent} faucet ${data.request}/${data.total}: ${data.success ? 'funded' : data.message}`);
+        `${fundIcon} ${data.agent}: ${data.message || (data.success ? 'funded' : 'failed')}`);
       break;
 
     case 'balance':

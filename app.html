@@ -8,8 +8,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/styles.css?v=20">
+<link rel="stylesheet" href="css/styles.css?v=29">
 <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
+<script src="/charting_library/charting_library.standalone.js"></script>
 </head>
 <body>
 
@@ -23,6 +24,19 @@
         <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
         GitHub
       </a>
+      <div class="nav-network-wrap">
+        <span class="nav-network-dot testnet" id="navNetDot"></span>
+        <select class="nav-network-select" id="navNetworkSelect" onchange="dexSwitchNetwork(this.value)">
+          <option value="testnet" selected>Testnet</option>
+          <option value="mainnet">Mainnet</option>
+        </select>
+      </div>
+      <button class="nav-connect-btn" id="navConnectBtn" onclick="globalShowWalletOptions()">Connect Wallet</button>
+      <span class="nav-connected-badge" id="navConnectedBadge" style="display:none">
+        <span class="nav-connected-dot"></span>
+        <span id="navConnectedAddr"></span>
+        <button class="nav-disconnect-x" onclick="globalDisconnectWallet()" title="Disconnect">&times;</button>
+      </span>
     </div>
   </div>
 </nav>
@@ -69,25 +83,17 @@
       </div>
     </div>
 
-    <!-- Global Wallet Bar -->
-    <div class="global-wallet-bar reveal" id="globalWalletBar">
+    <!-- Global Wallet Bar (minimal — just shows connected state) -->
+    <div class="global-wallet-bar reveal" id="globalWalletBar" style="display:none">
       <div class="global-wallet-left">
-        <!-- Agent mode (default) -->
-        <div id="gwAgent">
-          <span class="dex-wallet-mode-badge agent">Demo Wallet</span>
-          <span class="global-wallet-hint">Try it free — no wallet needed</span>
-        </div>
-        <!-- Connected mode (hidden) -->
+        <div id="gwAgent" style="display:none"></div>
         <div id="gwConnected" style="display:none">
           <span class="dex-wallet-mode-badge connected" id="gwProviderBadge">Keplr</span>
           <span class="global-wallet-addr" id="gwAddr"></span>
-          <span class="global-wallet-hint" id="gwHint">You are the token issuer</span>
         </div>
       </div>
       <div class="global-wallet-right">
-        <!-- Disconnected: Connect button -->
-        <div id="gwActions" style="display:flex;align-items:center;gap:8px">
-          <button class="dex-connect-btn" onclick="globalShowWalletOptions()">Connect Wallet</button>
+        <div id="gwActions" style="display:none">
           <div class="dex-wallet-dropdown" id="gwDropdown">
             <button class="dex-wallet-opt" onclick="globalConnectWallet('keplr')">
               <img src="https://raw.githubusercontent.com/nicolaracco/kepler-ui/main/packages/icons/src/icons/keplr-logo.svg" alt="Keplr" onerror="this.style.display='none'">
@@ -99,25 +105,12 @@
             </button>
           </div>
         </div>
-        <!-- Connected: Fund + Disconnect buttons -->
         <div id="gwDisconnectWrap" style="display:none">
-          <button class="gw-fund-btn" onclick="fundWallet()" title="Get free testnet TX tokens">Fund Wallet</button>
           <button class="dex-disconnect-btn" onclick="globalDisconnectWallet()">Disconnect</button>
         </div>
       </div>
     </div>
 
-    <!-- Agent Wallet Status (shown on DEX/Swarm tabs) -->
-    <div class="agent-wallet-bar" id="agentWalletBar" style="display:none">
-      <div class="agent-wallet-left">
-        <span class="agent-wallet-label">Agent Wallet</span>
-        <span class="agent-wallet-balance" id="agentWalletBal">Checking...</span>
-        <span class="agent-wallet-status" id="agentWalletStatus"></span>
-      </div>
-      <div class="agent-wallet-right">
-        <button class="agent-topup-btn" id="agentTopupBtn" onclick="agentTopUp()">Top Up (Faucet)</button>
-      </div>
-    </div>
 
     <!-- App Layout: Main content + Chat sidebar -->
     <div class="app-layout" id="appLayout">
@@ -339,29 +332,34 @@
     <!-- DEX Mode -->
     <div class="dex-wrap" id="dexWrap">
 
+      <!-- Multi-Pair Market Tabs -->
+      <div class="dex-market-tabs" id="dexMarketTabs"></div>
+
       <!-- Pair Bar -->
       <div class="dex-pair-bar">
-        <div class="dex-pair-token-logo" id="dexPairLogo" style="width:32px;height:32px;border-radius:50%;overflow:hidden;flex-shrink:0;display:none"></div>
-        <div class="dex-pair-select-wrap">
-          <select class="dex-pair-select" id="dexPairSelect" onchange="dexOnPairSelect()">
-            <option value="">-- Select Pair --</option>
-          </select>
+        <div class="dex-pair-bar-top">
+          <div class="dex-pair-token-logo" id="dexPairLogo" style="width:28px;height:28px;border-radius:50%;overflow:hidden;flex-shrink:0;display:none"></div>
+          <div class="dex-pair-name" id="dexPairName">TOKEN / TX</div>
+          <div class="dex-pair-select-wrap">
+            <select class="dex-pair-select" id="dexPairSelect" onchange="dexOnPairSelect()">
+              <option value="">-- Select Pair --</option>
+            </select>
+          </div>
+          <input type="hidden" id="dexBaseDenom">
         </div>
-        <span class="dex-pair-or">or</span>
-        <input type="text" class="dex-pair-manual" id="dexBaseDenom" placeholder="Paste denom (e.g. mytoken-testcore1...)">
-        <button class="dex-pair-load" onclick="dexLoadOrderbook()">Load</button>
-        <button class="dex-demo-btn" onclick="dexStartDemo()" title="Populate this token's orderbook with AI agents">🤖 Populate Orderbook</button>
-        <button class="dex-add-wallet-btn" id="dexAddWalletBtn" onclick="dexAddTokenToWallet()" title="Add this token to your Leap/Keplr wallet" style="display:none">➕ Add to Wallet</button>
-
-        <div class="dex-stats-strip">
-          <div class="dex-stat"><span class="dex-stat-label">Last Price</span><span class="dex-stat-value" id="dexStatLast">--</span></div>
+        <div class="dex-pair-bar-bottom">
+          <div class="dex-stat dex-stat-primary"><span class="dex-stat-value" id="dexStatLast" style="font-size:.92rem">--</span><span class="dex-stat-label">Last</span></div>
+          <div class="dex-stat-divider"></div>
+          <div class="dex-stat"><span class="dex-stat-label">24h Change</span><span class="dex-stat-value" id="dexStat24hChange">--</span></div>
+          <div class="dex-stat"><span class="dex-stat-label">24h Vol</span><span class="dex-stat-value" id="dexStatVol">--</span></div>
+          <div class="dex-stat"><span class="dex-stat-label">24h High</span><span class="dex-stat-value green" id="dexStatHigh">--</span></div>
+          <div class="dex-stat"><span class="dex-stat-label">24h Low</span><span class="dex-stat-value red" id="dexStatLow">--</span></div>
           <div class="dex-stat"><span class="dex-stat-label">Spread</span><span class="dex-stat-value purple" id="dexStatSpread">--</span></div>
           <div class="dex-stat"><span class="dex-stat-label">Best Bid</span><span class="dex-stat-value green" id="dexStatBid">--</span></div>
           <div class="dex-stat"><span class="dex-stat-label">Best Ask</span><span class="dex-stat-value red" id="dexStatAsk">--</span></div>
           <div class="dex-stat"><span class="dex-stat-label">Orders</span><span class="dex-stat-value" id="dexStatCount">0</span></div>
           <div class="dex-live-badge"><span class="dex-live-dot" id="dexLiveDot"></span><span id="dexLiveText">Idle</span></div>
         </div>
-
       </div>
 
       <!-- Processing Overlay -->
@@ -373,254 +371,65 @@
         <div class="dex-proc-stream" id="dexProcStream"></div>
       </div>
 
-      <!-- Live Demo Overlay -->
-      <!-- Swarm Config Panel (shown before launch) -->
-      <div class="dex-deposit-overlay" id="dexSwarmConfigModal" style="display:none">
-        <div class="dex-deposit-panel" style="max-width:480px">
-          <div class="dex-deposit-header">
-            <h3>🤖 Configure Agent Swarm</h3>
-            <button class="dex-demo-close" onclick="document.getElementById('dexSwarmConfigModal').style.display='none'">✕</button>
-          </div>
-          <div class="dex-deposit-body">
-            <p style="color:var(--text-dim);font-size:.88rem;margin-bottom:20px">
-              AI agents will populate the <b id="swarmConfigToken">TOKEN</b> orderbook on the live DEX.
-            </p>
-
-            <div class="swarm-config-field">
-              <label class="auth-label">Strategy</label>
-              <div class="swarm-strategy-cards">
-                <button class="swarm-strat-card active" data-strat="market-maker" onclick="dexSelectStrategy(this)">
-                  <span class="swarm-strat-icon">📊</span>
-                  <span class="swarm-strat-name">Market Maker</span>
-                  <span class="swarm-strat-tip">Buy & sell orders around a fair price with overlap fills</span>
-                </button>
-                <button class="swarm-strat-card" data-strat="stress-test" onclick="dexSelectStrategy(this)">
-                  <span class="swarm-strat-icon">⚡</span>
-                  <span class="swarm-strat-name">Stress Test</span>
-                  <span class="swarm-strat-tip">Rapid fire orders to test throughput & fills</span>
-                </button>
-              </div>
-            </div>
-
-            <div class="swarm-config-field">
-              <label class="auth-label">Intensity</label>
-              <div style="display:flex;align-items:center;gap:12px">
-                <input type="range" class="cp-slider" id="swarmIntensity" min="1" max="3" step="1" value="2"
-                  oninput="dexUpdateIntensityLabel()">
-                <span class="swarm-intensity-label" id="swarmIntensityLabel">Standard</span>
-              </div>
-              <div class="swarm-intensity-info" id="swarmIntensityInfo">
-                ~25 orders &bull; 6 overlap fills &bull; 3 agents
-              </div>
-            </div>
-
-            <div style="text-align:center;margin-top:20px">
-              <button class="dex-deposit-check-btn" onclick="dexConfirmSwarmLaunch()" style="padding:14px 36px;font-size:.95rem">
-                🚀 Launch Swarm
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="dex-demo-overlay" id="dexDemoOverlay" style="display:none">
-        <div class="dex-demo-panel">
-          <div class="dex-demo-header">
-            <h3>🤖 AI Agent Swarm — Populating <span id="dexDemoTokenName">Token</span></h3>
-            <div class="dex-demo-header-right">
-              <span class="dex-demo-timer" id="dexDemoTimer">00:00</span>
-              <button class="dex-demo-close" onclick="dexStopDemo()">✕</button>
-            </div>
-          </div>
-
-          <!-- Agent Cards -->
-          <div class="dex-demo-agents">
-            <div class="dex-demo-agent-card agent-buyer" id="dexDemoAgentA">
-              <div class="agent-role">🟢 Market Maker A</div>
-              <div class="agent-label">BUYER</div>
-              <div class="agent-addr" id="demoAddrA">Creating wallet...</div>
-              <div class="agent-stats">
-                <span>Balance: <b id="demoBalA">--</b></span>
-                <span>Orders: <b id="demoOrdersA">0</b></span>
-              </div>
-            </div>
-            <div class="dex-demo-agent-card agent-seller" id="dexDemoAgentB">
-              <div class="agent-role">🔴 Market Maker B</div>
-              <div class="agent-label">SELLER</div>
-              <div class="agent-addr" id="demoAddrB">Creating wallet...</div>
-              <div class="agent-stats">
-                <span>Balance: <b id="demoBalB">--</b></span>
-                <span>Orders: <b id="demoOrdersB">0</b></span>
-              </div>
-            </div>
-            <div class="dex-demo-agent-card agent-taker" id="dexDemoAgentTaker">
-              <div class="agent-role">🟣 Taker Bot</div>
-              <div class="agent-label">MARKET TAKER</div>
-              <div class="agent-addr" id="demoAddrTaker">Creating wallet...</div>
-              <div class="agent-stats">
-                <span>Balance: <b id="demoBalTaker">--</b></span>
-                <span>Orders: <b id="demoOrdersTaker">0</b></span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Progress & Timeline -->
-          <div class="dex-demo-progress">
-            <div class="dex-demo-phase" id="dexDemoPhase">Initializing...</div>
-            <div class="dex-demo-bar-wrap">
-              <div class="dex-demo-bar" id="dexDemoBar" style="width:0%"></div>
-            </div>
-          </div>
-
-          <div class="dex-demo-timeline" id="dexDemoTimeline">
-            <div class="demo-log-entry info">Demo starting — 3 AI agents will create a full orderbook...</div>
-          </div>
-
-          <!-- Summary (shown at end) -->
-          <div class="dex-demo-summary" id="dexDemoSummary" style="display:none">
-            <div class="demo-summary-title">Market Making Complete!</div>
-            <div class="demo-summary-grid" id="demoSummaryGrid"></div>
-          </div>
-
-          <!-- Post-demo reclaim options (shown after done) -->
-          <div class="dex-demo-reclaim" id="dexDemoReclaim" style="display:none">
-            <div class="reclaim-title">What would you like to do with the orderbook?</div>
-            <div class="reclaim-options">
-              <button class="reclaim-btn keep" onclick="dexKeepOrderbook()">
-                <span class="reclaim-icon">📊</span>
-                <span class="reclaim-label">Keep Orderbook Live</span>
-                <span class="reclaim-desc">Leave tokens on the book — explore the chart & depth</span>
-              </button>
-              <button class="reclaim-btn reclaim" onclick="dexReclaimTokens()">
-                <span class="reclaim-icon">💰</span>
-                <span class="reclaim-label">Reclaim Tokens & TX</span>
-                <span class="reclaim-desc">Sweep all tokens back to your wallet</span>
-              </button>
-            </div>
-            <label class="reclaim-checkbox" id="dexRevokeWhitelistRow" style="display:none">
-              <input type="checkbox" id="dexRevokeWhitelistChk"> Also revoke whitelisting for agent sub-wallets
-            </label>
-          </div>
-        </div>
-      </div>
-
-      <!-- Deposit Modal (shown when agent doesn't hold the token) -->
-      <div class="dex-deposit-overlay" id="dexDepositModal" style="display:none">
-        <div class="dex-deposit-panel">
-          <div class="dex-deposit-header">
-            <h3>📦 Token Deposit Required</h3>
-            <button class="dex-demo-close" onclick="dexCloseDeposit()">✕</button>
-          </div>
-          <div class="dex-deposit-body">
-            <p class="dex-deposit-desc">
-              The AI trading agents need <b><span id="dexDepositAmount">7,000</span>
-              <span id="dexDepositSymbol">TOKEN</span></b> to populate your orderbook.
-            </p>
-
-            <!-- Step-by-step instructions -->
-            <div class="dex-deposit-steps">
-              <div class="dex-deposit-step">
-                <span class="dex-deposit-step-num">1</span>
-                <div class="dex-deposit-step-text">
-                  <strong>Add token to your wallet</strong> so you can see your balance
-                  <button class="dex-deposit-add-btn" id="dexDepositAddBtn" onclick="dexDepositAddToWallet()">➕ Add to Wallet</button>
-                </div>
-              </div>
-              <!-- Whitelisting warning (only shown if token has whitelisting) -->
-              <div class="dex-deposit-step dex-wl-warn" id="dexDepositWhitelistWarn" style="display:none;border:1px solid rgba(251,191,36,.3);background:rgba(251,191,36,.06);border-radius:8px">
-                <span class="dex-deposit-step-num" style="background:linear-gradient(135deg,#f59e0b,#d97706)">!</span>
-                <div class="dex-deposit-step-text">
-                  <strong style="color:#fbbf24">Whitelisting Enabled</strong> — your token requires addresses to be whitelisted before they can hold tokens. The swarm needs 4 wallets whitelisted (1 agent + 3 trading bots).
-                  <button class="dex-deposit-add-btn" id="dexWhitelistBtn" onclick="dexWhitelistAgent()" style="background:linear-gradient(135deg,#f59e0b,#d97706);margin-top:8px">🔓 Whitelist All 4 Wallets (one tx)</button>
-                </div>
-              </div>
-
-              <div class="dex-deposit-step">
-                <span class="dex-deposit-step-num">2</span>
-                <div class="dex-deposit-step-text">
-                  <strong>Send tokens</strong> to the agent address below
-                  <div class="dex-deposit-address-row">
-                    <code id="dexDepositAddress">testcore1...</code>
-                    <button class="dex-deposit-copy" onclick="dexCopyDepositAddr()">📋 Copy</button>
-                  </div>
-                </div>
-              </div>
-              <div class="dex-deposit-step">
-                <span class="dex-deposit-step-num">3</span>
-                <div class="dex-deposit-step-text">
-                  <strong>Click below</strong> to verify deposit & launch the swarm
-                </div>
-              </div>
-            </div>
-
-            <p class="dex-deposit-note">
-              After the demo completes, unused tokens will be returned to your wallet automatically.
-              Each limit order costs ~0.01 TX in gas — the swarm uses ~0.25 TX total.
-            </p>
-            <div class="dex-deposit-actions">
-              <button class="dex-deposit-check-btn" id="dexDepositCheckBtn" onclick="dexCheckAndStart()">
-                🟢 Check & Start Demo
-              </button>
-              <div class="dex-deposit-status" id="dexDepositStatus"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <!-- Terminal Grid -->
       <div class="dex-terminal">
 
-        <!-- LEFT: Orderbook -->
-        <div class="dex-terminal-panel p-orderbook">
-          <div class="dex-panel-hdr">
-            Orderbook
-            <span id="dexObStatus" style="font-size:.6rem;font-weight:500;text-transform:none;letter-spacing:0">
-              <span class="dex-status-dot idle"></span> Idle
-            </span>
+        <!-- LEFT STACK: Orderbook + Trade History -->
+        <div class="dex-left-stack">
+          <div class="dex-terminal-panel p-orderbook">
+            <div class="dex-panel-hdr">
+              <span>Orderbook</span>
+              <div class="dex-ob-controls">
+                <div class="dex-ob-view-modes">
+                  <button class="dex-ob-mode active" onclick="dexSetObView('both',this)" title="Show bids & asks">
+                    <svg width="12" height="12" viewBox="0 0 12 12"><rect y="0" width="12" height="5" fill="#ff7386" opacity=".6"/><rect y="7" width="12" height="5" fill="#25d695" opacity=".6"/></svg>
+                  </button>
+                  <button class="dex-ob-mode" onclick="dexSetObView('bids',this)" title="Bids only">
+                    <svg width="12" height="12" viewBox="0 0 12 12"><rect y="0" width="12" height="12" fill="#25d695" opacity=".6"/></svg>
+                  </button>
+                  <button class="dex-ob-mode" onclick="dexSetObView('asks',this)" title="Asks only">
+                    <svg width="12" height="12" viewBox="0 0 12 12"><rect y="0" width="12" height="12" fill="#ff7386" opacity=".6"/></svg>
+                  </button>
+                </div>
+                <span id="dexObStatus" style="font-size:.55rem;font-weight:500;text-transform:none;letter-spacing:0">
+                  <span class="dex-status-dot idle"></span> Idle
+                </span>
+              </div>
+            </div>
+            <div style="padding:0;flex:1;display:flex;flex-direction:column;overflow:hidden">
+              <div class="dex-ob-hdr">
+                <span>Price</span>
+                <span>Amount</span>
+                <span>Total</span>
+              </div>
+              <div class="dex-ob-asks" id="dexAskRows"></div>
+              <div class="dex-ob-spread" id="dexSpreadRow" style="display:none">
+                <span>Spread:</span> <span class="sv" id="dexSpreadVal">--</span> <span class="sp" id="dexSpreadPct"></span>
+              </div>
+              <div class="dex-ob-bids" id="dexBidRows"></div>
+              <div class="dex-ob-empty" id="dexObEmpty">Select a trading pair to begin.</div>
+            </div>
           </div>
-          <div style="padding:0;flex:1;display:flex;flex-direction:column;overflow:hidden">
-            <div class="dex-ob-hdr">
-              <span>Price</span>
-              <span>Amount</span>
-              <span>Total</span>
+
+          <div class="dex-terminal-panel p-history">
+            <div class="dex-panel-hdr">Trade History</div>
+            <div style="padding:0;flex:1;overflow-y:auto">
+              <div class="dex-trade-row header">
+                <span>Price</span><span class="t-amt">Amount</span><span class="t-time">Time</span>
+              </div>
+              <div id="dexTradeHistory">
+                <div class="dex-trade-empty">Monitoring for trades...</div>
+              </div>
             </div>
-            <div class="dex-ob-asks" id="dexAskRows"></div>
-            <div class="dex-ob-spread" id="dexSpreadRow" style="display:none">
-              <span>Spread:</span> <span class="sv" id="dexSpreadVal">--</span> <span class="sp" id="dexSpreadPct"></span>
-            </div>
-            <div class="dex-ob-bids" id="dexBidRows"></div>
-            <div class="dex-ob-empty" id="dexObEmpty">Select a pair or enter a denom to begin trading.</div>
           </div>
         </div>
 
-        <!-- CENTER: Price / Depth / AI Advisor -->
+        <!-- CENTER: TradingView Chart -->
         <div class="dex-terminal-panel p-center">
-          <div class="dex-center-tabs">
-            <button class="dex-center-tab active" onclick="dexSetCenterTab('price')">Price</button>
-            <button class="dex-center-tab" onclick="dexSetCenterTab('depth')">Depth</button>
-          </div>
           <div class="dex-center-content">
-            <!-- Price Chart Pane -->
             <div class="dex-center-pane active" id="dexPricePane">
               <div class="dex-price-chart-wrap" id="dexPriceChartWrap">
-                <div class="dex-price-empty" id="dexPriceEmpty">Run the AI Agent Demo to generate live price action.</div>
-              </div>
-            </div>
-            <!-- Depth Chart Pane -->
-            <div class="dex-center-pane" id="dexDepthPane">
-              <canvas class="dex-depth-canvas" id="dexDepthCanvas"></canvas>
-            </div>
-            <!-- AI Advisor Pane -->
-            <div class="dex-center-pane" id="dexAdvisorPane">
-              <div class="dex-chat-messages" id="dexChatMessages">
-                <div class="dex-chat-msg">
-                  <div class="dex-chat-avatar ai">AI</div>
-                  <div class="dex-chat-bubble ai">I'm your AI trading advisor for the TX orderbook. Ask about strategies, or describe an order in natural language.</div>
-                </div>
-              </div>
-              <div class="dex-chat-input-row">
-                <input type="text" class="dex-chat-input" id="dexChatInput" placeholder="Ask about trading or describe an order..." onkeydown="if(event.key==='Enter')dexSendChat()">
-                <button class="dex-chat-send" id="dexChatSendBtn" onclick="dexSendChat()">Send</button>
+                <div class="dex-price-empty" id="dexPriceEmpty">Select a trading pair to view the chart.</div>
               </div>
             </div>
           </div>
@@ -628,7 +437,6 @@
 
         <!-- RIGHT: Order Form -->
         <div class="dex-terminal-panel p-order-form">
-          <div class="dex-panel-hdr">Place Order</div>
           <div class="dex-panel-body">
             <div class="dex-side-tabs">
               <button class="dex-side-tab buy active" onclick="dexSetSide('buy')">Buy</button>
@@ -641,70 +449,95 @@
             </div>
 
             <div class="dex-form-group" id="dexPriceGroup">
-              <label class="dex-form-label">Price (TX)</label>
+              <label class="dex-form-label">Limit Price</label>
               <input type="number" class="dex-form-input" id="dexPrice" placeholder="0.00" step="any" oninput="dexUpdateTotal()">
             </div>
 
             <div class="dex-form-group">
-              <label class="dex-form-label">Amount (Token)</label>
+              <label class="dex-form-label">Amount</label>
               <input type="number" class="dex-form-input" id="dexQty" placeholder="0.00" step="any" oninput="dexUpdateTotal()">
             </div>
 
-            <div class="dex-pct-btns">
-              <button class="dex-pct-btn" onclick="dexSetPct(25)">25%</button>
-              <button class="dex-pct-btn" onclick="dexSetPct(50)">50%</button>
-              <button class="dex-pct-btn" onclick="dexSetPct(75)">75%</button>
-              <button class="dex-pct-btn" onclick="dexSetPct(100)">100%</button>
+            <!-- Advanced Order Settings -->
+            <div class="dex-advanced-section">
+              <div class="dex-advanced-toggle" onclick="dexToggleAdvanced()">
+                <span>Advanced Settings</span>
+                <span class="dex-advanced-arrow" id="dexAdvancedArrow">▸</span>
+              </div>
+              <div class="dex-advanced-body" id="dexAdvancedBody">
+                <div class="dex-form-group" style="margin-top:8px">
+                  <label class="dex-form-label">Time in Force</label>
+                  <select class="dex-form-input dex-tif-select" id="dexTifSelect" onchange="dexOnTifChange()">
+                    <option value="GTC">Good Til Cancel</option>
+                    <option value="GoodTil">Good Til Time</option>
+                    <option value="IOC">Immediate or Cancel</option>
+                  </select>
+                </div>
+                <div class="dex-goodtil-section" id="dexGoodTilSection" style="display:none">
+                  <div class="dex-form-group">
+                    <label class="dex-form-label">Expires In</label>
+                    <div class="dex-goodtil-row">
+                      <input type="number" class="dex-form-input dex-goodtil-value" id="dexGoodTilValue" value="1" min="1" step="1">
+                      <div class="dex-goodtil-units">
+                        <button class="dex-goodtil-unit active" onclick="dexSetGoodTilUnit(this,'minutes')">Min</button>
+                        <button class="dex-goodtil-unit" onclick="dexSetGoodTilUnit(this,'hours')">Hr</button>
+                        <button class="dex-goodtil-unit" onclick="dexSetGoodTilUnit(this,'days')">Day</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div class="dex-total">
-              <span class="lbl">Total</span>
+              <span class="lbl">Estimated Total</span>
               <span id="dexTotalDisplay">0.00 TX</span>
             </div>
 
             <button class="dex-place-btn buy" id="dexPlaceBtn" onclick="dexPlaceOrder()" disabled>
-              Place Buy Order
+              Confirm Order
             </button>
 
-            <div class="dex-balance-info">
-              Available: <span class="val" id="dexAvailBalance">--</span>
+            <div class="dex-assets-section">
+              <div class="dex-assets-title">Assets</div>
+              <div class="dex-asset-row">
+                <span class="dex-asset-label" id="dexAssetBaseLabel">Token</span>
+                <span class="dex-asset-val" id="dexAssetBaseVal">--</span>
+              </div>
+              <div class="dex-asset-row">
+                <span class="dex-asset-label">TX</span>
+                <span class="dex-asset-val" id="dexAvailBalance">--</span>
+              </div>
             </div>
 
-            <div class="dex-wallet-info">
+            <div class="dex-wallet-info" id="dexWalletInfoRow">
               <span class="dex-wallet-mode-badge agent" id="dexModeBadge">Agent</span>
               <span id="dexWalletAddr">Loading...</span>
             </div>
           </div>
         </div>
 
-        <!-- BOTTOM-LEFT: Trade History -->
-        <div class="dex-terminal-panel p-history">
-          <div class="dex-panel-hdr">Trade History</div>
-          <div style="padding:0;flex:1;overflow-y:auto">
-            <div class="dex-trade-row header">
-              <span>Price</span><span class="t-amt">Amount</span><span class="t-time">Time</span>
-            </div>
-            <div id="dexTradeHistory">
-              <div class="dex-trade-empty">Monitoring for trades...</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- BOTTOM-RIGHT: Open Orders / Session History -->
+        <!-- BOTTOM: Open Orders / Order History (full width) -->
         <div class="dex-terminal-panel p-orders">
           <div class="dex-orders-tabs">
             <button class="dex-orders-tab active" onclick="dexSetOrdersTab('open')">Open Orders</button>
-            <button class="dex-orders-tab" onclick="dexSetOrdersTab('session')">Session History</button>
+            <button class="dex-orders-tab" onclick="dexSetOrdersTab('all')">Order History</button>
           </div>
           <div style="flex:1;overflow-y:auto">
             <div class="dex-orders-pane active" id="dexOpenOrdersPane">
+              <div class="dex-open-orders-hdr">
+                <span>Side</span><span>Price</span><span>Amount</span><span>Total</span><span></span>
+              </div>
               <div id="dexMyOrdersBody">
                 <div class="dex-no-orders">No open orders</div>
               </div>
             </div>
-            <div class="dex-orders-pane" id="dexSessionPane">
-              <div id="dexSessionHistory">
-                <div class="dex-no-orders">No orders placed this session</div>
+            <div class="dex-orders-pane" id="dexAllOrdersPane">
+              <div class="dex-all-orders-hdr">
+                <span>Side</span><span>Type</span><span>Price</span><span>Amount</span><span>Status</span><span>Time</span>
+              </div>
+              <div id="dexAllOrdersBody">
+                <div class="dex-no-orders">No order history for this pair</div>
               </div>
             </div>
           </div>
@@ -1407,12 +1240,14 @@
 
 <!-- Modular JavaScript -->
 <script src="js/txdb.js?v=11"></script>
-<script src="js/config.js?v=10"></script>
+<script src="js/config.js?v=11"></script>
 <script src="js/wallet.js?v=10"></script>
 <script src="js/chat.js?v=10"></script>
 <script src="js/create-token.js?v=14"></script>
 <script src="js/create-nft.js?v=10"></script>
-<script src="js/dex.js?v=18"></script>
+<script src="js/tradingview-chart.js?v=1"></script>
+<script src="js/ws-client.js?v=1"></script>
+<script src="js/dex.js?v=28"></script>
 <script src="js/manage.js?v=11"></script>
 <script src="js/swarm.js?v=11"></script>
 <script src="js/auth.js?v=10"></script>

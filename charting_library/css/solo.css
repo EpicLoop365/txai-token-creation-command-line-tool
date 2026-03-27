@@ -1,0 +1,54 @@
+/* ---------------------------------------- allowed css overrides ---------------------------------------- */
+
+/* These styles apply to both light and dark themes */
+:root {
+  --tv-color-toolbar-button-background-hover: transparent;
+  --tv-color-toolbar-button-text-hover: rgba(216, 29, 60, 0.5);
+  --tv-color-toolbar-button-text-active: #d81d3c;
+  --tv-color-toolbar-button-text-active-hover: rgba(216, 29, 60, 0.5);
+}
+
+/* Light Theme only */
+:root:not(.theme-dark) {
+  --tv-color-toolbar-button-text: #c3c3c3;
+  --tv-color-platform-background: #ffffff;
+  --tv-color-pane-background: #ffffff;
+  --tv-color-pane-background-secondary: #ffffff;
+}
+
+/* Dark Theme only */
+.theme-dark:root {
+  --tv-color-toolbar-button-text: #454545;
+  --tv-color-platform-background: #121212;
+  --tv-color-pane-background: #121212;
+  --tv-color-pane-background-secondary: #222222;
+}
+
+/* 
+Unused but available
+{
+  --tv-color-item-active-text: ;
+  --tv-color-toolbar-button-background-secondary-hover: ;
+  --tv-color-toolbar-button-background-expanded: ;
+  --tv-color-toolbar-toggle-button-background-active: ;
+  --tv-color-toolbar-toggle-button-background-active-hover: ;
+} 
+*/
+
+/* ---------------------------------------- hacky css overrides ---------------------------------------- */
+
+/* html.theme-dark .dialog-UM6w7sFp {
+  background: #222222 !important;
+}
+
+html.theme-dark .item-2IihgTnv {
+  background: #222222;
+}
+
+html.theme-dark .menuWrap-g78rwseC {
+  background: #222222 !important;
+}
+
+html.theme-dark .tv-floating-toolbar {
+  background: #222222 !important;
+} */

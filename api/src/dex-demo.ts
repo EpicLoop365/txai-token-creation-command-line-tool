@@ -312,7 +312,8 @@ export async function runDexDemo(config: DemoConfig): Promise<void> {
 
       // Attempt 1: Fund from agent wallet
       try {
-        await agentClient.signAndBroadcastMsg({
+        console.log(`[dex-demo] Funding ${agent.name}: ${fundPerWallet} ${QUOTE_DENOM} from ${agentClient.address.slice(0,16)}... → ${agent.address.slice(0,16)}...`);
+        const fundResult = await agentClient.signAndBroadcastMsg({
           typeUrl: "/cosmos.bank.v1beta1.MsgSend",
           value: {
             fromAddress: agentClient.address,
@@ -321,6 +322,7 @@ export async function runDexDemo(config: DemoConfig): Promise<void> {
           },
         }, 200000);
         funded = true;
+        console.log(`[dex-demo] Funded ${agent.name}: tx=${fundResult.txHash}, success=${fundResult.success}`);
         emit("funding", {
           agent: agent.name,
           request: 1,
@@ -330,12 +332,13 @@ export async function runDexDemo(config: DemoConfig): Promise<void> {
         });
         await sleep(2000);
       } catch (fundErr) {
+        console.error(`[dex-demo] Fund ${agent.name} FAILED:`, (fundErr as Error).message);
         emit("funding", {
           agent: agent.name,
           request: 1,
           total: 1,
           success: false,
-          message: `Issuer send failed: ${(fundErr as Error).message.slice(0, 80)}`,
+          message: `Issuer send failed: ${(fundErr as Error).message.slice(0, 120)}`,
         });
       }
 
