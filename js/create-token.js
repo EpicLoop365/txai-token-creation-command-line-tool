@@ -60,14 +60,137 @@ function switchTab(tab){
   if(typeof showAgentBar === 'function') showAgentBar(tab);
 }
 
-/* AI sub-tab toggle: Advisor / Agent Swarm */
+/* AI sub-tab toggle: Advisor / Use Cases / Agent Swarm */
 let aiMode = 'advisor';
 function setAiMode(mode){
   aiMode = mode;
   document.getElementById('aiModeAdvisor').classList.toggle('active', mode === 'advisor');
+  const ucBtn = document.getElementById('aiModeUsecases');
+  if(ucBtn) ucBtn.classList.toggle('active', mode === 'usecases');
   document.getElementById('aiModeSwarm').classList.toggle('active', mode === 'swarm');
   document.getElementById('aiAdvisorPane').style.display = mode === 'advisor' ? '' : 'none';
+  const ucPane = document.getElementById('aiUsecasesPane');
+  if(ucPane) ucPane.style.display = mode === 'usecases' ? '' : 'none';
   document.getElementById('aiSwarmPane').style.display = mode === 'swarm' ? '' : 'none';
+}
+
+/* ── Use Case Launcher ── */
+const ucConfigs = {
+  subscription: {
+    tab: 'subs',
+    msg: 'Switched to Subscriptions — create a pass token with built-in payment splitting.',
+  },
+  loyalty: {
+    tab: 'create', mode: 'custom',
+    prefill: { name: 'LoyaltyPoints', symbol: 'LOYAL', supply: '1000000', decimals: '0', desc: 'Loyalty reward tokens — earn on purchase, burn on redemption' },
+    features: ['minting', 'burning'],
+    msg: 'Pre-filled a loyalty token. Enable Mintable + Burnable, then deploy.',
+  },
+  apikey: {
+    tab: 'create', mode: 'custom',
+    prefill: { name: 'APIAccess', symbol: 'APIKEY', supply: '1000', decimals: '0', desc: 'On-chain API access key — hold to authenticate, freeze to revoke' },
+    features: ['freezing', 'whitelisting'],
+    msg: 'Pre-filled an API access token. Freezable lets you revoke access instantly.',
+  },
+  governance: {
+    tab: 'create', mode: 'custom',
+    prefill: { name: 'GovToken', symbol: 'GOV', supply: '10000000', decimals: '6', desc: 'DAO governance token — 1 token = 1 vote' },
+    features: ['governance', 'ibcEnabled'],
+    msg: 'Pre-filled a governance token. Airdrop to members after deploying.',
+  },
+  deflationary: {
+    tab: 'create', mode: 'custom',
+    prefill: { name: 'BurnCoin', symbol: 'BURN', supply: '100000000', decimals: '6', desc: 'Deflationary token — auto-burns on every transfer' },
+    features: ['burning'],
+    sliders: { cpBurnRate: '5' },
+    msg: 'Pre-filled a deflationary token with 5% burn rate. Adjust and deploy.',
+  },
+  revenue: {
+    tab: 'create', mode: 'custom',
+    prefill: { name: 'RevShare', symbol: 'REV', supply: '50000000', decimals: '6', desc: 'Revenue token — transfer fee creates passive income for issuer' },
+    features: ['minting'],
+    sliders: { cpFeeRate: '3' },
+    msg: 'Pre-filled a revenue token with 3% transfer fee to issuer.',
+  },
+  nft: {
+    tab: 'create', mode: 'nft',
+    msg: 'Switched to NFT mode — create a collection with royalties and batch minting.',
+  },
+  tickets: {
+    tab: 'create', mode: 'nft',
+    msg: 'Switched to NFT mode — create burnable/soulbound tickets for your event.',
+  },
+  marketmaker: {
+    tab: 'ai', aiMode: 'swarm',
+    msg: 'Switched to Agent Swarm — select a token and deploy 3 AI market makers.',
+  },
+};
+
+function ucLaunch(key){
+  const cfg = ucConfigs[key];
+  if(!cfg) return;
+
+  // Switch to the right tab
+  if(cfg.tab === 'ai' && cfg.aiMode){
+    switchTab('ai');
+    setAiMode(cfg.aiMode);
+  } else {
+    switchTab(cfg.tab);
+  }
+
+  // Set create mode if needed
+  if(cfg.mode && typeof setCreateMode === 'function'){
+    setCreateMode(cfg.mode);
+  }
+
+  // Pre-fill form fields
+  if(cfg.prefill){
+    const map = { name:'cpName', symbol:'cpSymbol', supply:'cpSupply', decimals:'cpDecimals', desc:'cpDesc' };
+    for(const [k,v] of Object.entries(cfg.prefill)){
+      const el = document.getElementById(map[k]);
+      if(el) el.value = v;
+    }
+  }
+
+  // Set features
+  if(cfg.features){
+    // Reset all features first
+    document.querySelectorAll('#cpFeatures .cp-feature.active').forEach(el => el.classList.remove('active'));
+    // Activate specified features
+    cfg.features.forEach(f => {
+      const el = document.querySelector(`#cpFeatures .cp-feature[data-feature="${f}"]`);
+      if(el) el.classList.add('active');
+    });
+  }
+
+  // Set sliders
+  if(cfg.sliders){
+    for(const [id, val] of Object.entries(cfg.sliders)){
+      const slider = document.getElementById(id);
+      if(slider){
+        slider.value = val;
+        // Trigger the display update
+        const valId = id === 'cpBurnRate' ? 'cpBurnVal' : 'cpFeeVal';
+        if(typeof updateSlider === 'function') updateSlider(id, valId);
+      }
+    }
+  }
+
+  // Show confirmation toast
+  if(cfg.msg) ucToast(cfg.msg);
+}
+
+function ucToast(msg){
+  let toast = document.getElementById('ucToast');
+  if(!toast){
+    toast = document.createElement('div');
+    toast.id = 'ucToast';
+    toast.className = 'uc-toast';
+    document.body.appendChild(toast);
+  }
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 3500);
 }
 
 

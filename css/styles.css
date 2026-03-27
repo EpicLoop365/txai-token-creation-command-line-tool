@@ -2554,9 +2554,133 @@ footer{
 .airdrop-result.success{background:rgba(0,208,132,.1);border:1px solid rgba(0,208,132,.3);color:var(--green)}
 .airdrop-result.error{background:rgba(216,29,60,.1);border:1px solid rgba(216,29,60,.3);color:#ff7386}
 
+/* ───── Use Cases ───── */
+.uc-header{text-align:center;margin-bottom:28px}
+.uc-title{font-size:1.3rem;font-weight:700;color:var(--text);margin-bottom:6px}
+.uc-sub{font-size:.82rem;color:var(--text-muted);max-width:480px;margin:0 auto}
+.uc-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:16px;
+}
+.uc-card{
+  background:var(--bg2);border:1px solid var(--border);border-radius:12px;
+  padding:20px;cursor:pointer;position:relative;overflow:hidden;
+  transition:border-color .2s,transform .15s;
+}
+.uc-card:hover{border-color:var(--purple);transform:translateY(-2px)}
+.uc-card-accent{position:absolute;top:0;left:0;right:0;height:3px}
+.uc-card-accent.purple{background:var(--purple)}
+.uc-card-accent.green{background:var(--green)}
+.uc-card-accent.blue{background:#5b9cf6}
+.uc-card-accent.amber{background:#f5a623}
+.uc-card-accent.red{background:#e74c3c}
+.uc-card-accent.teal{background:#00b894}
+.uc-card-accent.pink{background:#e84393}
+.uc-card-accent.orange{background:#f39c12}
+.uc-card-accent.cyan{background:#00cec9}
+.uc-card-icon{font-size:1.6rem;margin-bottom:8px}
+.uc-card h4{font-size:.9rem;font-weight:600;color:var(--text);margin:0 0 6px}
+.uc-card p{font-size:.75rem;color:var(--text-muted);line-height:1.5;margin:0 0 12px}
+.uc-card-stack{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:14px}
+.uc-card-stack span{
+  font-size:.6rem;text-transform:uppercase;letter-spacing:.04em;
+  padding:3px 8px;border-radius:4px;
+  background:var(--bg3);color:var(--text-muted);border:1px solid var(--border);
+  font-family:var(--mono);
+}
+.uc-card-btns{display:flex;gap:6px}
+.uc-deploy-btn{
+  flex:1;padding:8px;border-radius:8px;border:none;cursor:pointer;
+  font-size:.75rem;font-weight:600;font-family:var(--font);
+  transition:opacity .15s;
+}
+.uc-deploy-btn:hover{opacity:1}
+.uc-deploy-btn.agent{
+  background:var(--purple);color:#fff;opacity:.9;
+}
+.uc-deploy-btn.manual{
+  background:var(--bg3);color:var(--text-muted);border:1px solid var(--border);opacity:.8;
+}
+
+/* ───── Agent Workflow Modal ───── */
+.awf-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:10000;
+  display:flex;align-items:center;justify-content:center;
+  animation:awfFadeIn .2s ease;
+}
+@keyframes awfFadeIn{from{opacity:0}to{opacity:1}}
+.awf-modal{
+  background:var(--bg);border:1px solid var(--border);border-radius:14px;
+  width:520px;max-width:92vw;max-height:80vh;overflow:hidden;
+  display:flex;flex-direction:column;box-shadow:0 16px 64px rgba(0,0,0,.5);
+}
+.awf-header{
+  padding:18px 22px;border-bottom:1px solid var(--border);
+  display:flex;justify-content:space-between;align-items:center;
+}
+.awf-title{font-size:1rem;font-weight:700;color:var(--text)}
+.awf-close{
+  background:none;border:none;color:var(--text-muted);font-size:1.2rem;
+  cursor:pointer;padding:4px 8px;border-radius:6px;
+}
+.awf-close:hover{background:var(--bg3)}
+.awf-steps{padding:18px 22px;flex:1;overflow-y:auto}
+.awf-step{
+  display:flex;align-items:flex-start;gap:12px;padding:10px 0;
+  border-bottom:1px solid var(--border);
+}
+.awf-step:last-child{border-bottom:none}
+.awf-step-icon{
+  width:28px;height:28px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;font-size:.8rem;flex-shrink:0;
+  background:var(--bg3);color:var(--text-muted);
+}
+.awf-step.running .awf-step-icon{background:var(--purple);color:#fff;animation:awfPulse 1s infinite}
+.awf-step.done .awf-step-icon{background:var(--green);color:#fff}
+.awf-step.error .awf-step-icon{background:#e74c3c;color:#fff}
+.awf-step.skipped .awf-step-icon{background:var(--bg3);color:var(--text-muted);opacity:.5}
+@keyframes awfPulse{0%,100%{opacity:1}50%{opacity:.6}}
+.awf-step-body{flex:1;min-width:0}
+.awf-step-name{font-size:.85rem;font-weight:600;color:var(--text)}
+.awf-step-detail{font-size:.72rem;color:var(--text-muted);margin-top:2px;font-family:var(--mono);word-break:break-all}
+.awf-step.done .awf-step-name{color:var(--green)}
+.awf-step.error .awf-step-name{color:#ff7386}
+.awf-step.skipped .awf-step-name{color:var(--text-muted);opacity:.5}
+.awf-log{
+  padding:12px 22px;border-top:1px solid var(--border);
+  max-height:120px;overflow-y:auto;font-family:var(--mono);font-size:.68rem;
+  color:var(--text-muted);background:var(--bg2);
+}
+.awf-log-entry{padding:2px 0}
+.awf-log-entry.success{color:var(--green)}
+.awf-log-entry.error{color:#ff7386}
+.awf-footer{
+  padding:14px 22px;border-top:1px solid var(--border);
+  display:flex;justify-content:flex-end;gap:8px;
+}
+.awf-footer-btn{
+  padding:8px 20px;border-radius:8px;border:none;cursor:pointer;
+  font-size:.8rem;font-weight:600;font-family:var(--font);
+}
+.awf-footer-btn.primary{background:var(--purple);color:#fff}
+.awf-footer-btn.secondary{background:var(--bg3);color:var(--text-muted);border:1px solid var(--border)}
+
+/* Toast notification */
+.uc-toast{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);
+  background:var(--bg2);border:1px solid var(--green);color:var(--green);
+  padding:12px 24px;border-radius:10px;font-size:.82rem;font-family:var(--font);
+  z-index:9999;opacity:0;transition:transform .3s,opacity .3s;
+  box-shadow:0 8px 32px rgba(0,0,0,.4);white-space:nowrap;
+}
+.uc-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+@media(max-width:900px){
+  .uc-grid{grid-template-columns:repeat(2,1fr)}
+}
 @media(max-width:700px){
   .hero-title{font-size:1.5rem}
   .hero-stats{gap:20px}
   .cp-econ-row{grid-template-columns:1fr}
   .airdrop-layout{grid-template-columns:1fr}
+  .uc-grid{grid-template-columns:1fr}
 }

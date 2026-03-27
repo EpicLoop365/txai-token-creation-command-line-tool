@@ -1050,6 +1050,7 @@
       <!-- AI sub-tab toggle -->
       <div class="create-mode-toggle" style="margin-bottom:18px">
         <button class="create-mode-btn active" id="aiModeAdvisor" onclick="setAiMode('advisor')">Advisor</button>
+        <button class="create-mode-btn" id="aiModeUsecases" onclick="setAiMode('usecases')">Use Cases</button>
         <button class="create-mode-btn" id="aiModeSwarm" onclick="setAiMode('swarm')">Agent Swarm</button>
       </div>
 
@@ -1074,6 +1075,153 @@
             <input type="text" class="chat-input" id="chatInput" placeholder="Ask about tokens, features, strategy..." onkeydown="if(event.key==='Enter')sendChatMessage()">
             <button class="chat-send-btn" id="chatSendBtn" onclick="sendChatMessage()">→</button>
           </div>
+        </div>
+      </div>
+
+      <!-- Use Cases sub-pane -->
+      <div id="aiUsecasesPane" style="display:none">
+        <div class="uc-header">
+          <div class="uc-title">What are you building?</div>
+          <div class="uc-sub">Each use case pre-configures the right token, features, and tools. Click to deploy.</div>
+        </div>
+
+        <div class="uc-grid">
+
+          <!-- Subscription Pass -->
+          <div class="uc-card">
+            <div class="uc-card-accent purple"></div>
+            <div class="uc-card-icon">🎫</div>
+            <h4>Subscription Pass</h4>
+            <p>Monthly or yearly access passes for SaaS, content, or communities. Mint on purchase, verify by balance.</p>
+            <div class="uc-card-stack">
+              <span>Subscriptions</span><span>Mintable Token</span><span>Embed Widget</span>
+            </div>
+            <div class="uc-card-btns">
+              <button class="uc-deploy-btn agent" onclick="event.stopPropagation();agentWorkflowRun('subscription')">Agent Deploy</button>
+              <button class="uc-deploy-btn manual" onclick="event.stopPropagation();ucLaunch('subscription')">Configure</button>
+            </div>
+          </div>
+
+          <!-- Loyalty Rewards -->
+          <div class="uc-card">
+            <div class="uc-card-accent green"></div>
+            <div class="uc-card-icon">☕</div>
+            <h4>Loyalty Rewards</h4>
+            <p>Issue reward points as tokens. Customers earn on purchase, redeem for perks. Burnable on redemption.</p>
+            <div class="uc-card-stack">
+              <span>Mintable</span><span>Burnable</span><span>Airdrop</span>
+            </div>
+            <div class="uc-card-btns">
+              <button class="uc-deploy-btn agent" onclick="event.stopPropagation();agentWorkflowRun('loyalty')">Agent Deploy</button>
+              <button class="uc-deploy-btn manual" onclick="event.stopPropagation();ucLaunch('loyalty')">Configure</button>
+            </div>
+          </div>
+
+          <!-- Gated API Access -->
+          <div class="uc-card">
+            <div class="uc-card-accent blue"></div>
+            <div class="uc-card-icon">🔑</div>
+            <h4>API Access Key</h4>
+            <p>Replace API keys with on-chain tokens. Hold the token = access the API. Revoke by freezing.</p>
+            <div class="uc-card-stack">
+              <span>Freezable</span><span>Whitelist</span><span>Non-Transferable</span>
+            </div>
+            <div class="uc-card-btns">
+              <button class="uc-deploy-btn agent" onclick="event.stopPropagation();agentWorkflowRun('apikey')">Agent Deploy</button>
+              <button class="uc-deploy-btn manual" onclick="event.stopPropagation();ucLaunch('apikey')">Configure</button>
+            </div>
+          </div>
+
+          <!-- DAO Governance -->
+          <div class="uc-card">
+            <div class="uc-card-accent amber"></div>
+            <div class="uc-card-icon">🏛️</div>
+            <h4>DAO Governance</h4>
+            <p>Voting tokens for decentralized governance. Fixed supply, airdrop to members, track on-chain votes.</p>
+            <div class="uc-card-stack">
+              <span>Governance</span><span>IBC</span><span>Airdrop</span>
+            </div>
+            <div class="uc-card-btns">
+              <button class="uc-deploy-btn agent" onclick="event.stopPropagation();agentWorkflowRun('governance')">Agent Deploy</button>
+              <button class="uc-deploy-btn manual" onclick="event.stopPropagation();ucLaunch('governance')">Configure</button>
+            </div>
+          </div>
+
+          <!-- Deflationary Currency -->
+          <div class="uc-card">
+            <div class="uc-card-accent red"></div>
+            <div class="uc-card-icon">🔥</div>
+            <h4>Deflationary Token</h4>
+            <p>Auto-burn on every transfer creates scarcity over time. Set burn rate, list on the DEX, let economics work.</p>
+            <div class="uc-card-stack">
+              <span>Burn Rate</span><span>Burnable</span><span>DEX Listing</span>
+            </div>
+            <div class="uc-card-btns">
+              <button class="uc-deploy-btn agent" onclick="event.stopPropagation();agentWorkflowRun('deflationary')">Agent Deploy</button>
+              <button class="uc-deploy-btn manual" onclick="event.stopPropagation();ucLaunch('deflationary')">Configure</button>
+            </div>
+          </div>
+
+          <!-- Revenue Token -->
+          <div class="uc-card">
+            <div class="uc-card-accent teal"></div>
+            <div class="uc-card-icon">💰</div>
+            <h4>Revenue Token</h4>
+            <p>Transfer fee sends a percentage to the issuer on every trade. Passive income enforced at the protocol level.</p>
+            <div class="uc-card-stack">
+              <span>Transfer Fee</span><span>Mintable</span><span>DEX</span>
+            </div>
+            <div class="uc-card-btns">
+              <button class="uc-deploy-btn agent" onclick="event.stopPropagation();agentWorkflowRun('revenue')">Agent Deploy</button>
+              <button class="uc-deploy-btn manual" onclick="event.stopPropagation();ucLaunch('revenue')">Configure</button>
+            </div>
+          </div>
+
+          <!-- NFT Collection -->
+          <div class="uc-card">
+            <div class="uc-card-accent pink"></div>
+            <div class="uc-card-icon">🎨</div>
+            <h4>NFT Collection</h4>
+            <p>Smart NFTs with royalties, freezing, and batch minting. Launch a collection in under a minute.</p>
+            <div class="uc-card-stack">
+              <span>Smart NFT</span><span>Royalties</span><span>Batch Mint</span>
+            </div>
+            <div class="uc-card-btns">
+              <button class="uc-deploy-btn agent" onclick="event.stopPropagation();agentWorkflowRun('nftCollection')">Agent Deploy</button>
+              <button class="uc-deploy-btn manual" onclick="event.stopPropagation();ucLaunch('nft')">Configure</button>
+            </div>
+          </div>
+
+          <!-- Event Tickets -->
+          <div class="uc-card">
+            <div class="uc-card-accent orange"></div>
+            <div class="uc-card-icon">🎟️</div>
+            <h4>Event Tickets</h4>
+            <p>One-time-use NFT tickets. Burn on entry, prevent counterfeiting. Soulbound optional to prevent resale.</p>
+            <div class="uc-card-stack">
+              <span>Smart NFT</span><span>Burnable</span><span>Soulbound</span>
+            </div>
+            <div class="uc-card-btns">
+              <button class="uc-deploy-btn agent" onclick="event.stopPropagation();agentWorkflowRun('nftCollection')">Agent Deploy</button>
+              <button class="uc-deploy-btn manual" onclick="event.stopPropagation();ucLaunch('tickets')">Configure</button>
+            </div>
+          </div>
+
+          <!-- Market Maker -->
+          <div class="uc-card">
+            <div class="uc-card-accent cyan"></div>
+            <div class="uc-card-icon">📈</div>
+            <h4>Instant Liquidity</h4>
+            <p>Deploy AI agent swarm to fill your orderbook with real on-chain trades. 3 agents, 23+ orders, under 3 minutes.</p>
+            <div class="uc-card-stack">
+              <span>Agent Swarm</span><span>DEX</span><span>Autonomous</span>
+            </div>
+            <div class="uc-card-btns">
+              <button class="uc-deploy-btn agent" onclick="event.stopPropagation();ucLaunch('marketmaker')">Launch Swarm</button>
+              <button class="uc-deploy-btn manual" onclick="event.stopPropagation();ucLaunch('marketmaker')">Configure</button>
+            </div>
+          </div>
+
         </div>
       </div>
 
@@ -1265,6 +1413,7 @@
 <script src="js/auth.js?v=10"></script>
 <script src="js/subscriptions.js?v=1"></script>
 <script src="js/airdrop.js?v=1"></script>
+<script src="js/agent-workflows.js?v=1"></script>
 <script>
 // ── Inspiration ticker ──
 (function(){
