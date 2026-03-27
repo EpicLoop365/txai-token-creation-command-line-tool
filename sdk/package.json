@@ -1,0 +1,45 @@
+{
+  "name": "@txai/agent-sdk",
+  "version": "0.1.0",
+  "description": "Deploy AI agent swarms on Coreum blockchain — autonomous wallets, DEX trading, token management, and NFTs",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "coreum",
+    "blockchain",
+    "ai-agents",
+    "swarm",
+    "dex",
+    "trading",
+    "nft",
+    "smart-tokens",
+    "web3",
+    "autonomous-agents"
+  ],
+  "author": "Solomente Labs",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/EpicLoop365/txai-token-creation-command-line-tool"
+  },
+  "homepage": "https://solomentelabs.com",
+  "dependencies": {
+    "@cosmjs/proto-signing": "^0.32.4",
+    "@cosmjs/crypto": "^0.32.4",
+    "@cosmjs/stargate": "^0.32.4",
+    "@cosmjs/tendermint-rpc": "^0.32.4",
+    "coreum-js-nightly": "^2.19.4"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  }
+}
