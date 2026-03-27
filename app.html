@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/styles.css?v=15">
+<link rel="stylesheet" href="css/styles.css?v=16">
 </head>
 <body>
 
@@ -133,6 +133,20 @@
     <div class="demo-error" id="demoError"></div>
 
     <div class="create-split-layout" id="createSplitLayout">
+
+    <!-- Inspiration Ticker (left side) -->
+    <div class="inspiration-rail" id="inspirationRail">
+      <div class="inspiration-label">Possibilities</div>
+      <div class="inspiration-ticker" id="inspirationTicker">
+        <div class="inspiration-item active">
+          <span class="insp-icon">🔑</span>
+          <span class="insp-text">Mint a 30-day access pass — no backend needed</span>
+        </div>
+      </div>
+      <div class="inspiration-dots" id="inspirationDots"></div>
+      <div class="inspiration-footer">The possibilities are endless.</div>
+    </div>
+
     <div class="demo-input-wrap reveal live-glow" id="demoInputWrap">
 
       <!-- Creation Mode Picker -->
@@ -1361,6 +1375,49 @@
 <script src="js/swarm.js?v=11"></script>
 <script src="js/auth.js?v=10"></script>
 <script>
+// ── Inspiration ticker ──
+(function(){
+  const items = [
+    { icon: '🔑', text: 'Mint a 30-day access pass — no backend needed' },
+    { icon: '🤖', text: 'Create an AI agent permission token — revocable on-chain' },
+    { icon: '🔐', text: 'Issue a KYC-gated compliance wrapper for regulated assets' },
+    { icon: '⏱️', text: 'Deploy a subscription that auto-expires at the protocol level' },
+    { icon: '🎫', text: 'Gate content access with tokens that can\'t be transferred' },
+    { icon: '🌐', text: 'Replace API keys with on-chain usage tokens' },
+    { icon: '💎', text: 'Launch a loyalty token — mint on purchase, burn to redeem' },
+    { icon: '🏛️', text: 'Wrap assets with jurisdiction-aware transfer restrictions' },
+    { icon: '⚡', text: 'Fuel AI trading agents with tokens they burn per operation' },
+    { icon: '🎮', text: 'Create in-game currency with freezable balances' },
+  ];
+  const ticker = document.getElementById('inspirationTicker');
+  const dotsEl = document.getElementById('inspirationDots');
+  if (!ticker || !dotsEl) return;
+
+  // Build all items
+  ticker.innerHTML = items.map((item, i) =>
+    `<div class="inspiration-item${i === 0 ? ' active' : ''}">
+      <span class="insp-icon">${item.icon}</span>
+      <span class="insp-text">${item.text}</span>
+    </div>`
+  ).join('');
+
+  // Build dots
+  dotsEl.innerHTML = items.map((_, i) =>
+    `<div class="inspiration-dot${i === 0 ? ' active' : ''}"></div>`
+  ).join('');
+
+  let current = 0;
+  setInterval(() => {
+    const allItems = ticker.querySelectorAll('.inspiration-item');
+    const allDots = dotsEl.querySelectorAll('.inspiration-dot');
+    allItems[current].classList.remove('active');
+    allDots[current].classList.remove('active');
+    current = (current + 1) % items.length;
+    allItems[current].classList.add('active');
+    allDots[current].classList.add('active');
+  }, 4000);
+})();
+
 // ── Agent wallet status bar ──
 const AGENT_BAR_TABS = ['dex','swarm'];
 let _agentBalCache = null;
