@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/styles.css?v=6">
+<link rel="stylesheet" href="css/styles.css?v=7">
 </head>
 <body>
 
@@ -136,9 +136,10 @@
       <!-- Quick Create: AI prompt -->
       <div id="quickCreateWrap">
         <div class="demo-input-row">
-          <input type="text" class="demo-input" id="demoInput" placeholder='e.g. "a gaming token called GEMS with 5M supply, mintable and burnable"'>
-          <button class="demo-create-btn" id="demoBtn" onclick="runDemo()">Deploy Token (Testnet)</button>
+          <input type="text" class="demo-input" id="demoInput" placeholder=''>
+          <button class="demo-create-btn" id="demoBtn" onclick="useSuggestionIfEmpty();runDemo()">Deploy Token (Testnet)</button>
         </div>
+        <div class="suggestion-hint" id="suggestionHint" style="display:none"></div>
       </div>
 
       <!-- Custom Build: manual fields -->
@@ -1296,16 +1297,16 @@
 
 
 <!-- Modular JavaScript -->
-<script src="js/txdb.js?v=6"></script>
-<script src="js/config.js?v=6"></script>
-<script src="js/wallet.js?v=6"></script>
-<script src="js/chat.js?v=6"></script>
-<script src="js/create-token.js?v=6"></script>
-<script src="js/create-nft.js?v=6"></script>
-<script src="js/dex.js?v=6"></script>
-<script src="js/manage.js?v=6"></script>
-<script src="js/swarm.js?v=6"></script>
-<script src="js/auth.js?v=6"></script>
+<script src="js/txdb.js?v=7"></script>
+<script src="js/config.js?v=7"></script>
+<script src="js/wallet.js?v=7"></script>
+<script src="js/chat.js?v=7"></script>
+<script src="js/create-token.js?v=7"></script>
+<script src="js/create-nft.js?v=7"></script>
+<script src="js/dex.js?v=7"></script>
+<script src="js/manage.js?v=7"></script>
+<script src="js/swarm.js?v=7"></script>
+<script src="js/auth.js?v=7"></script>
 
 </body>
 </html>

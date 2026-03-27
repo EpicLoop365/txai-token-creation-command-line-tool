@@ -123,13 +123,51 @@ const _TSG = {
     'energy','charity','esports','photography','robotics','maritime','weather',
     'farming','dating','meditation','podcast','coding','dance','adventure',
   ],
-  // Consonant-vowel syllable generator for pronounceable symbols
+  // Use-case templates keyed by category, with feature-aware variants
+  useCases: {
+    'gaming':       { base:'In-game currency for purchasing items, upgrades, and rewards', mint:'New tokens minted as play-to-earn rewards', burn:'Spent tokens are burned to create deflationary pressure', freeze:'Freeze accounts involved in cheating or exploits', whitelist:'Restrict trading to verified players only' },
+    'loyalty':      { base:'Reward points for repeat customers, redeemable for discounts and perks', mint:'Issue new points with every purchase', burn:'Points burned on redemption to maintain scarcity', freeze:'Pause accounts under review for abuse', whitelist:'Only partnered merchants and verified customers can hold' },
+    'community':    { base:'Unite your community with a shared token for voting, tipping, and access', mint:'Grow supply as the community grows', burn:'Members burn tokens to unlock exclusive content', freeze:'Temporarily suspend bad actors', whitelist:'Gate access to verified community members' },
+    'governance':   { base:'Voting power for DAO proposals — 1 token = 1 vote on treasury and roadmap', mint:'Mint new voting power for new stakeholders', burn:'Burn tokens after votes to prevent re-use', freeze:'Lock tokens during active voting periods', whitelist:'Only KYC-verified members can participate in governance' },
+    'meme':         { base:'Community-driven fun token — tip creators, flex holdings, ride the vibes', mint:'Infinite minting for maximum meme energy', burn:'Deflationary burns on every transfer', freeze:'Pause trading during coordinated events', whitelist:'Early access for OG holders' },
+    'music':        { base:'Royalty shares for artists — holders earn a cut of streaming revenue', mint:'New tokens issued per album or single release', burn:'Burn to claim royalty payouts', freeze:'Freeze during royalty distribution periods', whitelist:'Only verified fans and investors can hold' },
+    'real estate':  { base:'Fractional property ownership — each token represents a share of real assets', mint:'Issue new shares for additional properties', burn:'Burn on property sale to distribute proceeds', freeze:'Lock transfers during closing periods', whitelist:'Accredited investors only via KYC whitelist' },
+    'carbon credit':{ base:'Tradeable carbon offsets — each token = 1 verified ton of CO2 offset', mint:'Mint when new offsets are certified', burn:'Retire credits by burning them permanently', freeze:'Suspend credits under audit', whitelist:'Only verified environmental projects can issue' },
+    'sports':       { base:'Fan engagement token — vote on team decisions, unlock VIP experiences', mint:'Release new tokens each season', burn:'Burn to redeem match tickets and merch', freeze:'Lock during playoff voting windows', whitelist:'Season ticket holders get priority access' },
+    'DeFi':         { base:'Utility token powering swaps, lending, and liquidity pool rewards', mint:'Elastic supply adjusts to protocol demand', burn:'Fee burns create buy pressure over time', freeze:'Emergency pause for smart contract upgrades', whitelist:'Whitelisted protocols only for composability' },
+    'art':          { base:'Fractional ownership of digital and physical art collections', mint:'New tokens per artwork acquisition', burn:'Burn to claim physical piece delivery', freeze:'Lock during auction and bidding periods', whitelist:'Gallery-verified collectors only' },
+    'social':       { base:'Tip your favorite creators, unlock premium content, build reputation', mint:'Earn tokens for engagement and content creation', burn:'Spend tokens to boost posts or unlock features', freeze:'Pause accounts flagged for spam', whitelist:'Verified creators get enhanced earning rates' },
+    'AI':           { base:'Pay for AI compute, API calls, and model training on decentralized infra', mint:'Mint rewards for contributing GPU resources', burn:'Burned per API call — usage = deflation', freeze:'Pause during model safety reviews', whitelist:'Verified compute providers and enterprise users' },
+    'travel':       { base:'Earn miles across airlines and hotels, redeem for flights and upgrades', mint:'Miles issued per booking or loyalty tier', burn:'Redeem miles by burning for travel perks', freeze:'Freeze expired or disputed miles', whitelist:'Partner airlines and travel agencies only' },
+    'food':         { base:'Order and earn — every meal earns tokens, redeemable at partner restaurants', mint:'Tokens minted per delivery order', burn:'Burn to pay for meals at a discount', freeze:'Suspend fraudulent accounts instantly', whitelist:'Verified restaurant partners only' },
+    'fitness':      { base:'Move-to-earn rewards — track workouts, earn tokens, compete with friends', mint:'Daily mint based on verified activity', burn:'Burn to enter premium challenges', freeze:'Pause accounts with suspicious activity data', whitelist:'Verified fitness app users only' },
+    'streaming':    { base:'Subscribe, tip, and unlock content — the token of your streaming platform', mint:'Creators earn freshly minted tokens from views', burn:'Subscription payments are burned', freeze:'Content under review gets tokens frozen', whitelist:'Partnered creators and subscribers' },
+    'pet care':     { base:'Rewards for pet owners — earn at vet visits, redeem for pet supplies', mint:'Tokens issued per vet checkup or adoption', burn:'Burn to redeem for pet food and toys', freeze:'Freeze tokens tied to disputed transactions', whitelist:'Verified pet stores and vet clinics' },
+    'education':    { base:'Learn-to-earn — complete courses, earn credentials, trade knowledge tokens', mint:'Mint on course completion and certifications', burn:'Burn to access premium courses and mentors', freeze:'Freeze during exam and grading periods', whitelist:'Accredited institutions and verified students' },
+    'space':        { base:'Fund space missions — each token is a micro-share in exploration ventures', mint:'New tokens issued per mission milestone', burn:'Burn to vote on mission priorities', freeze:'Lock during launch windows and critical phases', whitelist:'Space agency partners and accredited backers' },
+    'fashion':      { base:'Authenticity tokens for luxury goods — prove provenance, trade rare items', mint:'Mint per verified luxury item registration', burn:'Burn counterfeit-linked tokens', freeze:'Freeze tokens under authenticity dispute', whitelist:'Authorized retailers and verified buyers' },
+    'health':       { base:'Health data marketplace — earn by sharing anonymized data for research', mint:'Mint tokens for each data contribution', burn:'Burn to access premium health insights', freeze:'Emergency freeze for data breach response', whitelist:'HIPAA-compliant researchers and providers' },
+    'energy':       { base:'Peer-to-peer energy trading — sell surplus solar, buy clean power', mint:'Mint based on verified energy production', burn:'Burn on energy consumption settlement', freeze:'Grid emergency pause capability', whitelist:'Licensed energy producers and consumers' },
+    'charity':      { base:'Transparent donations — every token tracks from donor to impact', mint:'Donors receive tokens as proof of giving', burn:'Burn to release funds to verified causes', freeze:'Freeze during audit periods', whitelist:'Verified nonprofits and vetted donors' },
+    'esports':      { base:'Bet, cheer, and earn across tournaments — the token of competitive gaming', mint:'Prize pool tokens minted per tournament', burn:'Entry fees burned to fund prize pools', freeze:'Freeze during match-fixing investigations', whitelist:'Verified teams and tournament organizers' },
+    'photography':  { base:'License and sell photo rights — each token grants usage permissions', mint:'Mint per new photo upload and licensing', burn:'Burn expired licenses automatically', freeze:'Freeze during copyright disputes', whitelist:'Verified photographers and media buyers' },
+    'robotics':     { base:'Fund and govern robotics R&D — token holders vote on research direction', mint:'Milestone-based minting for R&D progress', burn:'Burn to claim IP licensing rights', freeze:'Lock during patent filing periods', whitelist:'Research institutions and accredited investors' },
+    'maritime':     { base:'Shipping and logistics token — track cargo, settle freight, insure voyages', mint:'Tokens issued per shipment booking', burn:'Burn on delivery confirmation', freeze:'Freeze cargo tokens during customs holds', whitelist:'Licensed carriers and verified importers' },
+    'weather':      { base:'Decentralized weather data marketplace — earn by running weather stations', mint:'Mint for verified weather data contributions', burn:'Burn to access hyperlocal forecasts', freeze:'Pause during sensor calibration periods', whitelist:'Verified station operators and data buyers' },
+    'farming':      { base:'Farm-to-table traceability — each token tracks produce from seed to shelf', mint:'Mint at each supply chain checkpoint', burn:'Consumer burns to verify origin story', freeze:'Freeze batches during food safety recalls', whitelist:'Certified farms and authorized distributors' },
+    'dating':       { base:'Premium dating features — earn through engagement, spend on boosts and gifts', mint:'Earn tokens for profile verification and activity', burn:'Burn to send super-likes and gifts', freeze:'Freeze accounts under safety review', whitelist:'Verified users with identity confirmation' },
+    'meditation':   { base:'Mindfulness rewards — meditate daily, earn tokens, unlock guided sessions', mint:'Daily mint for completing meditation sessions', burn:'Burn to access master classes and retreats', freeze:'Pause during content curation reviews', whitelist:'Certified instructors and wellness partners' },
+    'podcast':      { base:'Support podcasters directly — tip episodes, unlock bonus content', mint:'Listeners earn tokens for engagement', burn:'Burn to access ad-free and exclusive episodes', freeze:'Freeze during content moderation reviews', whitelist:'Verified podcasters and premium subscribers' },
+    'coding':       { base:'Bounty and reputation token for open-source contributors', mint:'Mint on merged pull requests and bug fixes', burn:'Burn to post bounties and job listings', freeze:'Freeze during code audit periods', whitelist:'Verified developers with contribution history' },
+    'dance':        { base:'Dance-to-earn and event token — perform, compete, and earn', mint:'Judges mint rewards for competition winners', burn:'Burn to enter dance battles and workshops', freeze:'Freeze during judging deliberation', whitelist:'Verified dance studios and competition organizers' },
+    'adventure':    { base:'Explore the world and earn — check in at landmarks, complete quests', mint:'Mint on verified location check-ins', burn:'Burn to unlock premium adventure routes', freeze:'Freeze during seasonal trail closures', whitelist:'Partnered parks and verified explorers' },
+  },
   consonants: 'BCDFGHJKLMNPRSTVWXZ',
   vowels: 'AEIOU',
   _syl(){ return this.consonants[Math.floor(Math.random()*this.consonants.length)]
               + this.vowels[Math.floor(Math.random()*this.vowels.length)]; },
   symbol(){
-    const len = Math.random() < 0.5 ? 2 : 3; // 4 or 6 letter symbols
+    const len = Math.random() < 0.5 ? 2 : 3;
     let s = '';
     for(let i=0;i<len;i++) s += this._syl();
     return s;
@@ -140,10 +178,18 @@ const _TSG = {
   },
   features(){
     const all = ['mintable','burnable','freezable','whitelisting'];
-    // Pick 1-2 random features
     const shuffled = all.sort(()=>Math.random()-0.5);
     const count = Math.random() < 0.4 ? 1 : 2;
     return shuffled.slice(0,count);
+  },
+  buildUseCase(cat, feats){
+    const uc = this.useCases[cat];
+    if(!uc) return '';
+    let desc = uc.base + '.';
+    const featMap = { mintable:'mint', burnable:'burn', freezable:'freeze', whitelisting:'whitelist' };
+    const extras = feats.map(f => uc[featMap[f]]).filter(Boolean);
+    if(extras.length) desc += ' ' + extras.join('. ') + '.';
+    return desc;
   },
   generate(){
     const cat = this.categories[Math.floor(Math.random()*this.categories.length)];
@@ -151,14 +197,34 @@ const _TSG = {
     const sup = this.supply();
     const feats = this.features();
     const article = /^[aeiou]/i.test(cat) ? 'an' : 'a';
-    return `${article} ${cat} token called ${sym} with ${sup} supply, ${feats.join(' and ')}`;
+    const prompt = `${article} ${cat} token called ${sym} with ${sup} supply, ${feats.join(' and ')}`;
+    const useCase = this.buildUseCase(cat, feats);
+    return { prompt, useCase, symbol: sym, category: cat, features: feats };
   }
 };
+
+let _currentSuggestion = null;
 
 function setRandomPlaceholder(){
   const input = document.getElementById('demoInput');
   if(!input) return;
-  input.setAttribute('placeholder', 'e.g. "' + _TSG.generate() + '"');
+  _currentSuggestion = _TSG.generate();
+  input.setAttribute('placeholder', _currentSuggestion.prompt);
+  // Show use case hint
+  const hint = document.getElementById('suggestionHint');
+  if(hint){
+    hint.innerHTML = '<strong>' + _currentSuggestion.symbol + ':</strong> ' + _currentSuggestion.useCase
+      + ' <button class="suggestion-shuffle" onclick="setRandomPlaceholder()" title="New suggestion">&#8635;</button>';
+    hint.style.display = '';
+  }
+}
+
+/* Auto-fill placeholder into input when deploying with empty field */
+function useSuggestionIfEmpty(){
+  const input = document.getElementById('demoInput');
+  if(input && !input.value.trim() && _currentSuggestion){
+    input.value = _currentSuggestion.prompt;
+  }
 }
 
 /* ---- Logo URL Preview ---- */
