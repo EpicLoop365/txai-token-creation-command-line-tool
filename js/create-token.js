@@ -141,8 +141,11 @@ const TOKEN_SUGGESTIONS = [
 function setRandomPlaceholder(){
   const input = document.getElementById('demoInput');
   if(!input) return;
-  const suggestion = TOKEN_SUGGESTIONS[Math.floor(Math.random() * TOKEN_SUGGESTIONS.length)];
-  input.setAttribute('placeholder', 'e.g. "' + suggestion + '"');
+  const lastIdx = parseInt(localStorage.getItem('txai_lastSuggestion') || '-1', 10);
+  let idx;
+  do { idx = Math.floor(Math.random() * TOKEN_SUGGESTIONS.length); } while(idx === lastIdx && TOKEN_SUGGESTIONS.length > 1);
+  localStorage.setItem('txai_lastSuggestion', idx);
+  input.setAttribute('placeholder', 'e.g. "' + TOKEN_SUGGESTIONS[idx] + '"');
 }
 
 /* ---- Logo URL Preview ---- */
