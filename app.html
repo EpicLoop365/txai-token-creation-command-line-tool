@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/styles.css?v=7">
+<link rel="stylesheet" href="css/styles.css?v=8">
 </head>
 <body>
 
@@ -489,6 +489,16 @@
                   <button class="dex-deposit-add-btn" id="dexDepositAddBtn" onclick="dexDepositAddToWallet()">➕ Add to Wallet</button>
                 </div>
               </div>
+              <!-- Whitelisting warning (only shown if token has whitelisting) -->
+              <div class="dex-deposit-step dex-wl-warn" id="dexDepositWhitelistWarn" style="display:none;border:1px solid rgba(251,191,36,.3);background:rgba(251,191,36,.06);border-radius:8px">
+                <span class="dex-deposit-step-num" style="background:linear-gradient(135deg,#f59e0b,#d97706)">!</span>
+                <div class="dex-deposit-step-text">
+                  <strong style="color:#fbbf24">Whitelisting Enabled</strong> — your token requires addresses to be whitelisted before receiving tokens. Whitelist the agent wallet first:
+                  <div style="margin-top:6px"><code class="wl-agent-addr" style="font-size:.75rem;word-break:break-all">testcore1...</code></div>
+                  <button class="dex-deposit-add-btn" id="dexWhitelistBtn" onclick="dexWhitelistAgent()" style="background:linear-gradient(135deg,#f59e0b,#d97706);margin-top:6px">🔓 Whitelist Agent Wallet</button>
+                </div>
+              </div>
+
               <div class="dex-deposit-step">
                 <span class="dex-deposit-step-num">2</span>
                 <div class="dex-deposit-step-text">
@@ -1297,16 +1307,16 @@
 
 
 <!-- Modular JavaScript -->
-<script src="js/txdb.js?v=7"></script>
-<script src="js/config.js?v=7"></script>
-<script src="js/wallet.js?v=7"></script>
-<script src="js/chat.js?v=7"></script>
-<script src="js/create-token.js?v=7"></script>
-<script src="js/create-nft.js?v=7"></script>
-<script src="js/dex.js?v=7"></script>
-<script src="js/manage.js?v=7"></script>
-<script src="js/swarm.js?v=7"></script>
-<script src="js/auth.js?v=7"></script>
+<script src="js/txdb.js?v=8"></script>
+<script src="js/config.js?v=8"></script>
+<script src="js/wallet.js?v=8"></script>
+<script src="js/chat.js?v=8"></script>
+<script src="js/create-token.js?v=8"></script>
+<script src="js/create-nft.js?v=8"></script>
+<script src="js/dex.js?v=8"></script>
+<script src="js/manage.js?v=8"></script>
+<script src="js/swarm.js?v=8"></script>
+<script src="js/auth.js?v=8"></script>
 
 </body>
 </html>

@@ -1017,6 +1017,14 @@ async function dexStartDemo() {
       document.getElementById('dexDepositStatus').textContent = '';
       document.getElementById('dexDepositStatus').className = 'dex-deposit-status';
       document.getElementById('dexDepositCheckBtn').disabled = false;
+      // Show/hide whitelisting warning
+      const wlWarn = document.getElementById('dexDepositWhitelistWarn');
+      if (wlWarn) {
+        wlWarn.style.display = checkData.hasWhitelisting ? '' : 'none';
+        if (checkData.hasWhitelisting) {
+          wlWarn.querySelector('.wl-agent-addr').textContent = checkData.agentAddress;
+        }
+      }
       document.getElementById('dexDepositModal').style.display = 'flex';
     }
   } catch (err) {
@@ -1039,6 +1047,63 @@ function dexDepositAddToWallet() {
 
   // Show the helper modal with manual instructions
   dexShowAddTokenModal(symbol);
+}
+
+async function dexWhitelistAgent() {
+  const btn = document.getElementById('dexWhitelistBtn');
+  const agentAddr = document.getElementById('dexDepositAddress').textContent;
+  if (!agentAddr || !dexDepositBaseDenom) return;
+  btn.disabled = true;
+  btn.textContent = 'Whitelisting...';
+
+  // Determine who does the whitelisting
+  if (walletMode !== 'agent' && connectedAddress && connectedOfflineSigner) {
+    // Client-side: user's wallet signs the whitelist tx
+    try {
+      const messages = [{
+        typeUrl: '/coreum.asset.ft.v1.MsgSetWhitelistedLimit',
+        value: {
+          sender: connectedAddress,
+          account: agentAddr,
+          coin: { denom: dexDepositBaseDenom, amount: (10000 * 1e6).toString() },
+        },
+      }];
+      const result = await dexBuildAndSignTx(messages, 300000);
+      btn.textContent = 'Whitelisted!';
+      btn.style.borderColor = 'var(--green)';
+      btn.style.color = 'var(--green)';
+    } catch (err) {
+      btn.textContent = 'Failed — try manually';
+      console.error('Whitelist error:', err);
+      alert('Whitelisting failed: ' + (err.message || err));
+      btn.disabled = false;
+    }
+  } else {
+    // Server-side: agent wallet is the issuer
+    try {
+      const res = await fetch(`${API_URL}/api/token/whitelist`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          denom: dexDepositBaseDenom,
+          account: agentAddr,
+          amount: (10000 * 1e6).toString(),
+        }),
+      });
+      const data = await res.json();
+      if (data.success !== false && !data.error) {
+        btn.textContent = 'Whitelisted!';
+        btn.style.borderColor = 'var(--green)';
+        btn.style.color = 'var(--green)';
+      } else {
+        throw new Error(data.error || 'Unknown error');
+      }
+    } catch (err) {
+      btn.textContent = 'Failed';
+      alert('Whitelisting failed: ' + (err.message || err));
+      btn.disabled = false;
+    }
+  }
 }
 
 function dexCopyDepositAddr() {

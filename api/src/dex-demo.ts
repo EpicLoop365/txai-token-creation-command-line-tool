@@ -24,6 +24,8 @@ import {
   cancelOrder,
   queryOrderbook,
   queryOrdersByCreator,
+  getTokenInfo,
+  setWhitelistedLimit,
   TxClient,
   NetworkName,
   NETWORKS,
@@ -245,6 +247,29 @@ export async function runDexDemo(config: DemoConfig): Promise<void> {
     }
 
     const [mmA, mmB, taker] = agents;
+
+    // ── Phase 4.5: Whitelist agent wallets if token has whitelisting ──
+    if (abortSignal?.aborted) throw new Error("Demo aborted");
+    try {
+      const tokenInfo = await getTokenInfo(baseDenom, networkName);
+      const features = tokenInfo.features || [];
+      if (features.includes("whitelisting")) {
+        emit("phase", { phase: "whitelist", message: `Whitelisting agent wallets for ${tokenSymbol}...` });
+        const whitelistAmount = toRaw(10000); // generous limit
+        for (const agent of agents) {
+          try {
+            await setWhitelistedLimit(agentClient, baseDenom, agent.address, whitelistAmount);
+            emit("log", { message: `Whitelisted ${agent.name} (${agent.address.slice(0,12)}...)` });
+            await sleep(2000);
+          } catch (wlErr) {
+            emit("log", { message: `Whitelist ${agent.name}: ${(wlErr as Error).message}` });
+          }
+        }
+      }
+    } catch (infoErr) {
+      // Non-fatal — if we can't check, try sending anyway
+      emit("log", { message: `Token info check: ${(infoErr as Error).message}` });
+    }
 
     // ── Phase 5: Distribute Tokens to Sellers ──
     emit("phase", { phase: "transfer", message: `Sending ${tokenSymbol} to trading agents...` });

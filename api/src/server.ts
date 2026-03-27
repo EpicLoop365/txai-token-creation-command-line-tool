@@ -721,7 +721,7 @@ app.post("/api/token/whitelist", async (req, res) => {
   try {
     const txWallet = await importWallet(process.env.AGENT_MNEMONIC, networkName);
     const client = await TxClient.connectWithWallet(txWallet);
-    const result = await setWhitelistedLimit(client, denom, amount, account);
+    const result = await setWhitelistedLimit(client, denom, account, amount);
     client.disconnect();
     res.json(result);
   } catch (err) { res.status(500).json({ error: (err as Error).message }); }
@@ -1299,6 +1299,11 @@ app.post("/api/dex/check-demo-ready", async (req, res) => {
     const neededRaw = needed * 1e6;
     const symbol = baseDenom.split("-")[0].toUpperCase();
 
+    // Check token features (whitelisting, etc.)
+    const tokenInfo = await getTokenInfo(baseDenom, networkName);
+    const features = tokenInfo.features || [];
+    const hasWhitelisting = features.includes("whitelisting");
+
     client.disconnect();
 
     if (rawAmount >= neededRaw) {
@@ -1310,6 +1315,7 @@ app.post("/api/dex/check-demo-ready", async (req, res) => {
         tokensNeeded: needed,
         tokensHeld: displayAmount,
         symbol,
+        hasWhitelisting,
       });
     }
   } catch (err) {
