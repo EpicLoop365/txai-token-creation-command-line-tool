@@ -114,48 +114,51 @@ function updateSlider(sliderId, valId){
   document.getElementById(valId).textContent = val + '%';
 }
 
-/* ---- Random Placeholder Suggestions ---- */
-const TOKEN_SUGGESTIONS = [
-  'a gaming token called GEMS with 5M supply, mintable and burnable',
-  'a loyalty rewards token called PERKS with 10M supply and whitelisting',
-  'a community token called VIBE with 1M supply, burnable',
-  'a governance token called VOTE with 100K supply, freezable',
-  'a meme token called MOON with 1B supply, mintable and burnable',
-  'a music royalty token called BEATS with 500K supply, freezable and whitelisting',
-  'a real estate token called BRICK with 50K supply and whitelisting',
-  'a carbon credit token called GREEN with 2M supply, burnable',
-  'a sports fan token called GOALS with 10M supply, mintable',
-  'a DeFi utility token called FLUX with 100M supply, mintable and burnable',
-  'an art collectible token called CANVAS with 250K supply, freezable',
-  'a social tipping token called PROPS with 5M supply, mintable',
-  'an AI compute token called NEURON with 1M supply, burnable and freezable',
-  'a travel rewards token called MILES with 20M supply, mintable and whitelisting',
-  'a food delivery token called BITES with 8M supply, burnable',
-  'a fitness token called REPS with 3M supply, mintable and burnable',
-  'a streaming token called STREAM with 50M supply, freezable',
-  'a pet care token called PAWS with 2M supply, mintable',
-  'an education token called LEARN with 10M supply, burnable and whitelisting',
-  'a space exploration token called ORBIT with 500K supply, mintable and freezable',
-];
+/* ---- Random Token Suggestion Generator ---- */
+const _TSG = {
+  categories: [
+    'gaming','loyalty','community','governance','meme','music','real estate',
+    'carbon credit','sports','DeFi','art','social','AI','travel','food',
+    'fitness','streaming','pet care','education','space','fashion','health',
+    'energy','charity','esports','photography','robotics','maritime','weather',
+    'farming','dating','meditation','podcast','coding','dance','adventure',
+  ],
+  // Consonant-vowel syllable generator for pronounceable symbols
+  consonants: 'BCDFGHJKLMNPRSTVWXZ',
+  vowels: 'AEIOU',
+  _syl(){ return this.consonants[Math.floor(Math.random()*this.consonants.length)]
+              + this.vowels[Math.floor(Math.random()*this.vowels.length)]; },
+  symbol(){
+    const len = Math.random() < 0.5 ? 2 : 3; // 4 or 6 letter symbols
+    let s = '';
+    for(let i=0;i<len;i++) s += this._syl();
+    return s;
+  },
+  supply(){
+    const amounts = ['100K','250K','500K','1M','2M','5M','10M','20M','50M','100M','500M','1B'];
+    return amounts[Math.floor(Math.random()*amounts.length)];
+  },
+  features(){
+    const all = ['mintable','burnable','freezable','whitelisting'];
+    // Pick 1-2 random features
+    const shuffled = all.sort(()=>Math.random()-0.5);
+    const count = Math.random() < 0.4 ? 1 : 2;
+    return shuffled.slice(0,count);
+  },
+  generate(){
+    const cat = this.categories[Math.floor(Math.random()*this.categories.length)];
+    const sym = this.symbol();
+    const sup = this.supply();
+    const feats = this.features();
+    const article = /^[aeiou]/i.test(cat) ? 'an' : 'a';
+    return `${article} ${cat} token called ${sym} with ${sup} supply, ${feats.join(' and ')}`;
+  }
+};
 
 function setRandomPlaceholder(){
   const input = document.getElementById('demoInput');
   if(!input) return;
-
-  // Filter out suggestions whose symbol has already been minted (stored in txdb)
-  const createdTokens = (typeof txdbGetTokens === 'function' ? txdbGetTokens() : [])
-    .map(t => (t.symbol || '').toUpperCase());
-  const available = TOKEN_SUGGESTIONS.filter(s => {
-    const m = s.match(/called\s+(\w+)/i);
-    return !m || !createdTokens.includes(m[1].toUpperCase());
-  });
-
-  const pool = available.length > 0 ? available : TOKEN_SUGGESTIONS;
-  const lastShown = localStorage.getItem('txai_lastSuggestion') || '';
-  let pick;
-  do { pick = pool[Math.floor(Math.random() * pool.length)]; } while(pick === lastShown && pool.length > 1);
-  localStorage.setItem('txai_lastSuggestion', pick);
-  input.setAttribute('placeholder', 'e.g. "' + pick + '"');
+  input.setAttribute('placeholder', 'e.g. "' + _TSG.generate() + '"');
 }
 
 /* ---- Logo URL Preview ---- */
