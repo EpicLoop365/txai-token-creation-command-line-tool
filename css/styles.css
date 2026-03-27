@@ -1559,12 +1559,18 @@ footer{
 
 .dex-demo-overlay{
   position:fixed;top:64px;right:0;bottom:0;
-  width:440px;z-index:90;
-  background:#0d1117;backdrop-filter:blur(8px);
+  width:420px;z-index:90;
+  background:#0d1117;
   display:flex;flex-direction:column;
   box-shadow:-4px 0 24px rgba(0,0,0,.5);
   border-left:1px solid #30363d;
   animation:slideInRight .3s ease;
+  overflow-y:auto;
+}
+/* When demo is active, shrink the entire dex-wrap so nothing is hidden behind the overlay */
+.dex-wrap.demo-active{
+  width:calc(100% - 424px);
+  transition:width .3s ease;
 }
 @keyframes slideInRight{from{transform:translateX(100%)}to{transform:translateX(0)}}
 .dex-demo-panel{
@@ -1678,10 +1684,31 @@ footer{
 .demo-stat-value.green{color:#22c55e}
 .demo-stat-value.red{color:#ef4444}
 
+/* Price Chart Pane */
+.dex-price-chart-wrap{width:100%;height:100%;min-height:280px;position:relative;background:#0d0f14;border-radius:6px}
+.dex-price-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#6b7280;font-size:.85rem;text-align:center;padding:20px}
+
+/* Post-demo Reclaim Card */
+.dex-demo-reclaim{padding:16px 20px;border-top:1px solid #30363d;background:rgba(124,109,250,.05)}
+.reclaim-title{font-size:.9rem;font-weight:600;color:#c9d1d9;margin-bottom:12px;text-align:center}
+.reclaim-options{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.reclaim-btn{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:14px 12px;cursor:pointer;text-align:center;transition:all .2s}
+.reclaim-btn:hover{border-color:var(--purple);background:#1a1d27}
+.reclaim-btn.keep:hover{border-color:#22c55e}
+.reclaim-btn.reclaim:hover{border-color:#f59e0b}
+.reclaim-icon{display:block;font-size:1.5rem;margin-bottom:6px}
+.reclaim-label{display:block;font-size:.85rem;font-weight:600;color:#e6edf3;margin-bottom:4px}
+.reclaim-desc{display:block;font-size:.7rem;color:#8b949e;line-height:1.3}
+.reclaim-checkbox{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:.78rem;color:#8b949e;cursor:pointer}
+.reclaim-checkbox input{accent-color:var(--purple)}
+.reclaim-status{margin-top:10px;padding:10px;background:#161b22;border-radius:6px;font-size:.8rem;color:#8b949e;text-align:center}
+
 @media(max-width:768px){
   .dex-demo-overlay{width:100%}
+  .dex-wrap.demo-active{width:100%}
   .dex-demo-agents{grid-template-columns:1fr}
   .demo-summary-grid{grid-template-columns:repeat(2,1fr)}
+  .reclaim-options{grid-template-columns:1fr}
 }
 
 /* ─── Deposit Modal ─────────────────────────────────────────────────────── */

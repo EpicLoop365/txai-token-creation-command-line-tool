@@ -151,7 +151,10 @@ function dexSetCenterTab(tab){
   document.querySelectorAll('.dex-center-tab').forEach(t => t.classList.remove('active'));
   event.target.classList.add('active');
   document.querySelectorAll('.dex-center-pane').forEach(p => p.classList.remove('active'));
-  if(tab === 'depth'){
+  if(tab === 'price'){
+    document.getElementById('dexPricePane').classList.add('active');
+    if(dexPriceChart) dexPriceChart.timeScale().fitContent();
+  } else if(tab === 'depth'){
     document.getElementById('dexDepthPane').classList.add('active');
     dexDrawDepthChart();
   } else {
@@ -968,6 +971,94 @@ window.addEventListener('resize', () => {
   if(dexLastOrderbook) dexDrawDepthChart();
 });
 
+/* ===== LIVE PRICE CHART (lightweight-charts) ===== */
+
+let dexPriceChart = null;
+let dexPriceSeries = null;
+let dexPriceVolSeries = null;
+let dexPriceData = [];      // { time, open, high, low, close }
+let dexVolData = [];         // { time, value, color }
+let dexFillSequence = 0;    // monotonic counter for time axis during demo
+
+function dexInitPriceChart() {
+  const wrap = document.getElementById('dexPriceChartWrap');
+  if (!wrap || !window.LightweightCharts) return;
+
+  // Clear previous chart
+  if (dexPriceChart) { dexPriceChart.remove(); dexPriceChart = null; }
+  document.getElementById('dexPriceEmpty').style.display = 'none';
+
+  dexPriceChart = LightweightCharts.createChart(wrap, {
+    width: wrap.clientWidth,
+    height: wrap.clientHeight || 280,
+    layout: { background: { type: 'solid', color: '#0d0f14' }, textColor: '#8b949e', fontSize: 11 },
+    grid: { vertLines: { color: '#1a1d27' }, horzLines: { color: '#1a1d27' } },
+    crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+    rightPriceScale: { borderColor: '#30363d' },
+    timeScale: { borderColor: '#30363d', timeVisible: true, secondsVisible: false },
+  });
+
+  dexPriceSeries = dexPriceChart.addCandlestickSeries({
+    upColor: '#22c55e', downColor: '#ef4444',
+    borderUpColor: '#22c55e', borderDownColor: '#ef4444',
+    wickUpColor: '#22c55e', wickDownColor: '#ef4444',
+  });
+
+  dexPriceVolSeries = dexPriceChart.addHistogramSeries({
+    color: '#7c6dfa',
+    priceFormat: { type: 'volume' },
+    priceScaleId: '',
+  });
+  dexPriceVolSeries.priceScale().applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } });
+
+  dexPriceData = [];
+  dexVolData = [];
+  dexFillSequence = 0;
+
+  // Resize observer
+  const ro = new ResizeObserver(() => {
+    if (dexPriceChart) dexPriceChart.applyOptions({ width: wrap.clientWidth, height: wrap.clientHeight || 280 });
+  });
+  ro.observe(wrap);
+}
+
+function dexAddFillToChart(price, quantity) {
+  if (!dexPriceSeries) return;
+  const p = parseFloat(price);
+  const q = parseFloat(quantity || 0);
+  if (!p || isNaN(p)) return;
+
+  dexFillSequence++;
+  // Use seconds-based time: start at a fixed epoch + sequence
+  const t = 1700000000 + dexFillSequence * 10;
+
+  const last = dexPriceData.length > 0 ? dexPriceData[dexPriceData.length - 1] : null;
+  const open = last ? last.close : p;
+
+  const candle = {
+    time: t,
+    open: open,
+    high: Math.max(open, p),
+    low: Math.min(open, p),
+    close: p,
+  };
+  dexPriceData.push(candle);
+  dexPriceSeries.update(candle);
+
+  const vol = { time: t, value: q, color: p >= open ? 'rgba(34,197,94,.4)' : 'rgba(239,68,68,.4)' };
+  dexVolData.push(vol);
+  dexPriceVolSeries.update(vol);
+}
+
+function dexResetPriceChart() {
+  dexPriceData = [];
+  dexVolData = [];
+  dexFillSequence = 0;
+  if (dexPriceSeries) dexPriceSeries.setData([]);
+  if (dexPriceVolSeries) dexPriceVolSeries.setData([]);
+  document.getElementById('dexPriceEmpty').style.display = 'flex';
+}
+
 /* ===== LIVE DEX DEMO — AI Agent Swarm ===== */
 
 let dexDemoEventSource = null;
@@ -1206,17 +1297,18 @@ function dexLaunchDemoOverlay() {
   if (!overlay) return;
 
   const tokenSymbol = dexBaseDenom.split('-')[0].toUpperCase();
-  // Determine returnAddress: if user has a connected wallet, return tokens to them
-  const returnAddr = (typeof walletMode !== 'undefined' && walletMode !== 'agent' && typeof connectedAddress !== 'undefined' && connectedAddress)
-    ? connectedAddress
-    : undefined;
+  // Don't send returnAddress — keep tokens on the orderbook after demo
+  // User can reclaim manually via the post-demo card
 
-  // Reset UI
+  // Reset UI — shift DEX left to make room for the swarm panel
   overlay.style.display = 'flex';
+  const dexWrap = document.getElementById('dexWrap');
+  if (dexWrap) dexWrap.classList.add('demo-active');
   document.getElementById('dexDemoTokenName').textContent = tokenSymbol;
   document.getElementById('dexDemoTimeline').innerHTML =
     `<div class="demo-log-entry info">Populating ${tokenSymbol} orderbook with 3 AI agents...</div>`;
   document.getElementById('dexDemoSummary').style.display = 'none';
+  document.getElementById('dexDemoReclaim').style.display = 'none';
   document.getElementById('dexDemoPhase').textContent = 'Initializing...';
   document.getElementById('dexDemoBar').style.width = '0%';
   document.getElementById('demoAddrA').textContent = 'Creating wallet...';
@@ -1230,6 +1322,9 @@ function dexLaunchDemoOverlay() {
   document.getElementById('demoOrdersTaker').textContent = '0';
   dexDemoOrderCounts = { A: 0, B: 0, Taker: 0 };
 
+  // Initialize price chart
+  dexInitPriceChart();
+
   // Start timer + auto-refresh orderbook so user sees orders appearing live
   dexDemoStartTime = Date.now();
   dexDemoTimerInterval = setInterval(() => {
@@ -1241,8 +1336,17 @@ function dexLaunchDemoOverlay() {
     if (elapsed % 8 === 0 && elapsed > 0) dexLoadOrderbook();
   }, 1000);
 
-  // Use fetch-based SSE
-  dexDemoFetchSSE(dexBaseDenom, returnAddr);
+  // Use fetch-based SSE — no returnAddress so tokens stay on orderbook
+  dexDemoFetchSSE(dexBaseDenom, undefined);
+
+  // After CSS transition, resize charts to fit the new space
+  setTimeout(() => {
+    if (dexPriceChart) {
+      const wrap = document.getElementById('dexPriceChartWrap');
+      if (wrap) dexPriceChart.applyOptions({ width: wrap.clientWidth });
+    }
+    if (dexLastOrderbook) dexDrawDepthChart();
+  }, 350);
 }
 
 async function dexResetDemo() {
@@ -1399,6 +1503,8 @@ function dexDemoProcessEvent(event, data) {
 
     case 'fill':
       dexDemoLog('fill', `⚡ <span class="demo-fill-tag">FILL</span> <b>${data.buyQty || data.quantity} ${data.symbol}</b> @ <span class="demo-price">${data.priceDisplay} TX</span> — ${data.buyer} ↔ ${data.seller}${txLink(data.txHash)}`);
+      // Feed live price chart
+      dexAddFillToChart(data.price || data.priceDisplay, data.buyQty || data.quantity);
       break;
 
     case 'taker':
@@ -1421,13 +1527,19 @@ function dexDemoProcessEvent(event, data) {
         <div class="demo-stat"><span class="demo-stat-label">Final Bids</span><span class="demo-stat-value green">${data.orderbook?.bids || 0}</span></div>
         <div class="demo-stat"><span class="demo-stat-label">Final Asks</span><span class="demo-stat-value red">${data.orderbook?.asks || 0}</span></div>
       `;
-      dexDemoLog('info', '💰 Unused tokens are being returned to your wallet. TX gas costs (~0.25 TX total) are non-refundable.');
+
+      // Store demo token info for reclaim
+      dexDemoLastToken = data.token || {};
+      dexDemoLastAgents = data.agents || {};
 
       // Load the demo token's orderbook in the main DEX view
       if (data.token?.denom) {
         document.getElementById('dexBaseDenom').value = data.token.denom;
         dexLoadOrderbook();
       }
+
+      // Fit price chart to content
+      if (dexPriceChart) dexPriceChart.timeScale().fitContent();
       break;
 
     case 'return':
@@ -1437,6 +1549,8 @@ function dexDemoProcessEvent(event, data) {
         dexDemoLog('success', `💰 Returned <b>${(data.amount || 0).toLocaleString()} ${data.symbol}</b> to your wallet${txLink(data.txHash)}`);
       } else if (data.step === 'error') {
         dexDemoLog('warn', `⚠️ ${data.message}`);
+      } else if (data.step === 'done') {
+        dexDemoLog('success', '✅ Reclaim complete.');
       }
       break;
 
@@ -1445,6 +1559,8 @@ function dexDemoProcessEvent(event, data) {
       if (dexDemoTimerInterval) clearInterval(dexDemoTimerInterval);
       // Final orderbook refresh
       setTimeout(() => dexLoadOrderbook(), 1000);
+      // Show reclaim options
+      dexShowReclaimCard();
       break;
 
     case 'error':
@@ -1468,12 +1584,102 @@ function dexDemoLog(type, message) {
 function dexStopDemo() {
   const overlay = document.getElementById('dexDemoOverlay');
   if (overlay) overlay.style.display = 'none';
+  const dexWrap = document.getElementById('dexWrap');
+  if (dexWrap) dexWrap.classList.remove('demo-active');
   if (dexDemoTimerInterval) {
     clearInterval(dexDemoTimerInterval);
     dexDemoTimerInterval = null;
   }
   // Note: the fetch-based SSE doesn't have a clean abort mechanism
   // The server will detect the closed connection via req.on('close')
+}
+
+/* ===== POST-DEMO: Reclaim / Keep Orderbook ===== */
+
+let dexDemoLastToken = {};   // { symbol, denom }
+let dexDemoLastAgents = {};  // { mmA, mmB, taker }
+
+function dexShowReclaimCard() {
+  const card = document.getElementById('dexDemoReclaim');
+  if (!card) return;
+
+  // Check if token has whitelisting (show revoke option)
+  const wlRow = document.getElementById('dexRevokeWhitelistRow');
+  if (wlRow) {
+    // Check from cached token info
+    try {
+      fetch(`${COREUM_REST}/coreum/asset/ft/v1/tokens/${dexDemoLastToken.denom}`)
+        .then(r => r.json())
+        .then(d => {
+          const features = d?.token?.features || [];
+          wlRow.style.display = features.includes('whitelisting') ? 'flex' : 'none';
+        })
+        .catch(() => { wlRow.style.display = 'none'; });
+    } catch { wlRow.style.display = 'none'; }
+  }
+
+  card.style.display = 'block';
+  dexDemoLog('info', '📊 Tokens are on the orderbook — explore the Price & Depth charts, or reclaim your tokens below.');
+}
+
+function dexKeepOrderbook() {
+  const card = document.getElementById('dexDemoReclaim');
+  if (card) card.style.display = 'none';
+  dexDemoLog('success', '📊 Orderbook kept live! Switch to the Price tab to explore the chart.');
+  // Auto-switch to price tab
+  document.querySelectorAll('.dex-center-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.dex-center-pane').forEach(p => p.classList.remove('active'));
+  document.querySelector('.dex-center-tab').classList.add('active'); // first tab = Price
+  document.getElementById('dexPricePane').classList.add('active');
+  if (dexPriceChart) dexPriceChart.timeScale().fitContent();
+}
+
+async function dexReclaimTokens() {
+  const card = document.getElementById('dexDemoReclaim');
+  const returnAddr = (typeof walletMode !== 'undefined' && walletMode !== 'agent' && typeof connectedAddress !== 'undefined' && connectedAddress)
+    ? connectedAddress
+    : undefined;
+
+  if (!returnAddr) {
+    dexDemoLog('warn', '⚠️ Connect a wallet first to reclaim tokens.');
+    return;
+  }
+
+  if (!dexDemoLastToken.denom) {
+    dexDemoLog('warn', '⚠️ No demo token to reclaim.');
+    return;
+  }
+
+  // Disable buttons
+  card.querySelectorAll('.reclaim-btn').forEach(b => { b.disabled = true; b.style.opacity = '0.5'; });
+  dexDemoLog('info', '🔄 Reclaiming tokens...');
+
+  try {
+    const revokeWl = document.getElementById('dexRevokeWhitelistChk')?.checked || false;
+    const res = await fetch(`${API_URL}/api/dex/reclaim`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        baseDenom: dexDemoLastToken.denom,
+        returnAddress: returnAddr,
+        revokeWhitelist: revokeWl,
+      }),
+    });
+
+    const result = await res.json();
+    if (result.success) {
+      dexDemoLog('success', `💰 Reclaimed ${(result.amount || 0).toLocaleString()} ${dexDemoLastToken.symbol || 'tokens'} to your wallet.`);
+      if (result.txHash) dexDemoLog('info', `TX: ${result.txHash}`);
+    } else {
+      dexDemoLog('error', `Reclaim failed: ${result.error || 'Unknown error'}`);
+    }
+  } catch (err) {
+    dexDemoLog('error', `Reclaim error: ${err.message}`);
+  }
+
+  if (card) card.style.display = 'none';
+  // Refresh orderbook
+  setTimeout(() => dexLoadOrderbook(), 2000);
 }
 
 /* ---- Add Token to Wallet (Leap/Keplr) ---- */

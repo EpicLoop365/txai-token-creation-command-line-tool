@@ -1521,6 +1521,61 @@ app.post("/api/dex/live-demo", async (req, res) => {
   try { res.end(); } catch { /* ignore */ }
 });
 
+// ─── POST /api/dex/reclaim — Return leftover tokens to user wallet ──────────
+
+app.post("/api/dex/reclaim", async (req, res) => {
+  const { baseDenom, returnAddress, revokeWhitelist } = req.body as {
+    baseDenom?: string;
+    returnAddress?: string;
+    revokeWhitelist?: boolean;
+  };
+
+  if (!baseDenom || !returnAddress) {
+    res.status(400).json({ error: "Missing baseDenom or returnAddress" });
+    return;
+  }
+  if (!process.env.AGENT_MNEMONIC) {
+    res.status(500).json({ error: "Server not configured (no agent mnemonic)" });
+    return;
+  }
+
+  try {
+    const agentWallet = await importWallet(process.env.AGENT_MNEMONIC);
+    const agentClient = await TxClient.connectWithWallet(agentWallet);
+
+    // Check agent's token balance
+    const bals = await agentClient.getBalances(agentClient.address);
+    const tokenBal = bals.find((b: { denom: string }) => b.denom === baseDenom);
+    const amount = tokenBal ? parseInt(tokenBal.amount) : 0;
+
+    if (amount <= 0) {
+      res.json({ success: true, amount: 0, message: "No tokens to reclaim" });
+      agentClient.disconnect();
+      return;
+    }
+
+    // Send tokens from agent → user
+    const result = await agentClient.signAndBroadcastMsg({
+      typeUrl: "/cosmos.bank.v1beta1.MsgSend",
+      value: {
+        fromAddress: agentClient.address,
+        toAddress: returnAddress,
+        amount: [{ denom: baseDenom, amount: amount.toString() }],
+      },
+    }, 200000);
+
+    agentClient.disconnect();
+
+    res.json({
+      success: result.success,
+      amount: amount / 1e6,
+      txHash: result.txHash,
+    });
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
 // ─── START ───────────────────────────────────────────────────────────────────
 
 app.listen(PORT, () => {
