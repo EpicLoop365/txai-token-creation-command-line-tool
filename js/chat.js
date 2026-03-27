@@ -91,8 +91,10 @@ async function sendChatMessage(){
   chatBusy = true;
   document.getElementById('chatSendBtn').disabled = true;
 
-  // Add user message
-  chatHistory.push({ role: 'user', content: text });
+  // Add user message with current tab context
+  const activeTab = document.querySelector('.chat-tab.active')?.textContent?.trim() || 'Create';
+  const contextPrefix = `[User is on the "${activeTab}" tab] `;
+  chatHistory.push({ role: 'user', content: contextPrefix + text });
   renderChatMessage('user', text);
 
   // Show typing indicator
