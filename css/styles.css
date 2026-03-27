@@ -339,30 +339,41 @@ footer{
 
 /* Create mode picker: Quick vs Custom */
 .create-mode-picker{
-  display:flex;gap:12px;margin-bottom:20px;
+  display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:24px;
 }
 .create-mode-card{
-  flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;
-  padding:18px 14px;background:var(--bg3);border:2px solid var(--border);
-  border-radius:var(--radius);cursor:pointer;transition:all .25s;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:8px;padding:24px 16px;
+  background:var(--bg3);border:2px solid var(--border);border-radius:var(--radius-lg);
+  cursor:pointer;transition:all .3s;
   font-family:var(--sans);color:var(--text);text-align:center;
 }
-.create-mode-card:hover{border-color:var(--border-light);background:var(--bg4)}
-.create-mode-card.active{
-  border-color:var(--purple);background:rgba(124,109,250,.08);
-  box-shadow:0 0 20px var(--purple-glow);
+.create-mode-card:hover{
+  border-color:var(--border-light);background:var(--bg4);transform:translateY(-2px);
 }
-.create-mode-icon{font-size:1.6rem}
-.create-mode-label{font-weight:700;font-size:.95rem}
-.create-mode-desc{font-size:.75rem;color:var(--text-muted);line-height:1.4}
+.create-mode-card.active{
+  border-color:var(--purple);background:rgba(124,109,250,.1);
+  box-shadow:0 0 24px var(--purple-glow),inset 0 0 20px rgba(124,109,250,.05);
+}
+.create-mode-card .create-mode-icon{
+  display:block;font-size:2rem;line-height:1;margin-bottom:2px;
+}
+.create-mode-card .create-mode-label{
+  display:block;font-weight:700;font-size:1.05rem;line-height:1.2;
+}
+.create-mode-card .create-mode-desc{
+  display:block;font-size:.78rem;color:var(--text-muted);line-height:1.4;max-width:220px;
+}
 
 /* Custom deploy button inside panel */
 .custom-deploy-btn{
-  width:100%;margin-top:16px;padding:14px;font-size:1rem;
+  width:100%;margin-top:20px;padding:16px;font-size:1.05rem;
+  background:linear-gradient(135deg,var(--purple),var(--purple-dim)) !important;
+  border-radius:var(--radius) !important;
 }
 
 @media(max-width:480px){
-  .create-mode-picker{flex-direction:column}
+  .create-mode-picker{grid-template-columns:1fr}
 }
 
 /* Live error */
