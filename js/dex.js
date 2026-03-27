@@ -982,15 +982,20 @@ let dexFillSequence = 0;    // monotonic counter for time axis during demo
 
 function dexInitPriceChart() {
   const wrap = document.getElementById('dexPriceChartWrap');
-  if (!wrap || !window.LightweightCharts) return;
+  if (!wrap) { console.warn('[price-chart] wrap not found'); return; }
+  if (!window.LightweightCharts) { console.warn('[price-chart] LightweightCharts not loaded'); return; }
 
   // Clear previous chart
   if (dexPriceChart) { dexPriceChart.remove(); dexPriceChart = null; }
   document.getElementById('dexPriceEmpty').style.display = 'none';
 
+  const w = wrap.clientWidth || wrap.offsetWidth || 600;
+  const h = wrap.clientHeight || wrap.offsetHeight || 320;
+  console.log('[price-chart] init', w, 'x', h);
+
   dexPriceChart = LightweightCharts.createChart(wrap, {
-    width: wrap.clientWidth,
-    height: wrap.clientHeight || 280,
+    width: w,
+    height: h,
     layout: { background: { type: 'solid', color: '#0d0f14' }, textColor: '#8b949e', fontSize: 11 },
     grid: { vertLines: { color: '#1a1d27' }, horzLines: { color: '#1a1d27' } },
     crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
@@ -1023,10 +1028,11 @@ function dexInitPriceChart() {
 }
 
 function dexAddFillToChart(price, quantity) {
-  if (!dexPriceSeries) return;
+  if (!dexPriceSeries) { console.warn('[price-chart] no series yet'); return; }
   const p = parseFloat(price);
   const q = parseFloat(quantity || 0);
-  if (!p || isNaN(p)) return;
+  if (!p || isNaN(p)) { console.warn('[price-chart] bad price:', price); return; }
+  console.log('[price-chart] fill', p, q);
 
   dexFillSequence++;
   // Use seconds-based time: start at a fixed epoch + sequence
@@ -1322,8 +1328,12 @@ function dexLaunchDemoOverlay() {
   document.getElementById('demoOrdersTaker').textContent = '0';
   dexDemoOrderCounts = { A: 0, B: 0, Taker: 0 };
 
-  // Initialize price chart
-  dexInitPriceChart();
+  // Switch to Price tab and initialize chart (delay to let layout settle)
+  document.querySelectorAll('.dex-center-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.dex-center-pane').forEach(p => p.classList.remove('active'));
+  document.querySelector('.dex-center-tab').classList.add('active'); // first = Price
+  document.getElementById('dexPricePane').classList.add('active');
+  setTimeout(() => dexInitPriceChart(), 200);
 
   // Start timer + auto-refresh orderbook so user sees orders appearing live
   dexDemoStartTime = Date.now();
