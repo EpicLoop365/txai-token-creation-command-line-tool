@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/styles.css?v=29">
+<link rel="stylesheet" href="css/styles.css?v=30">
 <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
 <script src="/charting_library/charting_library.standalone.js"></script>
 </head>
@@ -48,16 +48,15 @@
 
     <!-- Tab Bar -->
     <div class="tab-bar-wrap reveal">
-      <button class="tab-scroll-arrow tab-arrow-left" id="tabArrowL" onclick="scrollTabs(-200)" style="display:none">‹</button>
       <div class="chat-tab-bar" id="chatTabBar">
-        <button class="chat-tab active" id="tabCreate" onclick="switchTab('create')">🚀 Create</button>
-        <button class="chat-tab" id="tabManage" onclick="switchTab('manage')">⚙️ Manage</button>
-        <button class="chat-tab" id="tabDex" onclick="switchTab('dex')">📊 Exchange</button>
-        <button class="chat-tab" id="tabSwarm" onclick="switchTab('swarm')">🤖 Swarm</button>
-        <button class="chat-tab" id="tabAuth" onclick="switchTab('auth')">🔐 Auth</button>
-        <button class="chat-tab" id="tabNft" onclick="switchTab('nft')">🎨 NFT</button>
+        <button class="chat-tab active" id="tabCreate" onclick="switchTab('create')">Create</button>
+        <button class="chat-tab" id="tabManage" onclick="switchTab('manage')">Manage</button>
+        <button class="chat-tab" id="tabDex" onclick="switchTab('dex')">Exchange</button>
+        <button class="chat-tab" id="tabSwarm" onclick="switchTab('swarm')">Swarm</button>
+        <button class="chat-tab" id="tabNft" onclick="switchTab('nft')">NFT</button>
+        <button class="chat-tab" id="tabSubs" onclick="switchTab('subs')">Subscriptions</button>
+        <button class="chat-tab" id="tabAi" onclick="switchTab('ai')">AI</button>
       </div>
-      <button class="tab-scroll-arrow tab-arrow-right" id="tabArrowR" onclick="scrollTabs(200)">›</button>
     </div>
 
     <!-- Wallet Choice Modal -->
@@ -112,65 +111,34 @@
     </div>
 
 
-    <!-- App Layout: Main content + Chat sidebar -->
-    <div class="app-layout" id="appLayout">
-    <div class="app-main">
+    <!-- Main content -->
+    <div class="app-main" id="appLayout">
 
     <!-- Create Mode (existing) -->
     <div id="createModeWrap">
-    <div class="mode-toggle-wrap reveal">
-      <div class="mode-toggle" id="modeToggle" onclick="toggleMode()">
-        <div class="mode-toggle-slider live" id="modeSlider"></div>
-        <div class="mode-toggle-option" id="optSim">Simulated</div>
-        <div class="mode-toggle-option active" id="optLive">Live</div>
-      </div>
-      <div class="mode-badge-testnet visible" id="testnetBadge"><span class="dot-g"></span> Testnet</div>
-    </div>
-
     <div class="demo-error" id="demoError"></div>
 
-    <div class="create-split-layout" id="createSplitLayout">
+    <div class="create-clean-layout" id="createSplitLayout">
 
-    <!-- Inspiration Ticker (left side) -->
-    <div class="inspiration-rail" id="inspirationRail">
-      <div class="inspiration-label">Possibilities</div>
-      <div class="inspiration-ticker" id="inspirationTicker">
-        <div class="inspiration-item active">
-          <span class="insp-icon">🔑</span>
-          <span class="insp-text">Mint a 30-day access pass — no backend needed</span>
-        </div>
-      </div>
-      <div class="inspiration-dots" id="inspirationDots"></div>
-      <div class="inspiration-footer">The possibilities are endless.</div>
-    </div>
+    <div class="demo-input-wrap reveal" id="demoInputWrap">
 
-    <div class="demo-input-wrap reveal live-glow" id="demoInputWrap">
-
-      <!-- Creation Mode Picker -->
-      <div class="create-mode-picker" id="createModePicker">
-        <button class="create-mode-card active" id="createModeQuick" onclick="setCreateMode('quick')">
-          <span class="create-mode-icon">&#9889;</span>
-          <span class="create-mode-label">Quick Create</span>
-          <span class="create-mode-desc">Describe in plain English, AI handles the rest</span>
-        </button>
-        <button class="create-mode-card" id="createModeCustom" onclick="setCreateMode('custom')">
-          <span class="create-mode-icon">&#128736;&#65039;</span>
-          <span class="create-mode-label">Custom Build</span>
-          <span class="create-mode-desc">Set every field yourself — full control</span>
-        </button>
+      <!-- Create mode toggle -->
+      <div class="create-mode-toggle" id="createModePicker">
+        <button class="create-mode-btn active" id="createModeCustom" onclick="setCreateMode('custom')">Manual</button>
+        <button class="create-mode-btn" id="createModeQuick" onclick="setCreateMode('quick')">AI Prompt</button>
       </div>
 
       <!-- Quick Create: AI prompt -->
-      <div id="quickCreateWrap">
+      <div id="quickCreateWrap" style="display:none">
         <div class="demo-input-row">
-          <input type="text" class="demo-input" id="demoInput" placeholder=''>
+          <input type="text" class="demo-input" id="demoInput" placeholder='Describe your token in plain English...'>
           <button class="demo-create-btn" id="demoBtn" onclick="useSuggestionIfEmpty();runDemo()">Deploy Token (Testnet)</button>
         </div>
         <div class="suggestion-hint" id="suggestionHint" style="display:none"></div>
       </div>
 
-      <!-- Custom Build: manual fields -->
-      <div id="customCreateWrap" style="display:none">
+      <!-- Custom Build: manual fields (default) -->
+      <div id="customCreateWrap">
         <div class="customize-panel show" id="customizePanel">
 
         <!-- Basics -->
@@ -1105,6 +1073,72 @@
 
         </div><!-- end manage-actions -->
 
+        <!-- Permissions Section (merged from Auth tab) -->
+        <div class="manage-permissions-section" id="managePermissions">
+          <div class="manage-action-hdr" style="margin-top:20px;margin-bottom:12px">
+            <span class="manage-action-icon">🔐</span> Permissions & Grants
+          </div>
+
+          <div class="auth-toggle-bar">
+            <button class="auth-toggle-btn active" id="authToggleGranter" onclick="authToggleView('granter')">Grants Given</button>
+            <button class="auth-toggle-btn" id="authToggleGrantee" onclick="authToggleView('grantee')">Grants Received</button>
+          </div>
+
+          <p class="auth-revoke-hint" id="authRevokeHint">Click <strong>Revoke</strong> on any grant to remove the permission.</p>
+
+          <div class="auth-grants-list" id="authGrantsList">
+            <div class="auth-empty">Connect a wallet or use the agent wallet to view permissions.</div>
+          </div>
+
+          <div class="auth-create-section">
+            <h3 class="auth-create-title">Create New Grant</h3>
+
+            <div class="auth-form-row">
+              <label class="auth-label">Grantee Address</label>
+              <input type="text" class="auth-input" id="authGrantee" placeholder="testcore1... (address to grant permission to)">
+            </div>
+
+            <div class="auth-form-row">
+              <label class="auth-label">Permission Type</label>
+              <select class="auth-select" id="authGrantType" onchange="authOnTypeChange()">
+                <option value="send">Send Tokens</option>
+                <option value="dex-place">Place DEX Orders</option>
+                <option value="dex-cancel">Cancel DEX Orders</option>
+                <option value="mint">Mint Tokens</option>
+                <option value="burn">Burn Tokens</option>
+                <option value="freeze">Freeze Account</option>
+                <option value="nft-mint">Mint NFT</option>
+                <option value="custom">Custom Message Type...</option>
+              </select>
+            </div>
+
+            <div class="auth-form-row" id="authCustomMsgRow" style="display:none">
+              <label class="auth-label">Message Type URL</label>
+              <input type="text" class="auth-input" id="authCustomMsg" placeholder="/cosmos.bank.v1beta1.MsgSend">
+            </div>
+
+            <div class="auth-send-limit-fields" id="authSendLimitFields" style="display:flex">
+              <div class="auth-form-row auth-half">
+                <label class="auth-label">Spend Limit (optional)</label>
+                <input type="number" class="auth-input" id="authSpendLimit" placeholder="e.g. 1000">
+              </div>
+              <div class="auth-form-row auth-half">
+                <label class="auth-label">Denom</label>
+                <input type="text" class="auth-input" id="authSpendDenom" placeholder="utestcore" value="utestcore">
+              </div>
+            </div>
+
+            <div class="auth-form-row">
+              <label class="auth-label">Expiration (days)</label>
+              <input type="number" class="auth-input auth-short" id="authExpiration" value="365" min="1" max="3650">
+            </div>
+
+            <button class="auth-grant-btn" id="authGrantBtn" onclick="authCreateGrant()">Create Grant</button>
+
+            <div class="auth-result" id="authResult" style="display:none"></div>
+          </div>
+        </div>
+
         <!-- TX Result -->
         <div class="manage-result" id="manageResult" style="display:none">
           <div class="manage-result-icon" id="manageResultIcon">✓</div>
@@ -1115,95 +1149,123 @@
       </div><!-- end manage-info-card -->
     </div><!-- end manage-wrap -->
 
-    <!-- ===== AUTH & PERMISSIONS TAB ===== -->
-    <div class="auth-wrap" id="authWrap">
+    <!-- Subscriptions Tab -->
+    <div class="subs-wrap" id="subsWrap">
 
-      <!-- Toggle Bar: Grants Given / Grants Received -->
-      <div class="auth-toggle-bar">
-        <button class="auth-toggle-btn active" id="authToggleGranter" onclick="authToggleView('granter')">Grants Given</button>
-        <button class="auth-toggle-btn" id="authToggleGrantee" onclick="authToggleView('grantee')">Grants Received</button>
-      </div>
+      <!-- Two-column layout: Create + Active Passes -->
+      <div class="subs-layout">
 
-      <p class="auth-revoke-hint" id="authRevokeHint">Click <strong>Revoke</strong> on any grant to remove the permission.</p>
+        <!-- Left: Create Pass -->
+        <div class="subs-create-panel">
+          <div class="subs-section-title">Create Subscription Pass</div>
+          <div class="subs-section-desc">Set up a token-gated access pass that users can buy. Payments split automatically on-chain.</div>
 
-      <!-- Grants List -->
-      <div class="auth-grants-list" id="authGrantsList">
-        <div class="auth-empty">Connect a wallet or use the agent wallet to view permissions.</div>
-      </div>
+          <div class="subs-form">
+            <div class="subs-field">
+              <label class="subs-label">Pass Name</label>
+              <input class="subs-input" id="subsName" placeholder="e.g. Pro Monthly Access">
+            </div>
+            <div class="subs-field-row">
+              <div class="subs-field">
+                <label class="subs-label">Price (TX)</label>
+                <input class="subs-input" id="subsPrice" type="number" placeholder="10" min="0.01" step="any">
+              </div>
+              <div class="subs-field">
+                <label class="subs-label">Duration</label>
+                <select class="subs-input subs-select" id="subsDuration">
+                  <option value="7">7 Days</option>
+                  <option value="30" selected>30 Days</option>
+                  <option value="90">90 Days</option>
+                  <option value="365">1 Year</option>
+                  <option value="0">Lifetime</option>
+                </select>
+              </div>
+            </div>
+            <div class="subs-field">
+              <label class="subs-label">Merchant Wallet</label>
+              <input class="subs-input" id="subsMerchantAddr" placeholder="testcore1... (where payments go)">
+              <div class="subs-hint">Your wallet address — receives payments minus platform fee.</div>
+            </div>
+            <div class="subs-field">
+              <label class="subs-label">Description (optional)</label>
+              <input class="subs-input" id="subsDesc" placeholder="What does this pass unlock?">
+            </div>
 
-      <!-- Create Grant Form -->
-      <div class="auth-create-section">
-        <h3 class="auth-create-title">Create New Grant</h3>
+            <!-- Fee breakdown -->
+            <div class="subs-fee-breakdown">
+              <div class="subs-fee-row">
+                <span>Pass Price</span>
+                <span id="subsFeePrice">0 TX</span>
+              </div>
+              <div class="subs-fee-row">
+                <span>Platform Fee (5%)</span>
+                <span id="subsFeeAmount">0 TX</span>
+              </div>
+              <div class="subs-fee-row subs-fee-total">
+                <span>You Receive</span>
+                <span id="subsFeeNet">0 TX</span>
+              </div>
+            </div>
 
-        <div class="auth-form-row">
-          <label class="auth-label">Grantee Address</label>
-          <input type="text" class="auth-input" id="authGrantee" placeholder="testcore1... (address to grant permission to)">
-        </div>
-
-        <div class="auth-form-row">
-          <label class="auth-label">Permission Type</label>
-          <select class="auth-select" id="authGrantType" onchange="authOnTypeChange()">
-            <option value="send">Send Tokens</option>
-            <option value="dex-place">Place DEX Orders</option>
-            <option value="dex-cancel">Cancel DEX Orders</option>
-            <option value="mint">Mint Tokens</option>
-            <option value="burn">Burn Tokens</option>
-            <option value="freeze">Freeze Account</option>
-            <option value="nft-mint">Mint NFT</option>
-            <option value="custom">Custom Message Type...</option>
-          </select>
-        </div>
-
-        <!-- Custom message input (hidden by default) -->
-        <div class="auth-form-row" id="authCustomMsgRow" style="display:none">
-          <label class="auth-label">Message Type URL</label>
-          <input type="text" class="auth-input" id="authCustomMsg" placeholder="/cosmos.bank.v1beta1.MsgSend">
-        </div>
-
-        <!-- Spend limit fields (only for Send) -->
-        <div class="auth-send-limit-fields" id="authSendLimitFields" style="display:flex">
-          <div class="auth-form-row auth-half">
-            <label class="auth-label">Spend Limit (optional)</label>
-            <input type="number" class="auth-input" id="authSpendLimit" placeholder="e.g. 1000">
+            <button class="subs-create-btn" id="subsCreateBtn" onclick="subsCreatePass()">Create Pass Token</button>
           </div>
-          <div class="auth-form-row auth-half">
-            <label class="auth-label">Denom</label>
-            <input type="text" class="auth-input" id="authSpendDenom" placeholder="utestcore" value="utestcore">
+        </div>
+
+        <!-- Right: Active Passes + Embed Code -->
+        <div class="subs-right-panel">
+
+          <!-- Active Passes -->
+          <div class="subs-section-title">Your Passes</div>
+          <div class="subs-passes-list" id="subsPassesList">
+            <div class="subs-empty">No subscription passes created yet.</div>
           </div>
+
+          <!-- Embed Code (shown after creating a pass) -->
+          <div class="subs-embed-section" id="subsEmbedSection" style="display:none">
+            <div class="subs-section-title">Embed on Your Site</div>
+            <div class="subs-section-desc">Add these 4 lines to your website. Users can buy passes directly.</div>
+            <div class="subs-code-block">
+              <pre id="subsEmbedCode"></pre>
+              <button class="subs-copy-btn" onclick="subsCopyEmbed()">Copy</button>
+            </div>
+          </div>
+
+          <!-- Verify Pass -->
+          <div class="subs-verify-section">
+            <div class="subs-section-title">Verify Access</div>
+            <div class="subs-section-desc">Check if a wallet holds a valid pass.</div>
+            <div class="subs-verify-row">
+              <input class="subs-input" id="subsVerifyAddr" placeholder="Wallet address to check...">
+              <select class="subs-input subs-select subs-verify-select" id="subsVerifyPass">
+                <option value="">-- Select Pass --</option>
+              </select>
+              <button class="subs-verify-btn" onclick="subsVerifyAccess()">Verify</button>
+            </div>
+            <div class="subs-verify-result" id="subsVerifyResult"></div>
+          </div>
+
         </div>
-
-        <div class="auth-form-row">
-          <label class="auth-label">Expiration (days)</label>
-          <input type="number" class="auth-input auth-short" id="authExpiration" value="365" min="1" max="3650">
-        </div>
-
-        <button class="auth-grant-btn" id="authGrantBtn" onclick="authCreateGrant()">🔐 Create Grant</button>
-
-        <!-- Result display -->
-        <div class="auth-result" id="authResult" style="display:none"></div>
       </div>
 
-    </div><!-- end auth-wrap -->
+      <!-- Status log -->
+      <div class="subs-log" id="subsLog"></div>
 
-    </div><!-- end app-main -->
+    </div><!-- end subs-wrap -->
 
-    <!-- Persistent Chat Sidebar -->
-    <div class="chat-sidebar" id="chatSidebar">
-      <div class="chat-sidebar-header">
-        <span class="chat-sidebar-title">💬 AI Advisor</span>
-        <button class="chat-sidebar-toggle" id="chatSidebarToggle" onclick="toggleChatSidebar()" title="Collapse chat">◁</button>
-      </div>
-      <div class="chat-sidebar-body" id="chatSidebarBody">
+    <!-- AI Advisor Tab -->
+    <div id="aiModeWrap" style="display:none">
+      <div class="ai-advisor-pane">
+        <div class="ai-advisor-header">AI Advisor</div>
+        <div class="ai-advisor-desc">Ask anything about tokens, smart features, compliance, trading, or the AI swarm.</div>
         <div class="chat-messages" id="chatMessages">
           <div class="chat-welcome">
-            <div class="chat-welcome-icon">💬</div>
-            <div class="chat-welcome-title">Ask me anything</div>
-            <div class="chat-welcome-sub">I know everything about this platform — how to create tokens, set up compliance, run the AI swarm, trade on the DEX, and more. How can I help?</div>
+            <div class="chat-welcome-title">What can I help with?</div>
+            <div class="chat-welcome-sub">I know everything about this platform — token creation, compliance setup, AI swarm orchestration, DEX trading, and more.</div>
             <div class="chat-starters">
-              <button class="chat-starter" onclick="chatFromStarter('What can I build with TXAI?')">🚀 What can I build?</button>
-              <button class="chat-starter" onclick="chatFromStarter('Help me design a token for my project')">🪙 Design a token</button>
-              <button class="chat-starter" onclick="chatFromStarter('How does the AI agent swarm work?')">🤖 How does the swarm work?</button>
-              <button class="chat-starter" onclick="chatFromStarter('What smart token features should I use?')">⚙️ Token features guide</button>
+              <button class="chat-starter" onclick="chatFromStarter('What can I build with TXAI?')">What can I build?</button>
+              <button class="chat-starter" onclick="chatFromStarter('Help me design a token for my project')">Design a token</button>
+              <button class="chat-starter" onclick="chatFromStarter('How does the AI agent swarm work?')">How does the swarm work?</button>
+              <button class="chat-starter" onclick="chatFromStarter('What smart token features should I use?')">Token features guide</button>
             </div>
           </div>
         </div>
@@ -1214,7 +1276,7 @@
       </div>
     </div>
 
-    </div><!-- end app-layout -->
+    </div><!-- end app-main -->
 
   </div>
 </section>
@@ -1251,6 +1313,7 @@
 <script src="js/manage.js?v=11"></script>
 <script src="js/swarm.js?v=11"></script>
 <script src="js/auth.js?v=10"></script>
+<script src="js/subscriptions.js?v=1"></script>
 <script>
 // ── Inspiration ticker ──
 (function(){
@@ -1363,32 +1426,13 @@ async function agentTopUp() {
   btn.textContent = 'Top Up (Faucet)';
 }
 
-// Tab bar scroll arrows + fade indicators
+// Tab bar: scroll active tab into view on load
 (function(){
   const bar = document.getElementById('chatTabBar');
-  const wrap = bar?.parentElement;
-  const arrowL = document.getElementById('tabArrowL');
-  const arrowR = document.getElementById('tabArrowR');
-  if(!bar||!wrap) return;
-  function updateArrows(){
-    const sl = bar.scrollLeft, sw = bar.scrollWidth, cw = bar.clientWidth;
-    const canLeft = sl > 4, canRight = sl < sw - cw - 4;
-    arrowL.style.display = canLeft ? 'flex' : 'none';
-    arrowR.style.display = canRight ? 'flex' : 'none';
-    wrap.classList.toggle('fade-right', canRight && !arrowR);
-    wrap.classList.toggle('fade-left', canLeft && !arrowL);
-  }
-  bar.addEventListener('scroll', updateArrows);
-  window.addEventListener('resize', updateArrows);
-  setTimeout(updateArrows, 100);
-  // scroll active tab into view on load
+  if(!bar) return;
   const active = bar.querySelector('.chat-tab.active');
   if(active) active.scrollIntoView({behavior:'auto',block:'nearest',inline:'nearest'});
 })();
-function scrollTabs(px){
-  const bar = document.getElementById('chatTabBar');
-  if(bar) bar.scrollBy({left:px,behavior:'smooth'});
-}
 </script>
 
 </body>

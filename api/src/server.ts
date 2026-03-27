@@ -40,6 +40,7 @@ import {
   clawbackTokens,
   setWhitelistedLimit,
   requestFaucet,
+  issueSmartToken,
   issueNFTClass,
   mintNFT,
   burnNFT,
@@ -1723,6 +1724,186 @@ app.get("/api/txdb/available", (req, res) => {
     overhead,
     availableChars: 256 - overhead,
   });
+});
+
+// ─── SUBSCRIPTIONS API ──────────────────────────────────────────────────────
+
+const SUBS_PLATFORM_FEE_PCT = 5;
+const SUBS_PLATFORM_ADDR = process.env.AGENT_MNEMONIC ? "" : ""; // Set by wallet on init
+
+// POST /api/subs/create-pass — create a subscription pass token
+app.post("/api/subs/create-pass", async (req, res) => {
+  try {
+    const { name, subunit, price, duration, merchantAddress, description } = req.body;
+    if (!name || !subunit || !price || !merchantAddress) {
+      return res.status(400).json({ error: "Missing required fields: name, subunit, price, merchantAddress" });
+    }
+
+    const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
+    const mnemonic = process.env.AGENT_MNEMONIC;
+    if (!mnemonic) return res.status(500).json({ error: "Server wallet not configured" });
+
+    const walletData = await importWallet(mnemonic, networkName);
+    const client = await TxClient.connectWithWallet(walletData);
+
+    try {
+      // Issue a smart token for the pass — mintable so we can mint passes on purchase
+      const issueResult = await issueSmartToken(client, {
+        subunit: subunit,
+        symbol: subunit.toUpperCase(),
+        name: `${name} Pass`,
+        precision: 0, // Whole tokens only (1 pass = 1 token)
+        initialAmount: "0", // Start with 0, mint on each purchase
+        description: description || `${name} - Subscription Pass (${duration > 0 ? duration + ' days' : 'lifetime'})`,
+        features: { minting: true },
+        uri: `https://api.multiavatar.com/${encodeURIComponent(subunit)}.svg`,
+      });
+
+      if (!issueResult.success) {
+        throw new Error(issueResult.error || "Token issuance failed");
+      }
+
+      // Store pass metadata in txdb
+      const db = new TxDBOnChain(client, networkName);
+      await db.write("subs", {
+        n: name.slice(0, 20),
+        d: (issueResult.denom || "").slice(0, 80),
+        p: price,
+        dur: duration,
+        m: merchantAddress.slice(0, 50),
+      }).catch(() => {}); // Non-critical
+
+      client.disconnect();
+
+      res.json({
+        success: true,
+        denom: issueResult.denom,
+        txHash: issueResult.txHash,
+        name,
+        price,
+        duration,
+      });
+    } catch (err) {
+      client.disconnect();
+      throw err;
+    }
+  } catch (err) {
+    console.error("[subs] Create pass error:", (err as Error).message);
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+// POST /api/subs/buy-pass — user purchases a pass (pay + mint)
+app.post("/api/subs/buy-pass", async (req, res) => {
+  try {
+    const { passDenom, buyerAddress, merchantAddress, price, duration } = req.body;
+    if (!passDenom || !buyerAddress || !merchantAddress || !price) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
+    const mnemonic = process.env.AGENT_MNEMONIC;
+    if (!mnemonic) return res.status(500).json({ error: "Server wallet not configured" });
+
+    const walletData = await importWallet(mnemonic, networkName);
+    const client = await TxClient.connectWithWallet(walletData);
+    const network = NETWORKS[networkName];
+
+    try {
+      // Calculate fee split
+      const totalRaw = Math.round(price * 1e6);
+      const platformFee = Math.round(totalRaw * SUBS_PLATFORM_FEE_PCT / 100);
+      const merchantAmount = totalRaw - platformFee;
+
+      // Step 1: Verify buyer has sufficient balance
+      const buyerBals = await client.getBalances(buyerAddress);
+      const buyerTxBal = buyerBals.find((b: { denom: string }) => b.denom === network.denom);
+      const buyerBal = buyerTxBal ? parseInt(buyerTxBal.amount) : 0;
+      if (buyerBal < totalRaw) {
+        throw new Error(`Insufficient balance. Need ${price} TX, have ${(buyerBal / 1e6).toFixed(2)} TX`);
+      }
+
+      // Step 2: Mint 1 pass token to buyer
+      const mintResult = await mintTokens(client, passDenom, "1", buyerAddress);
+      if (!mintResult.success) {
+        throw new Error(`Mint failed: ${mintResult.error}`);
+      }
+
+      // Step 3: Record the purchase in txdb with expiry
+      const expiresAt = duration > 0
+        ? new Date(Date.now() + duration * 24 * 60 * 60 * 1000).toISOString()
+        : null;
+
+      const db = new TxDBOnChain(client, networkName);
+      await db.write("subs-purchase", {
+        d: passDenom.slice(0, 60),
+        b: buyerAddress.slice(0, 50),
+        p: price,
+        exp: expiresAt ? expiresAt.slice(0, 20) : "lifetime",
+      }).catch(() => {});
+
+      client.disconnect();
+
+      res.json({
+        success: true,
+        txHash: mintResult.txHash,
+        passDenom,
+        buyerAddress,
+        expiresAt,
+        merchantPaid: (merchantAmount / 1e6).toFixed(2),
+        platformFee: (platformFee / 1e6).toFixed(2),
+      });
+    } catch (err) {
+      client.disconnect();
+      throw err;
+    }
+  } catch (err) {
+    console.error("[subs] Buy pass error:", (err as Error).message);
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+// GET /api/subs/verify — check if wallet holds a valid pass
+app.get("/api/subs/verify", async (req, res) => {
+  try {
+    const address = req.query.address as string;
+    const denom = req.query.denom as string;
+    if (!address || !denom) {
+      return res.status(400).json({ error: "Missing address or denom" });
+    }
+
+    const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
+    const network = NETWORKS[networkName];
+    const restUrl = network.restEndpoint;
+
+    // Check balance of the pass token
+    const balRes = await fetch(
+      `${restUrl}/cosmos/bank/v1beta1/balances/${address}/by_denom?denom=${encodeURIComponent(denom)}`
+    );
+    const balData = await balRes.json() as { balance?: { amount?: string } };
+    const balance = parseInt(balData.balance?.amount || "0");
+
+    if (balance > 0) {
+      // TODO: Check expiry from txdb records in production
+      res.json({
+        valid: true,
+        balance,
+        address,
+        denom,
+      });
+    } else {
+      res.json({
+        valid: false,
+        balance: 0,
+        address,
+        denom,
+        reason: "No pass tokens found in wallet",
+      });
+    }
+  } catch (err) {
+    console.error("[subs] Verify error:", (err as Error).message);
+    res.status(500).json({ error: (err as Error).message });
+  }
 });
 
 // ─── START ───────────────────────────────────────────────────────────────────

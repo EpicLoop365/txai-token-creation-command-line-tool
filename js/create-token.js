@@ -2,86 +2,70 @@
 
 /* Tab Switching */
 function switchTab(tab){
-  const tabCreate = document.getElementById('tabCreate');
-  const tabDex = document.getElementById('tabDex');
-  const tabSwarm = document.getElementById('tabSwarm');
-  const tabNft = document.getElementById('tabNft');
-  const tabManage = document.getElementById('tabManage');
-  const tabAuth = document.getElementById('tabAuth');
-  const createWrap = document.getElementById('createModeWrap');
-  const dexWrap = document.getElementById('dexWrap');
-  const swarmWrap = document.getElementById('swarmWrap');
-  const nftWrap = document.getElementById('nftWrap');
-  const manageWrap = document.getElementById('manageWrap');
-  const authWrap = document.getElementById('authWrap');
+  const tabs = ['create','manage','dex','swarm','nft','subs','ai'];
+  const wraps = {
+    create: document.getElementById('createModeWrap'),
+    manage: document.getElementById('manageWrap'),
+    dex: document.getElementById('dexWrap'),
+    swarm: document.getElementById('swarmWrap'),
+    nft: document.getElementById('nftWrap'),
+    subs: document.getElementById('subsWrap'),
+    ai: document.getElementById('aiModeWrap'),
+  };
 
-  // Reset all tabs
-  tabCreate.classList.remove('active');
-  tabDex.classList.remove('active');
-  tabSwarm.classList.remove('active');
-  tabNft.classList.remove('active');
-  tabManage.classList.remove('active');
-  tabAuth.classList.remove('active');
-  createWrap.style.display = 'none';
-  dexWrap.classList.remove('show');
-  swarmWrap.classList.remove('show');
-  nftWrap.classList.remove('show');
-  manageWrap.classList.remove('show');
-  authWrap.classList.remove('show');
+  // Reset all
+  tabs.forEach(t => {
+    const btn = document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1));
+    if(btn) btn.classList.remove('active');
+    const w = wraps[t];
+    if(!w) return;
+    if(t === 'create' || t === 'ai') { w.style.display = 'none'; }
+    else w.classList.remove('show');
+  });
+
   // Reset container width when leaving DEX/Swarm
-  dexWrap.closest('.container').style.maxWidth = '';
+  const container = wraps.dex?.closest('.container');
+  if(container) container.style.maxWidth = '';
   chatMode = false;
 
-  // Auto-collapse/expand chat sidebar based on tab
-  const chatSidebar = document.getElementById('chatSidebar');
-  if(tab === 'dex' || tab === 'swarm'){
-    if(chatSidebar) chatSidebar.classList.add('collapsed');
-  } else {
-    if(chatSidebar) chatSidebar.classList.remove('collapsed');
-  }
+  // Activate selected tab
+  const btn = document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1));
+  if(btn) btn.classList.add('active');
 
   if(tab === 'dex'){
-    tabDex.classList.add('active');
-    dexWrap.classList.add('show');
-    // Auto-fetch wallet and pairs on first load
+    wraps.dex.classList.add('show');
     if(!dexAgentWallet) dexFetchWallet();
     if(!document.getElementById('dexPairSelect').options.length || document.getElementById('dexPairSelect').options.length <= 1) dexFetchPairs();
     setTimeout(() => dexDrawDepthChart(), 100);
   } else if(tab === 'swarm'){
-    tabSwarm.classList.add('active');
-    swarmWrap.classList.add('show');
+    wraps.swarm.classList.add('show');
   } else if(tab === 'nft'){
-    tabNft.classList.add('active');
-    nftWrap.classList.add('show');
+    wraps.nft.classList.add('show');
   } else if(tab === 'manage'){
-    tabManage.classList.add('active');
-    manageWrap.classList.add('show');
-    // Auto-load last token denom if manage field is empty
+    wraps.manage.classList.add('show');
     const manageInput = document.getElementById('manageTokenDenom');
     if(manageInput && !manageInput.value.trim()){
       const tokens = typeof txdbGetTokens === 'function' ? txdbGetTokens() : [];
       if(tokens.length > 0){
         manageInput.value = tokens[0].denom;
-        // Auto-load the token info
         if(typeof loadManageToken === 'function') setTimeout(() => loadManageToken(), 200);
       }
     }
-    manageInput.focus();
-  } else if(tab === 'auth'){
-    tabAuth.classList.add('active');
-    authWrap.classList.add('show');
-    authLoadGrants();
+    if(manageInput) manageInput.focus();
+    // Load permissions/grants
+    if(typeof authLoadGrants === 'function') authLoadGrants();
+  } else if(tab === 'subs'){
+    wraps.subs.classList.add('show');
+    if(typeof subsInit === 'function') subsInit();
+  } else if(tab === 'ai'){
+    wraps.ai.style.display = '';
   } else {
-    tabCreate.classList.add('active');
-    createWrap.style.display = '';
+    wraps.create.style.display = '';
   }
   // Scroll active tab into view
   const activeTab = document.querySelector('.chat-tab.active');
   if(activeTab) activeTab.scrollIntoView({behavior:'smooth',block:'nearest',inline:'nearest'});
-  // Show/hide agent wallet bar
   if(typeof showAgentBar === 'function') showAgentBar(tab);
-  // Update chat starters for this tab
-  updateChatStarters(tab);
 }
 
 
@@ -207,7 +191,7 @@ function resetDeployBtns(){
 }
 
 /* Create Mode Toggle: Quick (AI) vs Custom (manual) */
-let createMode = 'quick';
+let createMode = 'custom';
 function setCreateMode(mode){
   createMode = mode;
   document.getElementById('createModeQuick').classList.toggle('active', mode === 'quick');
