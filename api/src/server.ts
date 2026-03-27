@@ -12,6 +12,9 @@
  *   POST /api/dex-chat      — DEX trading advisor chat
  *   POST /api/auth/grant    — create authz grant (agent wallet)
  *   POST /api/auth/revoke   — revoke authz grant (agent wallet)
+ *   GET  /api/stakers/:addr — query delegators of a validator
+ *   GET  /api/holders/:denom— query holders of a token denom
+ *   POST /api/nft-airdrop   — issue NFT class + batch mint to recipients
  */
 
 import express from "express";
@@ -940,6 +943,204 @@ app.post("/api/airdrop", async (req, res) => {
     res.json({ success: true, sent, failed, errors });
   } catch (err) {
     console.error("[airdrop] Error:", err);
+    res.status(500).json({ error: (err as Error).message });
+  } finally {
+    try { if (client) client.disconnect(); } catch { /* ignore */ }
+  }
+});
+
+// ─── GET STAKERS (Delegators of a Validator) ─────────────────────────────
+
+app.get("/api/stakers/:validatorAddr", async (req, res) => {
+  const { validatorAddr } = req.params;
+  if (!validatorAddr) {
+    res.status(400).json({ error: "Missing validator address." }); return;
+  }
+
+  const baseUrl = "https://full-node.testnet-1.coreum.dev:1317";
+  const allAddresses: string[] = [];
+  let nextKey: string | null = null;
+
+  try {
+    do {
+      let url = `${baseUrl}/cosmos/staking/v1beta1/validators/${validatorAddr}/delegations?pagination.limit=1000`;
+      if (nextKey) {
+        url += `&pagination.key=${encodeURIComponent(nextKey)}`;
+      }
+
+      const response = await fetch(url);
+      if (!response.ok) {
+        const text = await response.text();
+        res.status(response.status).json({ error: `Chain query failed: ${text}` }); return;
+      }
+
+      const data = await response.json() as {
+        delegation_responses?: Array<{ delegation?: { delegator_address?: string } }>;
+        pagination?: { next_key?: string | null };
+      };
+
+      if (data.delegation_responses) {
+        for (const entry of data.delegation_responses) {
+          const addr = entry.delegation?.delegator_address;
+          if (addr) allAddresses.push(addr);
+        }
+      }
+
+      nextKey = data.pagination?.next_key || null;
+    } while (nextKey);
+
+    res.json({ success: true, addresses: allAddresses, count: allAddresses.length });
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+// ─── GET HOLDERS (Token Holders by Denom) ─────────────────────────────────
+
+app.get("/api/holders/:denom", async (req, res) => {
+  const { denom } = req.params;
+  if (!denom) {
+    res.status(400).json({ error: "Missing denom." }); return;
+  }
+
+  const manualAddresses = req.query.addresses as string | undefined;
+
+  // If manual addresses provided, verify balances on-chain
+  if (manualAddresses) {
+    const addresses = manualAddresses.split(",").map((a) => a.trim()).filter(Boolean);
+    const baseUrl = "https://full-node.testnet-1.coreum.dev:1317";
+    const holders: string[] = [];
+    const errors: string[] = [];
+
+    for (const addr of addresses) {
+      try {
+        const response = await fetch(`${baseUrl}/cosmos/bank/v1beta1/balances/${addr}`);
+        if (!response.ok) {
+          errors.push(`${addr}: query failed`);
+          continue;
+        }
+        const data = await response.json() as {
+          balances?: Array<{ denom: string; amount: string }>;
+        };
+        const bal = data.balances?.find((b) => b.denom === denom);
+        if (bal && parseInt(bal.amount) > 0) {
+          holders.push(addr);
+        }
+      } catch (err) {
+        errors.push(`${addr}: ${(err as Error).message}`);
+      }
+    }
+
+    res.json({
+      success: true,
+      addresses: holders,
+      count: holders.length,
+      source: "manual",
+      ...(errors.length > 0 ? { errors } : {}),
+    });
+    return;
+  }
+
+  // No direct "all holders" endpoint on Coreum — return guidance
+  res.json({
+    success: true,
+    addresses: [],
+    count: 0,
+    source: "chain",
+    note: "Coreum does not expose a direct token-holders endpoint. Provide addresses via ?addresses=addr1,addr2,... to verify balances, or use an off-chain indexer.",
+  });
+});
+
+// ─── NFT AIRDROP (Issue Class + Batch Mint to Recipients) ─────────────────
+
+app.post("/api/nft-airdrop", async (req, res) => {
+  const { name, symbol, description, uri, recipients, royaltyRate } = req.body as {
+    name?: string;
+    symbol?: string;
+    description?: string;
+    uri?: string;
+    recipients?: string[];
+    royaltyRate?: string;
+  };
+
+  // Validate inputs
+  if (!name || typeof name !== "string") {
+    res.status(400).json({ error: "Missing 'name'." }); return;
+  }
+  if (!symbol || typeof symbol !== "string") {
+    res.status(400).json({ error: "Missing 'symbol'." }); return;
+  }
+  if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
+    res.status(400).json({ error: "'recipients' must be a non-empty array." }); return;
+  }
+  if (recipients.length > 100) {
+    res.status(400).json({ error: "Max 100 recipients per call." }); return;
+  }
+  if (!process.env.AGENT_MNEMONIC) {
+    res.status(500).json({ error: "Server not configured." }); return;
+  }
+
+  const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
+  let client: TxClient | null = null;
+  let minted = 0;
+  let failed = 0;
+  const errors: string[] = [];
+
+  try {
+    const txWallet = await importWallet(process.env.AGENT_MNEMONIC, networkName);
+    client = await TxClient.connectWithWallet(txWallet);
+
+    // Step 1: Issue NFT class
+    console.log(`[nft-airdrop] Issuing NFT class: ${symbol} (${name})`);
+    const classResult = await issueNFTClass(client, {
+      symbol: symbol.toLowerCase(),
+      name,
+      description: description || `${name} NFT Airdrop Collection`,
+      uri: uri || "",
+      royaltyRate: royaltyRate || "0",
+    });
+
+    if (!classResult.success) {
+      res.status(500).json({
+        error: `Failed to issue NFT class: ${classResult.error || "unknown error"}`,
+        txHash: classResult.txHash,
+      });
+      return;
+    }
+
+    const classId = classResult.classId;
+    console.log(`[nft-airdrop] NFT class issued: ${classId}`);
+
+    // Step 2: Mint and send an NFT to each recipient
+    for (let i = 0; i < recipients.length; i++) {
+      const recipient = recipients[i];
+      const nftId = `airdrop-${i + 1}`;
+
+      try {
+        await mintNFT(client, {
+          classId,
+          id: nftId,
+          uri: uri || "",
+          recipient,
+        });
+        minted++;
+        console.log(`[nft-airdrop] Minted ${nftId} → ${recipient}`);
+      } catch (err) {
+        failed++;
+        errors.push(`${recipient} (${nftId}): ${(err as Error).message}`);
+        console.error(`[nft-airdrop] Failed to mint ${nftId} → ${recipient}: ${(err as Error).message}`);
+      }
+    }
+
+    res.json({
+      success: true,
+      classId,
+      minted,
+      failed,
+      errors,
+    });
+  } catch (err) {
+    console.error("[nft-airdrop] Error:", err);
     res.status(500).json({ error: (err as Error).message });
   } finally {
     try { if (client) client.disconnect(); } catch { /* ignore */ }

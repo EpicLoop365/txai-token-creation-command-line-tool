@@ -323,13 +323,18 @@ function setCreateMode(mode){
   document.getElementById('createModeCustom').classList.toggle('active', mode === 'custom');
   const nftBtn = document.getElementById('createModeNft');
   if(nftBtn) nftBtn.classList.toggle('active', mode === 'nft');
+  const adBtn = document.getElementById('createModeAirdrop');
+  if(adBtn) adBtn.classList.toggle('active', mode === 'airdrop');
   document.getElementById('quickCreateWrap').style.display = mode === 'quick' ? '' : 'none';
   document.getElementById('customCreateWrap').style.display = mode === 'custom' ? '' : 'none';
   const nftWrap = document.getElementById('nftCreateWrap');
   if(nftWrap) nftWrap.style.display = mode === 'nft' ? '' : 'none';
+  const adWrap = document.getElementById('nftAirdropWrap');
+  if(adWrap) adWrap.style.display = mode === 'airdrop' ? '' : 'none';
   if(mode === 'quick') document.getElementById('demoInput').focus();
   if(mode === 'custom') document.getElementById('cpName').focus();
   if(mode === 'nft') { const el = document.getElementById('nftSymbol'); if(el) el.focus(); }
+  if(mode === 'airdrop' && typeof nftAirdropInit === 'function') nftAirdropInit();
 }
 
 /* Customize Panel (legacy toggle — kept for compatibility) */

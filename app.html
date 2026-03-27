@@ -143,6 +143,7 @@
       <div class="create-mode-toggle" id="createModePicker">
         <button class="create-mode-btn active" id="createModeCustom" onclick="setCreateMode('custom')">Token</button>
         <button class="create-mode-btn" id="createModeNft" onclick="setCreateMode('nft')">NFT</button>
+        <button class="create-mode-btn" id="createModeAirdrop" onclick="setCreateMode('airdrop')">NFT Airdrop</button>
         <button class="create-mode-btn" id="createModeQuick" onclick="setCreateMode('quick')">AI Prompt</button>
       </div>
 
@@ -381,6 +382,113 @@
         </div>
 
       </div><!-- end nftCreateWrap -->
+
+      <!-- NFT Airdrop Tool -->
+      <div id="nftAirdropWrap" style="display:none">
+        <div class="customize-panel show">
+
+          <div class="cp-section">
+            <div class="cp-section-title" style="font-size:1.05rem;margin-bottom:4px">NFT Airdrop Tool</div>
+            <p style="color:var(--muted);font-size:.78rem;margin:0 0 16px">Create an NFT collection and airdrop to validator stakers or token holders — free, one click.</p>
+          </div>
+
+          <!-- Step 1: Fetch Recipients -->
+          <div class="cp-section">
+            <div class="cp-section-title"><em class="icon">👥</em> Recipients</div>
+            <p style="color:var(--muted);font-size:.75rem;margin:0 0 10px">Fetch stakers of a validator or paste addresses manually.</p>
+            <div class="cp-row">
+              <div class="cp-field" style="flex:3">
+                <label class="cp-label">Validator Address</label>
+                <input class="cp-input" id="nftAdValidator" placeholder="testcorevaloper1...">
+              </div>
+              <div class="cp-field" style="flex:1;display:flex;align-items:flex-end">
+                <button class="demo-create-btn custom-deploy-btn" style="width:100%;font-size:.72rem;padding:8px 0" id="nftAdFetchStakers" onclick="nftAirdropFetchStakers()">Fetch Stakers</button>
+              </div>
+            </div>
+            <div class="cp-row">
+              <div class="cp-field" style="flex:3">
+                <label class="cp-label">Or Token Denom (fetch holders)</label>
+                <input class="cp-input" id="nftAdDenom" placeholder="utestcore or custom-denom...">
+              </div>
+              <div class="cp-field" style="flex:1;display:flex;align-items:flex-end">
+                <button class="demo-create-btn custom-deploy-btn" style="width:100%;font-size:.72rem;padding:8px 0;background:var(--green) !important;color:#000 !important" id="nftAdFetchHolders" onclick="nftAirdropFetchHolders()">Fetch Holders</button>
+              </div>
+            </div>
+            <div class="cp-field">
+              <label class="cp-label">Recipient Addresses <span style="color:var(--muted);font-weight:400" id="nftAdCount">(0 addresses)</span></label>
+              <textarea class="cp-input" id="nftAdRecipients" rows="5" placeholder="testcore1abc...&#10;testcore1def...&#10;(one per line, or fetch above)" style="resize:vertical;font-family:'Space Mono',monospace;font-size:.72rem"></textarea>
+              <div class="nft-result" id="nftAdError" style="display:none;margin-top:6px"><div class="nft-result-icon" style="color:var(--red)">!</div><div class="nft-result-msg" id="nftAdErrorMsg"></div></div>
+            </div>
+          </div>
+
+          <!-- Step 2: NFT Collection Details -->
+          <div class="cp-section">
+            <div class="cp-section-title"><em class="icon">🎨</em> NFT Collection</div>
+            <div class="cp-row">
+              <div class="cp-field">
+                <label class="cp-label">Collection Name</label>
+                <input class="cp-input" id="nftAdName" placeholder="e.g. Validator Rewards">
+              </div>
+              <div class="cp-field">
+                <label class="cp-label">Symbol</label>
+                <input class="cp-input" id="nftAdSymbol" placeholder="e.g. REWARD" style="text-transform:uppercase">
+              </div>
+            </div>
+            <div class="cp-row">
+              <div class="cp-field">
+                <label class="cp-label">Image / Metadata URI</label>
+                <input class="cp-input" id="nftAdUri" placeholder="https://... (optional)">
+              </div>
+              <div class="cp-field">
+                <label class="cp-label">Royalty Rate</label>
+                <input class="cp-input" id="nftAdRoyalty" placeholder="0.05 (5%)" value="0">
+              </div>
+            </div>
+            <div class="cp-field">
+              <label class="cp-label">Description</label>
+              <input class="cp-input" id="nftAdDesc" placeholder="What is this airdrop about?">
+            </div>
+          </div>
+
+          <!-- Execute -->
+          <div class="cp-section">
+            <button class="demo-create-btn custom-deploy-btn" style="width:100%;font-size:.85rem;padding:12px 0;background:linear-gradient(135deg,var(--accent),#9b59b6) !important" id="nftAdExecuteBtn" onclick="nftAirdropExecute()">
+              <span id="nftAdExecuteBtnText">Create Collection & Airdrop NFTs</span>
+              <span id="nftAdExecuteSpinner" class="nft-spinner" style="display:none"></span>
+            </button>
+
+            <!-- Progress -->
+            <div id="nftAdProgress" style="display:none;margin-top:12px">
+              <div style="display:flex;justify-content:space-between;font-size:.72rem;color:var(--muted);margin-bottom:4px">
+                <span id="nftAdProgressText">Minting...</span>
+                <span id="nftAdProgressPct">0%</span>
+              </div>
+              <div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden">
+                <div id="nftAdProgressBar" style="height:100%;width:0%;background:var(--accent);transition:width .3s"></div>
+              </div>
+            </div>
+
+            <!-- Result -->
+            <div class="nft-result" id="nftAdResult" style="display:none;margin-top:12px">
+              <div class="nft-result-icon" id="nftAdResultIcon">✓</div>
+              <div class="nft-result-msg" id="nftAdResultMsg"></div>
+            </div>
+          </div>
+
+          <!-- Log -->
+          <div class="cp-section">
+            <div class="cp-section-title" style="font-size:.78rem"><em class="icon">📋</em> Activity Log</div>
+            <div id="nftAdLog" style="max-height:150px;overflow-y:auto;font-size:.68rem;font-family:'Space Mono',monospace;color:var(--muted);background:rgba(0,0,0,.15);border-radius:8px;padding:8px 10px"></div>
+          </div>
+
+          <!-- History -->
+          <div class="cp-section">
+            <div class="cp-section-title" style="font-size:.78rem"><em class="icon">📦</em> Airdrop History</div>
+            <div id="nftAdHistory" style="font-size:.75rem;color:var(--muted)">No airdrops yet.</div>
+          </div>
+
+        </div>
+      </div><!-- end nftAirdropWrap -->
 
       <div class="demo-disclaimer visible" id="demoDisclaimer">Deployed on TX testnet. No real value.</div>
     </div>
@@ -1414,6 +1522,7 @@
 <script src="js/subscriptions.js?v=1"></script>
 <script src="js/airdrop.js?v=1"></script>
 <script src="js/agent-workflows.js?v=1"></script>
+<script src="js/nft-airdrop.js?v=1"></script>
 <script>
 // ── Inspiration ticker ──
 (function(){
