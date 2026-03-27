@@ -348,8 +348,8 @@ function dexLoadOrderbook(){
   const addr = dexGetActiveAddress();
   if(addr) dexFetchBalances(addr);
   dexUpdateAddWalletBtn();
-  // Initialize price chart with sample data for this pair
-  setTimeout(() => dexLoadSamplePriceData(0.001), 300);
+  // Initialize price chart with sample data (skip during demo — agents paint live)
+  if (!dexDemoRunning) setTimeout(() => dexLoadSamplePriceData(0.001), 300);
 }
 
 async function dexFetchOrderbook(){
@@ -363,8 +363,8 @@ async function dexFetchOrderbook(){
     dexUpdatePairStats(data);
     dexDrawDepthChart();
     dexDetectFills(data);
-    // If chart has no data yet, seed it with the mid-price from orderbook
-    if (dexPriceData.length === 0 && (data.bids?.length || data.asks?.length)) {
+    // If chart has no data yet, seed it with the mid-price from orderbook (skip during demo)
+    if (!dexDemoRunning && dexPriceData.length === 0 && (data.bids?.length || data.asks?.length)) {
       const bestBid = data.bids?.[0]?.price ? parseFloat(data.bids[0].price) : 0;
       const bestAsk = data.asks?.[0]?.price ? parseFloat(data.asks[0].price) : 0;
       const mid = bestBid && bestAsk ? (bestBid + bestAsk) / 2 : bestBid || bestAsk || 0.001;
@@ -1151,6 +1151,7 @@ function dexResetPriceChart() {
 let dexDemoEventSource = null;
 let dexDemoStartTime = null;
 let dexDemoTimerInterval = null;
+let dexDemoRunning = false;
 let dexDemoOrderCounts = { A: 0, B: 0, Taker: 0 };
 const EXPLORER_TX_URL = 'https://explorer.testnet-1.tx.org/tx/transactions/';
 const EXPLORER_ACCT_URL = 'https://explorer.testnet-1.tx.org/tx/accounts/';
@@ -1388,6 +1389,7 @@ function dexLaunchDemoOverlay() {
   // User can reclaim manually via the post-demo card
 
   // Reset UI — shift DEX left to make room for the swarm panel
+  dexDemoRunning = true;
   overlay.style.display = 'flex';
   const dexWrap = document.getElementById('dexWrap');
   if (dexWrap) dexWrap.classList.add('demo-active');
@@ -1651,6 +1653,7 @@ function dexDemoProcessEvent(event, data) {
       break;
 
     case 'done':
+      dexDemoRunning = false;
       dexDemoLog('success', '🏁 Market making complete! The orderbook is now populated.');
       if (dexDemoTimerInterval) clearInterval(dexDemoTimerInterval);
       // Final orderbook refresh
@@ -1678,6 +1681,7 @@ function dexDemoLog(type, message) {
 }
 
 function dexStopDemo() {
+  dexDemoRunning = false;
   const overlay = document.getElementById('dexDemoOverlay');
   if (overlay) overlay.style.display = 'none';
   const dexWrap = document.getElementById('dexWrap');

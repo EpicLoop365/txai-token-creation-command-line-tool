@@ -308,6 +308,9 @@ export async function runDexDemo(config: DemoConfig): Promise<void> {
 
     for (const agent of agents) {
       if (abortSignal?.aborted) throw new Error("Demo aborted");
+      let funded = false;
+
+      // Attempt 1: Fund from agent wallet
       try {
         await agentClient.signAndBroadcastMsg({
           typeUrl: "/cosmos.bank.v1beta1.MsgSend",
@@ -317,12 +320,13 @@ export async function runDexDemo(config: DemoConfig): Promise<void> {
             amount: [{ denom: QUOTE_DENOM, amount: fundPerWallet.toString() }],
           },
         }, 200000);
+        funded = true;
         emit("funding", {
           agent: agent.name,
           request: 1,
           total: 1,
           success: true,
-          message: `Funded ${(fundPerWallet / 1e6).toFixed(0)} TX`,
+          message: `Funded ${(fundPerWallet / 1e6).toFixed(0)} TX from issuer`,
         });
         await sleep(2000);
       } catch (fundErr) {
@@ -331,14 +335,42 @@ export async function runDexDemo(config: DemoConfig): Promise<void> {
           request: 1,
           total: 1,
           success: false,
-          message: (fundErr as Error).message,
+          message: `Issuer send failed: ${(fundErr as Error).message.slice(0, 80)}`,
         });
+      }
+
+      // Attempt 2: If agent send failed, try faucet directly to this wallet
+      if (!funded) {
+        emit("log", { message: `Trying faucet directly for ${agent.name}...` });
+        for (let f = 0; f < 2; f++) {
+          try {
+            await requestFaucet(agent.address, networkName);
+            funded = true;
+            emit("funding", {
+              agent: agent.name,
+              request: f + 1,
+              total: 2,
+              success: true,
+              message: `Funded from faucet (attempt ${f + 1})`,
+            });
+            await sleep(6000);
+            break;
+          } catch {
+            emit("log", { message: `Faucet ${f + 1}/2 for ${agent.name}: rate limited` });
+            await sleep(3000);
+          }
+        }
+      }
+
+      if (!funded) {
+        emit("error", { message: `Could not fund ${agent.name}. Agent wallet may be empty and faucet rate limited.` });
       }
     }
 
     // ── Phase 4: Connect Trading Clients ──
     emit("phase", { phase: "connecting", message: "Connecting trading agents to blockchain..." });
 
+    let unfundedCount = 0;
     for (const agent of agents) {
       if (abortSignal?.aborted) throw new Error("Demo aborted");
       const wallet = await importWallet(agent.mnemonic, networkName);
@@ -350,11 +382,21 @@ export async function runDexDemo(config: DemoConfig): Promise<void> {
       const txBal = bals.find(b => b.denom === QUOTE_DENOM);
       agent.txBalance = txBal ? parseInt(txBal.amount) : 0;
 
+      if (agent.txBalance < 1_000_000) unfundedCount++;
+
       emit("balance", {
         agent: agent.name,
         address: agent.address,
         display: (agent.txBalance / 1e6).toFixed(2) + " TX",
       });
+    }
+
+    // Abort early if agents aren't funded — no point placing 200 failing orders
+    if (unfundedCount >= 2) {
+      emit("error", {
+        message: `${unfundedCount}/3 agents have no TX. The issuer wallet needs more funds. Use "Fund Agent" or connect a wallet with TX.`,
+      });
+      throw new Error(`${unfundedCount} agents unfunded — aborting demo`);
     }
 
     const [mmA, mmB, taker] = agents;
@@ -537,9 +579,18 @@ export async function runDexDemo(config: DemoConfig): Promise<void> {
 
     // Generate dramatic price trajectory
     const trajectory = generatePriceTrajectory(BASE_PRICE, PAINT_CANDLES);
+    let consecutiveErrors = 0;
+    const MAX_CONSECUTIVE_ERRORS = 5;
 
     for (let i = 0; i < trajectory.length; i++) {
       if (abortSignal?.aborted) throw new Error("Demo aborted");
+
+      // Circuit breaker: stop if too many consecutive failures
+      if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+        emit("error", { message: `${MAX_CONSECUTIVE_ERRORS} consecutive order failures — stopping early. Check agent funding.` });
+        emit("log", { message: `Placed ${placedCount} orders, ${fillCount} fills, ${errorCount} errors before aborting.` });
+        break;
+      }
 
       const targetPrice = trajectory[i];
       // Vary quantity per trade: more during volatile phases
@@ -557,13 +608,16 @@ export async function runDexDemo(config: DemoConfig): Promise<void> {
       }
 
       // MM-A places a buy at targetPrice → sits on book
-      await placeAndEmit(mmA.client!, mmA.name, 1, targetPrice, baseQty, true, tif);
+      const buyResult = await placeAndEmit(mmA.client!, mmA.name, 1, targetPrice, baseQty, true, tif);
+      if (!buyResult) { consecutiveErrors++; await sleep(PAINT_DELAY); continue; }
+      consecutiveErrors = 0;
       await sleep(PAINT_DELAY);
 
       // MM-B places a sell at same price → matches → fill!
       const sellResult = await placeAndEmit(mmB.client!, mmB.name, 2, targetPrice, baseQty, true, tif);
       if (sellResult?.success) {
         fillCount++;
+        consecutiveErrors = 0;
         emit("fill", {
           price: formatPrice(targetPrice),
           priceDisplay: targetPrice,
@@ -576,6 +630,8 @@ export async function runDexDemo(config: DemoConfig): Promise<void> {
           txHash: sellResult.txHash,
           timeInForce: tif === DexTimeInForce.IOC ? "IOC" : tif === DexTimeInForce.FOK ? "FOK" : "GTC",
         });
+      } else {
+        consecutiveErrors++;
       }
 
       // Every 15 trades, Taker adds depth or sweeps with IOC for variety
