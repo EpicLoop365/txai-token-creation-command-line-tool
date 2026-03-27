@@ -58,6 +58,7 @@ const AGENT_FUND_AMOUNT = 150_000_000; // 150 TX in utestcore per sub-wallet
 const MIN_AGENT_BALANCE = 500_000_000; // 500 TX — below this, try faucet refill
 const ORDER_DELAY = 5000;             // 5s between orders (same wallet)
 const INTERLEAVE_DELAY = 2000;        // 2s between different wallet orders
+const PAINT_DELAY = 1500;             // 1.5s between orders during chart painting
 const TOKEN_PRECISION = 6;
 const QUOTE_DENOM = "utestcore";
 
@@ -68,6 +69,9 @@ export const DEMO_TOKENS_NEEDED = SELLER_TOKEN_AMOUNT + TAKER_TOKEN_AMOUNT; // 7
 
 // Price config: 0.001 TX per token (1e-3)
 const BASE_PRICE = 0.001;
+
+// Chart painting: how many candles the agents paint
+const PAINT_CANDLES = 100;
 
 /**
  * Generate Coreum-compatible price string.
@@ -100,11 +104,81 @@ function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }
 
+// ─── Price Trajectory Generator ─────────────────────────────────────────────
+// Creates a dramatic but semi-random price path for chart painting.
+// Phases: accumulation → breakout → consolidation → second leap →
+//         plateau → selloff → capitulation → recovery → settling
+
+interface PricePhase {
+  pct: number;       // fraction of total candles
+  drift: number;     // directional bias (fraction of basePrice per candle)
+  vol: number;       // volatility (fraction of basePrice)
+  volMult: number;   // volume multiplier for trade sizing
+  desc: string;      // phase description for UI
+}
+
+const PRICE_PHASES: PricePhase[] = [
+  { pct: 0.14, drift: 0.006,  vol: 0.012, volMult: 0.6,  desc: "quiet accumulation" },
+  { pct: 0.10, drift: 0.045,  vol: 0.025, volMult: 1.8,  desc: "breakout rally 🚀" },
+  { pct: 0.11, drift: 0.002,  vol: 0.015, volMult: 0.8,  desc: "consolidation" },
+  { pct: 0.08, drift: 0.04,   vol: 0.03,  volMult: 2.2,  desc: "second leap 📈" },
+  { pct: 0.11, drift: 0.001,  vol: 0.01,  volMult: 0.6,  desc: "high plateau" },
+  { pct: 0.10, drift: -0.055, vol: 0.04,  volMult: 2.5,  desc: "selloff 📉" },
+  { pct: 0.10, drift: 0.003,  vol: 0.025, volMult: 1.0,  desc: "capitulation base" },
+  { pct: 0.14, drift: 0.025,  vol: 0.018, volMult: 1.3,  desc: "recovery bounce" },
+  { pct: 0.12, drift: 0.004,  vol: 0.01,  volMult: 0.7,  desc: "settling" },
+];
+
+function getPricePhase(candleIndex: number, totalCandles: number): PricePhase {
+  let cum = 0;
+  for (const phase of PRICE_PHASES) {
+    cum += phase.pct;
+    if (candleIndex / totalCandles < cum) return phase;
+  }
+  return PRICE_PHASES[PRICE_PHASES.length - 1];
+}
+
+function generatePriceTrajectory(basePrice: number, count: number): number[] {
+  const prices: number[] = [];
+  // Randomize starting point: 40-60% of base price
+  let price = basePrice * (0.4 + Math.random() * 0.2);
+  let idx = 0;
+
+  for (const phase of PRICE_PHASES) {
+    const phaseCount = Math.max(1, Math.round(count * phase.pct));
+    // Add randomness to phase duration (+/- 20%)
+    const jitter = Math.round(phaseCount * (Math.random() * 0.4 - 0.2));
+    const actualCount = Math.max(1, phaseCount + jitter);
+
+    for (let i = 0; i < actualCount && idx < count; i++) {
+      // Drift with randomness: 60-140% of base drift
+      const driftMult = 0.6 + Math.random() * 0.8;
+      const drift = phase.drift * basePrice * driftMult;
+      // Volatility noise
+      const noise = (Math.random() - 0.5) * basePrice * phase.vol * 2;
+      // Mean-reversion nudge toward expected level
+      price = Math.max(price + drift + noise, basePrice * 0.08);
+      // Round to 6 decimals (Coreum tick size)
+      prices.push(Math.round(price * 1e6) / 1e6);
+      idx++;
+    }
+  }
+
+  // Fill remaining if rounding left some out
+  while (prices.length < count) {
+    const last = prices[prices.length - 1];
+    const noise = (Math.random() - 0.5) * basePrice * 0.01;
+    prices.push(Math.round((last + noise) * 1e6) / 1e6);
+  }
+
+  return prices.slice(0, count);
+}
+
 // ─── Demo Logic ─────────────────────────────────────────────────────────────
 
 let demoRunning = false;
 let demoStartedAt = 0;
-const DEMO_MAX_DURATION = 5 * 60 * 1000; // 5 min safety timeout
+const DEMO_MAX_DURATION = 10 * 60 * 1000; // 10 min safety timeout (chart painting needs time)
 
 export function isDemoRunning(): boolean {
   // Auto-reset if stuck for longer than max duration
@@ -367,43 +441,9 @@ export async function runDexDemo(config: DemoConfig): Promise<void> {
       console.log(`[dex-demo] ${agent.name}: ${txAmt.toFixed(2)} TX, ${tokenAmt.toFixed(0)} ${tokenSymbol}`);
     }
 
-    // ── Phase 6: Place Limit Orders ──
-    // 12 buy orders (MM-A) + 11 sell orders (MM-B)
-    // 6 prices overlap → instant fills when both sides hit
-
-    const buyPrices: { price: number; quantity: number; overlap: boolean }[] = [];
-    const sellPrices: { price: number; quantity: number; overlap: boolean }[] = [];
-
-    // 6 non-overlapping buys spread below midpoint
-    for (let i = 0; i < 6; i++) {
-      const price = Math.round(BASE_PRICE * (0.5 + 0.07 * i) * 1e6) / 1e6;
-      buyPrices.push({ price, quantity: 10 + i * 5, overlap: false });
-    }
-
-    // 5 non-overlapping sells spread above midpoint
-    for (let i = 0; i < 5; i++) {
-      const price = Math.round(BASE_PRICE * (1.15 + 0.08 * i) * 1e6) / 1e6;
-      sellPrices.push({ price, quantity: 10 + i * 5, overlap: false });
-    }
-
-    // 6 overlapping prices near midpoint (creates fills)
-    const overlapMultipliers = [0.97, 0.98, 0.99, 1.0, 1.01, 1.02];
-    for (const mult of overlapMultipliers) {
-      const price = Math.round(BASE_PRICE * mult * 1e6) / 1e6;
-      // Vary quantities: some partial fills, some full fills
-      const buyQty = 15 + Math.floor(Math.random() * 20);
-      const sellQty = mult < 1.0 ? buyQty : Math.floor(buyQty * 0.6); // partials for some
-      buyPrices.push({ price, quantity: buyQty, overlap: true });
-      sellPrices.push({ price, quantity: sellQty, overlap: true });
-    }
-
-    emit("phase", {
-      phase: "orders",
-      message: `Placing ${buyPrices.length} buy + ${sellPrices.length} sell orders for ${tokenSymbol}...`,
-      buyCount: buyPrices.length,
-      sellCount: sellPrices.length,
-      overlapCount: 6,
-    });
+    // ── Phase 6: Paint the Chart ──
+    // Agents trade ~100 times following a dramatic price trajectory.
+    // Each matched buy+sell creates one candle on the live chart.
 
     let placedCount = 0;
     let fillCount = 0;
@@ -451,46 +491,61 @@ export async function runDexDemo(config: DemoConfig): Promise<void> {
       }
     };
 
-    // Place non-overlapping buys (MM-A)
-    const nonOverlapBuys = buyPrices.filter(p => !p.overlap);
-    for (let i = 0; i < nonOverlapBuys.length; i++) {
+    // ── Phase 6a: Seed depth orders (non-overlapping) ──
+    emit("phase", { phase: "orders", message: `Seeding ${tokenSymbol} orderbook depth...` });
+
+    // 4 buy orders spread below midpoint
+    for (let i = 0; i < 4; i++) {
       if (abortSignal?.aborted) throw new Error("Demo aborted");
-      const l = nonOverlapBuys[i];
-      await placeAndEmit(mmA.client!, mmA.name, 1, l.price, l.quantity, false);
-      if (i < nonOverlapBuys.length - 1) await sleep(ORDER_DELAY);
-    }
-
-    // Place non-overlapping sells (MM-B)
-    const nonOverlapSells = sellPrices.filter(p => !p.overlap);
-    for (let i = 0; i < nonOverlapSells.length; i++) {
-      if (abortSignal?.aborted) throw new Error("Demo aborted");
-      const l = nonOverlapSells[i];
-      await placeAndEmit(mmB.client!, mmB.name, 2, l.price, l.quantity, false);
-      if (i < nonOverlapSells.length - 1) await sleep(ORDER_DELAY);
-    }
-
-    // Place overlapping orders (interleaved buy → sell for fills)
-    emit("phase", { phase: "fills", message: "Placing matching orders (instant fills)..." });
-
-    const overlapBuys = buyPrices.filter(p => p.overlap);
-    const overlapSells = sellPrices.filter(p => p.overlap);
-
-    for (let i = 0; i < overlapBuys.length; i++) {
-      if (abortSignal?.aborted) throw new Error("Demo aborted");
-
-      // Buy first
-      await placeAndEmit(mmA.client!, mmA.name, 1, overlapBuys[i].price, overlapBuys[i].quantity, true);
+      const price = Math.round(BASE_PRICE * (0.4 + 0.08 * i) * 1e6) / 1e6;
+      await placeAndEmit(mmA.client!, mmA.name, 1, price, 20 + i * 10, false);
       await sleep(INTERLEAVE_DELAY);
+    }
 
-      // Matching sell → triggers fill
-      const sellResult = await placeAndEmit(mmB.client!, mmB.name, 2, overlapSells[i].price, overlapSells[i].quantity, true);
+    // 4 sell orders spread above midpoint
+    for (let i = 0; i < 4; i++) {
+      if (abortSignal?.aborted) throw new Error("Demo aborted");
+      const price = Math.round(BASE_PRICE * (1.2 + 0.1 * i) * 1e6) / 1e6;
+      await placeAndEmit(mmB.client!, mmB.name, 2, price, 20 + i * 10, false);
+      await sleep(INTERLEAVE_DELAY);
+    }
+
+    // ── Phase 6b: Paint the chart with ~100 matched trades ──
+    emit("phase", {
+      phase: "fills",
+      message: `Painting ${PAINT_CANDLES} candles — agents trading ${tokenSymbol}...`,
+      buyCount: PAINT_CANDLES,
+      sellCount: PAINT_CANDLES,
+      overlapCount: PAINT_CANDLES,
+    });
+
+    // Generate dramatic price trajectory
+    const trajectory = generatePriceTrajectory(BASE_PRICE, PAINT_CANDLES);
+
+    for (let i = 0; i < trajectory.length; i++) {
+      if (abortSignal?.aborted) throw new Error("Demo aborted");
+
+      const targetPrice = trajectory[i];
+      // Vary quantity per trade: more during volatile phases
+      const phase = getPricePhase(i, PAINT_CANDLES);
+      const baseQty = phase.volMult > 1.5 ? 15 + Math.floor(Math.random() * 25)
+                     : phase.volMult > 1.0 ? 8 + Math.floor(Math.random() * 18)
+                     : 5 + Math.floor(Math.random() * 12);
+
+      // MM-A places a buy at targetPrice → sits on book
+      await placeAndEmit(mmA.client!, mmA.name, 1, targetPrice, baseQty, true);
+      await sleep(PAINT_DELAY);
+
+      // MM-B places a sell at same price → matches → fill!
+      const sellResult = await placeAndEmit(mmB.client!, mmB.name, 2, targetPrice, baseQty, true);
       if (sellResult?.success) {
         fillCount++;
         emit("fill", {
-          price: formatPrice(overlapBuys[i].price),
-          priceDisplay: overlapBuys[i].price,
-          buyQty: overlapBuys[i].quantity,
-          sellQty: overlapSells[i].quantity,
+          price: formatPrice(targetPrice),
+          priceDisplay: targetPrice,
+          buyQty: baseQty,
+          sellQty: baseQty,
+          quantity: baseQty,
           symbol: tokenSymbol,
           buyer: mmA.name,
           seller: mmB.name,
@@ -498,20 +553,40 @@ export async function runDexDemo(config: DemoConfig): Promise<void> {
         });
       }
 
-      if (i < overlapBuys.length - 1) await sleep(ORDER_DELAY);
+      // Every 20 trades, let Taker add a depth order to keep book interesting
+      if (i > 0 && i % 20 === 0) {
+        const takerSide = Math.random() > 0.5 ? 1 : 2;
+        const offset = takerSide === 1
+          ? targetPrice * (0.85 + Math.random() * 0.1)  // bid below
+          : targetPrice * (1.05 + Math.random() * 0.1); // ask above
+        const takerPrice = Math.round(offset * 1e6) / 1e6;
+        await placeAndEmit(taker.client!, taker.name, takerSide as 1 | 2, takerPrice, 30 + Math.floor(Math.random() * 40), false);
+      }
+
+      // Progress update every 10 candles
+      if (i > 0 && i % 10 === 0) {
+        const pct = 40 + Math.floor((i / trajectory.length) * 50);
+        emit("phase", {
+          phase: "fills",
+          message: `Candle ${i}/${PAINT_CANDLES} — ${phase.desc}`,
+        });
+      }
+
+      if (i < trajectory.length - 1) await sleep(PAINT_DELAY);
     }
 
-    // ── Phase 7: Taker Market Orders ──
-    emit("phase", { phase: "taker", message: "Taker sweeping the orderbook..." });
+    // ── Phase 7: Taker Sweep ──
+    emit("phase", { phase: "taker", message: "Taker sweeping remaining orders..." });
 
-    // Taker buys aggressively (sweeps asks)
-    const takerBuyPrice = Math.round(BASE_PRICE * 1.5 * 1e6) / 1e6;
-    await placeAndEmit(taker.client!, taker.name, 1, takerBuyPrice, 100, false);
+    // Taker buys aggressively (sweeps some asks)
+    const lastPrice = trajectory[trajectory.length - 1];
+    const takerBuyPrice = Math.round(lastPrice * 1.3 * 1e6) / 1e6;
+    await placeAndEmit(taker.client!, taker.name, 1, takerBuyPrice, 50, false);
     await sleep(ORDER_DELAY);
 
-    // Taker sells aggressively (sweeps bids)
-    const takerSellPrice = Math.round(BASE_PRICE * 0.4 * 1e6) / 1e6;
-    await placeAndEmit(taker.client!, taker.name, 2, takerSellPrice, 100, false);
+    // Taker sells aggressively (sweeps some bids)
+    const takerSellPrice = Math.round(lastPrice * 0.7 * 1e6) / 1e6;
+    await placeAndEmit(taker.client!, taker.name, 2, takerSellPrice, 50, false);
 
     // ── Phase 8: Final Summary ──
     await sleep(5000);

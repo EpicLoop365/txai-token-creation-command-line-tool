@@ -1583,13 +1583,16 @@ function dexDemoProcessEvent(event, data) {
       } else if (data.agent?.includes('Maker B')) {
         dexDemoOrderCounts.B++;
         document.getElementById('demoOrdersB').textContent = dexDemoOrderCounts.B;
+      } else if (data.agent?.includes('Taker')) {
+        dexDemoOrderCounts.Taker++;
+        document.getElementById('demoOrdersTaker').textContent = dexDemoOrderCounts.Taker;
       }
 
-      // Update progress bar incrementally
-      const totalOrders = 23; // 12 buy + 11 sell
-      const totalPlaced = dexDemoOrderCounts.A + dexDemoOrderCounts.B;
-      const orderProgress = 40 + (totalPlaced / totalOrders) * 45;
-      document.getElementById('dexDemoBar').style.width = Math.min(orderProgress, 85) + '%';
+      // Update progress bar incrementally (8 depth + ~200 paint orders)
+      const totalOrders = 208; // 8 depth + 100 buy + 100 sell
+      const totalPlaced = dexDemoOrderCounts.A + dexDemoOrderCounts.B + (dexDemoOrderCounts.Taker || 0);
+      const orderProgress = 40 + (totalPlaced / totalOrders) * 50;
+      document.getElementById('dexDemoBar').style.width = Math.min(orderProgress, 90) + '%';
       break;
     }
 
