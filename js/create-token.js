@@ -602,6 +602,11 @@ function buildLiveTokenCard(data, desc){
     '<a href="' + escapeHtml(explorerUrl) + '" target="_blank" rel="noopener">View on TX Explorer &#8599;</a>' +
     '</div>';
 
+  // Show "What's Next?" popup after a brief pause
+  if(denom){
+    setTimeout(() => showPostCreateModal(denom, displayName), 1500);
+  }
+
   // Auto-populate DEX and Manage tabs with newly created token
   if(denom){
     populateDexFromToken(denom);
@@ -623,6 +628,83 @@ function buildLiveTokenCard(data, desc){
   }
 }
 
+
+/* Post-Create "What's Next?" Modal */
+function showPostCreateModal(denom, symbol){
+  const existing = document.getElementById('postCreateModal');
+  if(existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'postCreateModal';
+  modal.className = 'dex-deposit-overlay';
+  modal.onclick = (e) => { if(e.target === modal) modal.remove(); };
+  modal.innerHTML = `
+    <div class="dex-deposit-panel" style="max-width:460px">
+      <div class="dex-deposit-header">
+        <h3>Your token is live!</h3>
+        <button class="dex-demo-close" onclick="document.getElementById('postCreateModal').remove()">&#10005;</button>
+      </div>
+      <div class="dex-deposit-body" style="text-align:center">
+        <div style="font-size:2.5rem;margin-bottom:8px">&#127881;</div>
+        <p style="color:var(--text);font-size:1.05rem;font-weight:600;margin-bottom:6px">${symbol} is on-chain</p>
+        <p style="color:var(--text-muted);font-size:.85rem;margin-bottom:24px">What would you like to do next?</p>
+
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <button class="tc-next-btn tc-next-primary" onclick="postCreateLaunchSwarm('${denom}','${symbol}')">
+            <span class="tc-next-icon">&#129302;</span>
+            <div class="tc-next-info">
+              <span class="tc-next-title">Launch Agent Swarm</span>
+              <span class="tc-next-desc">AI agents populate the orderbook with 25+ orders &amp; stress-test your token</span>
+            </div>
+          </button>
+
+          <button class="tc-next-btn" onclick="document.getElementById('postCreateModal').remove();switchTab('dex')">
+            <span class="tc-next-icon">&#128200;</span>
+            <div class="tc-next-info">
+              <span class="tc-next-title">Go to DEX</span>
+              <span class="tc-next-desc">View the orderbook and trade manually</span>
+            </div>
+          </button>
+
+          <button class="tc-next-btn" onclick="document.getElementById('postCreateModal').remove();switchTab('manage')">
+            <span class="tc-next-icon">&#9881;&#65039;</span>
+            <div class="tc-next-info">
+              <span class="tc-next-title">Manage Token</span>
+              <span class="tc-next-desc">Mint, burn, freeze, whitelist &amp; more</span>
+            </div>
+          </button>
+
+          <button class="tc-next-dismiss" onclick="document.getElementById('postCreateModal').remove()">
+            Maybe later
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
+function postCreateLaunchSwarm(denom, symbol){
+  document.getElementById('postCreateModal').remove();
+  switchTab('dex');
+  // Pre-fill the denom and trigger the demo
+  dexBaseDenom = denom;
+  const select = document.getElementById('dexPairSelect');
+  if(select){
+    // Ensure the option exists
+    let found = false;
+    for(let i = 0; i < select.options.length; i++){
+      if(select.options[i].value === denom){ select.selectedIndex = i; found = true; break; }
+    }
+    if(!found){
+      const opt = new Option(symbol + ' / TX', denom);
+      select.add(opt);
+      select.value = denom;
+    }
+  }
+  // Small delay to let the tab render, then launch demo
+  setTimeout(() => dexStartDemo(), 300);
+}
 
 /* Wallet Choice Modal */
 function showWalletChoice(preset){
