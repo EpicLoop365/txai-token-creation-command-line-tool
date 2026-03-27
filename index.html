@@ -39,6 +39,7 @@
       <button class="chat-tab" id="tabSwarm" onclick="switchTab('swarm')">🤖 AI Agent Swarm</button>
       <button class="chat-tab" id="tabNft" onclick="switchTab('nft')">🎨 Create Smart NFT</button>
       <button class="chat-tab" id="tabManage" onclick="switchTab('manage')">⚙️ Manage Smart Token</button>
+      <button class="chat-tab" id="tabAuth" onclick="switchTab('auth')">🔐 Auth & Permissions</button>
     </div>
 
     <!-- Wallet Choice Modal -->
@@ -1122,6 +1123,76 @@
       </div><!-- end manage-info-card -->
     </div><!-- end manage-wrap -->
 
+    <!-- ===== AUTH & PERMISSIONS TAB ===== -->
+    <div class="auth-wrap" id="authWrap">
+
+      <!-- Toggle Bar: Grants Given / Grants Received -->
+      <div class="auth-toggle-bar">
+        <button class="auth-toggle-btn active" id="authToggleGranter" onclick="authToggleView('granter')">Grants Given</button>
+        <button class="auth-toggle-btn" id="authToggleGrantee" onclick="authToggleView('grantee')">Grants Received</button>
+      </div>
+
+      <p class="auth-revoke-hint" id="authRevokeHint">Click <strong>Revoke</strong> on any grant to remove the permission.</p>
+
+      <!-- Grants List -->
+      <div class="auth-grants-list" id="authGrantsList">
+        <div class="auth-empty">Connect a wallet or use the agent wallet to view permissions.</div>
+      </div>
+
+      <!-- Create Grant Form -->
+      <div class="auth-create-section">
+        <h3 class="auth-create-title">Create New Grant</h3>
+
+        <div class="auth-form-row">
+          <label class="auth-label">Grantee Address</label>
+          <input type="text" class="auth-input" id="authGrantee" placeholder="testcore1... (address to grant permission to)">
+        </div>
+
+        <div class="auth-form-row">
+          <label class="auth-label">Permission Type</label>
+          <select class="auth-select" id="authGrantType" onchange="authOnTypeChange()">
+            <option value="send">Send Tokens</option>
+            <option value="dex-place">Place DEX Orders</option>
+            <option value="dex-cancel">Cancel DEX Orders</option>
+            <option value="mint">Mint Tokens</option>
+            <option value="burn">Burn Tokens</option>
+            <option value="freeze">Freeze Account</option>
+            <option value="nft-mint">Mint NFT</option>
+            <option value="custom">Custom Message Type...</option>
+          </select>
+        </div>
+
+        <!-- Custom message input (hidden by default) -->
+        <div class="auth-form-row" id="authCustomMsgRow" style="display:none">
+          <label class="auth-label">Message Type URL</label>
+          <input type="text" class="auth-input" id="authCustomMsg" placeholder="/cosmos.bank.v1beta1.MsgSend">
+        </div>
+
+        <!-- Spend limit fields (only for Send) -->
+        <div class="auth-send-limit-fields" id="authSendLimitFields" style="display:flex">
+          <div class="auth-form-row auth-half">
+            <label class="auth-label">Spend Limit (optional)</label>
+            <input type="number" class="auth-input" id="authSpendLimit" placeholder="e.g. 1000">
+          </div>
+          <div class="auth-form-row auth-half">
+            <label class="auth-label">Denom</label>
+            <input type="text" class="auth-input" id="authSpendDenom" placeholder="utestcore" value="utestcore">
+          </div>
+        </div>
+
+        <div class="auth-form-row">
+          <label class="auth-label">Expiration (days)</label>
+          <input type="number" class="auth-input auth-short" id="authExpiration" value="365" min="1" max="3650">
+        </div>
+
+        <button class="auth-grant-btn" id="authGrantBtn" onclick="authCreateGrant()">🔐 Create Grant</button>
+
+        <!-- Result display -->
+        <div class="auth-result" id="authResult" style="display:none"></div>
+      </div>
+
+    </div><!-- end auth-wrap -->
+
   </div>
 </section>
 
@@ -1145,6 +1216,7 @@
 
 
 <!-- Modular JavaScript -->
+<script src="js/txdb.js?v=5"></script>
 <script src="js/config.js?v=5"></script>
 <script src="js/wallet.js?v=5"></script>
 <script src="js/chat.js?v=5"></script>

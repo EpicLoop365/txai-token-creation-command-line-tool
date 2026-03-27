@@ -163,7 +163,7 @@ export class Swarm {
 
       const result = await strategy.run(this, this.emit.bind(this));
 
-      this.emit("done", { success: true, ...result });
+      this.emit("done", { ...result, success: true });
       return result;
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown error";

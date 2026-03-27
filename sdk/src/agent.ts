@@ -36,8 +36,7 @@ import {
   MintNFTParams,
 } from "./types";
 
-// Re-import the actual SDK functions from the parent api package
-// In the published SDK, these would be bundled directly
+// Core blockchain functions — bridged from the tx-sdk module
 import {
   createWallet,
   importWallet,
@@ -53,7 +52,7 @@ import {
   issueNFTClass,
   mintNFT,
   type TxWallet,
-} from "../../api/src/tx-sdk";
+} from "./tx-sdk-bridge";
 
 export class Agent {
   readonly name: string;

@@ -10,6 +10,8 @@
  *   GET  /api/pairs         — list known trading pairs
  *   POST /api/trade         — AI-powered trade execution (SSE)
  *   POST /api/dex-chat      — DEX trading advisor chat
+ *   POST /api/auth/grant    — create authz grant (agent wallet)
+ *   POST /api/auth/revoke   — revoke authz grant (agent wallet)
  */
 
 import express from "express";
@@ -1118,6 +1120,108 @@ app.get("/api/nft/nfts", async (req, res) => {
     }
     res.json({ nfts });
   } catch (err) { res.status(500).json({ error: (err as Error).message }); }
+});
+
+// ─── AUTH: GRANT (Agent Wallet) ─────────────────────────────────────────────
+
+app.post("/api/auth/grant", async (req, res) => {
+  const { grantee, authorizationType, authorizationValue, expirationSeconds } = req.body as {
+    grantee?: string;
+    authorizationType?: string;
+    authorizationValue?: Record<string, unknown>;
+    expirationSeconds?: number;
+  };
+
+  if (!grantee || !authorizationType) {
+    res.status(400).json({ error: "Missing grantee or authorizationType." });
+    return;
+  }
+  if (!process.env.AGENT_MNEMONIC) {
+    res.status(500).json({ error: "Server not configured." });
+    return;
+  }
+
+  const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
+
+  try {
+    const txWallet = await importWallet(process.env.AGENT_MNEMONIC, networkName);
+    const client = await TxClient.connectWithWallet(txWallet);
+
+    const expSeconds = expirationSeconds || 365 * 86400;
+    const expirationDate = new Date(Date.now() + expSeconds * 1000);
+
+    // Build the authorization Any based on type
+    let authorization: { typeUrl: string; value: Record<string, unknown> };
+    if (authorizationType.includes("SendAuthorization")) {
+      authorization = {
+        typeUrl: "/cosmos.bank.v1beta1.SendAuthorization",
+        ...(authorizationValue || {}),
+      };
+    } else {
+      authorization = {
+        typeUrl: "/cosmos.authz.v1beta1.GenericAuthorization",
+        ...(authorizationValue || {}),
+      };
+    }
+
+    const msg = {
+      typeUrl: "/cosmos.authz.v1beta1.MsgGrant",
+      value: {
+        granter: client.address,
+        grantee,
+        grant: {
+          authorization,
+          expiration: expirationDate,
+        },
+      },
+    };
+
+    const result = await client.signAndBroadcastMsg(msg, 300000);
+    client.disconnect();
+    res.json({ success: result.success, txHash: result.txHash });
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+// ─── AUTH: REVOKE (Agent Wallet) ────────────────────────────────────────────
+
+app.post("/api/auth/revoke", async (req, res) => {
+  const { grantee, msgTypeUrl } = req.body as {
+    grantee?: string;
+    msgTypeUrl?: string;
+  };
+
+  if (!grantee || !msgTypeUrl) {
+    res.status(400).json({ error: "Missing grantee or msgTypeUrl." });
+    return;
+  }
+  if (!process.env.AGENT_MNEMONIC) {
+    res.status(500).json({ error: "Server not configured." });
+    return;
+  }
+
+  const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
+
+  try {
+    const txWallet = await importWallet(process.env.AGENT_MNEMONIC, networkName);
+    const client = await TxClient.connectWithWallet(txWallet);
+
+    const msg = {
+      typeUrl: "/cosmos.authz.v1beta1.MsgRevoke",
+      value: {
+        granter: client.address,
+        grantee,
+        msgTypeUrl,
+      },
+    };
+
+    const result = await client.signAndBroadcastMsg(msg, 200000);
+    client.disconnect();
+    res.json({ success: result.success, txHash: result.txHash });
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
 });
 
 // ─── DEX: CHAT (Trading Advisor) ────────────────────────────────────────────

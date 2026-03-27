@@ -4,7 +4,7 @@ let swarmRunning = false;
 let swarmTimerInterval = null;
 let swarmStartTime = null;
 let swarmOrderCounts = { A: 0, B: 0, Taker: 0 };
-let swarmHistory = [];
+let swarmHistory = txdbGetSwarmHistory();
 let swarmCurrentDenom = '';
 let swarmCurrentSymbol = '';
 
@@ -156,6 +156,7 @@ async function swarmDeploy() {
     fills: 0,
   };
   swarmHistory.unshift(historyEntry);
+  txdbAddSwarmRun(historyEntry);
   swarmUpdateHistory();
 
   // Start SSE
@@ -362,6 +363,7 @@ function swarmFinish(historyEntry, status) {
     const m = Math.floor(elapsed / 60);
     const s = elapsed % 60;
     historyEntry.duration = `${m}m ${s}s`;
+    txdbUpdateSwarmRun(historyEntry.id, { status, duration: historyEntry.duration, orders: historyEntry.orders, fills: historyEntry.fills });
   }
   swarmUpdateHistory();
 }

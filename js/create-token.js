@@ -8,12 +8,14 @@ function switchTab(tab){
   const tabSwarm = document.getElementById('tabSwarm');
   const tabNft = document.getElementById('tabNft');
   const tabManage = document.getElementById('tabManage');
+  const tabAuth = document.getElementById('tabAuth');
   const createWrap = document.getElementById('createModeWrap');
   const chatWrap = document.getElementById('chatWrap');
   const dexWrap = document.getElementById('dexWrap');
   const swarmWrap = document.getElementById('swarmWrap');
   const nftWrap = document.getElementById('nftWrap');
   const manageWrap = document.getElementById('manageWrap');
+  const authWrap = document.getElementById('authWrap');
 
   // Reset all tabs
   tabCreate.classList.remove('active');
@@ -22,12 +24,14 @@ function switchTab(tab){
   tabSwarm.classList.remove('active');
   tabNft.classList.remove('active');
   tabManage.classList.remove('active');
+  tabAuth.classList.remove('active');
   createWrap.style.display = 'none';
   chatWrap.classList.remove('show');
   dexWrap.classList.remove('show');
   swarmWrap.classList.remove('show');
   nftWrap.classList.remove('show');
   manageWrap.classList.remove('show');
+  authWrap.classList.remove('show');
   // Reset container width when leaving DEX/Swarm
   dexWrap.closest('.container').style.maxWidth = '';
   chatMode = false;
@@ -57,6 +61,10 @@ function switchTab(tab){
     tabManage.classList.add('active');
     manageWrap.classList.add('show');
     document.getElementById('manageTokenDenom').focus();
+  } else if(tab === 'auth'){
+    tabAuth.classList.add('active');
+    authWrap.classList.add('show');
+    authLoadGrants();
   } else {
     tabCreate.classList.add('active');
     createWrap.style.display = '';
@@ -600,6 +608,18 @@ function buildLiveTokenCard(data, desc){
     populateManageFromToken(denom);
     // Register token with connected wallet (Leap/Keplr) so it shows up
     registerTokenWithWallet(denom, displayName, data.decimals || 6);
+    // Persist to txdb
+    txdbAddToken({
+      denom: denom,
+      symbol: displayName,
+      name: data.name || displayName,
+      txHash: txHash,
+      supply: data.supply || data.initialAmount || '',
+      decimals: data.decimals || 6,
+      features: features,
+      walletAddress: dexGetActiveAddress(),
+      network: 'testnet',
+    });
   }
 }
 
@@ -925,8 +945,8 @@ function getDirectTokenConfig(){
   // If the customize panel has at least a name or symbol, use it directly
   if(!cpConfig.name && !cpConfig.symbol && !cpConfig.supply) return null;
 
-  const name = cpConfig.name || cpConfig.symbol || 'Token';
-  const symbol = cpConfig.symbol || cpConfig.name || 'TOKEN';
+  const name = cpConfig.name || cpConfig.symbol || 'MyToken';
+  const symbol = cpConfig.symbol || cpConfig.name || name;
   const subunit = symbol.toLowerCase().replace(/[^a-z0-9]/g, '');
 
   // Build features object from the feature names list

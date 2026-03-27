@@ -30,7 +30,7 @@ export interface WalletInfo {
 export interface TokenBalance {
   denom: string;
   amount: string;
-  display: string;
+  display: number;
 }
 
 // ─── Transaction ─────────────────────────────────────────────────────────────
@@ -104,12 +104,12 @@ export interface PlaceOrderParams {
 export interface DexOrder {
   id: string;
   creator: string;
-  type: number;
+  type: string;
   baseDenom: string;
   quoteDenom: string;
   price: string;
   quantity: string;
-  side: number;
+  side: string;
   remainingQuantity: string;
   remainingBalance: string;
 }

@@ -11,14 +11,25 @@ function globalShowWalletOptions(){
   setTimeout(() => document.addEventListener('click', handler), 10);
 }
 
+function isMobileDevice(){
+  return /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+    || (navigator.maxTouchPoints > 1 && window.innerWidth < 1024);
+}
+
 async function globalConnectWallet(provider){
   document.getElementById('gwDropdown').classList.remove('show');
 
   const walletObj = provider === 'keplr' ? window.keplr : window.leap;
   if(!walletObj){
-    alert(`${provider === 'keplr' ? 'Keplr' : 'Leap'} wallet extension not found.\n\nPlease install it from:\n${
-      provider === 'keplr' ? 'https://www.keplr.app/download' : 'https://www.leapwallet.io/download'
-    }`);
+    if(isMobileDevice()){
+      // Mobile: show deep link to open site in wallet's built-in browser
+      const siteUrl = encodeURIComponent(window.location.href);
+      showMobileWalletModal(provider, siteUrl);
+    } else {
+      alert(`${provider === 'keplr' ? 'Keplr' : 'Leap'} wallet extension not found.\n\nPlease install it from:\n${
+        provider === 'keplr' ? 'https://www.keplr.app/download' : 'https://www.leapwallet.io/download'
+      }`);
+    }
     return;
   }
 
@@ -294,5 +305,65 @@ async function dexBuildAndSignTx(messages, gasLimit){
   }
 
   return broadcastData.tx_response || broadcastData;
+}
+
+/* ---- Mobile Wallet Modal ---- */
+function showMobileWalletModal(provider, encodedUrl){
+  const existing = document.getElementById('mobileWalletModal');
+  if(existing) existing.remove();
+
+  const name = provider === 'keplr' ? 'Keplr' : 'Leap';
+  const icon = provider === 'keplr'
+    ? 'https://raw.githubusercontent.com/nicolaracco/kepler-ui/main/packages/icons/src/icons/keplr-logo.svg'
+    : 'https://assets.leapwallet.io/logos/leap-cosmos-logo.svg';
+
+  // Deep links for mobile wallet browsers
+  const appStoreUrl = provider === 'keplr'
+    ? 'https://www.keplr.app/download'
+    : 'https://www.leapwallet.io/download';
+
+  const modal = document.createElement('div');
+  modal.id = 'mobileWalletModal';
+  modal.className = 'dex-deposit-overlay';
+  modal.onclick = (e) => { if(e.target === modal) modal.remove(); };
+  modal.innerHTML = `
+    <div class="dex-deposit-panel" style="max-width:400px">
+      <div class="dex-deposit-header">
+        <h3 style="display:flex;align-items:center;gap:8px">
+          <img src="${icon}" alt="${name}" style="width:24px;height:24px" onerror="this.style.display='none'">
+          ${name} on Mobile
+        </h3>
+        <button class="dex-demo-close" onclick="document.getElementById('mobileWalletModal').remove()">&#10005;</button>
+      </div>
+      <div class="dex-deposit-body" style="text-align:center">
+        <p style="margin-bottom:16px;color:var(--text-dim);font-size:.9rem">
+          On mobile, you need to open this site inside the <strong>${name}</strong> wallet app's built-in browser.
+        </p>
+
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;margin-bottom:16px;text-align:left">
+          <p style="font-weight:700;margin-bottom:10px;font-size:.9rem">How to connect:</p>
+          <ol style="padding-left:20px;color:var(--text-dim);font-size:.84rem;line-height:1.8">
+            <li>Open the <strong>${name}</strong> app on your phone</li>
+            <li>Go to the <strong>Browser</strong> tab inside the app</li>
+            <li>Navigate to <strong>solomentelabs.com</strong></li>
+            <li>Tap <strong>Connect Wallet</strong> &mdash; it will work automatically</li>
+          </ol>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <button class="dex-deposit-check-btn" onclick="navigator.clipboard.writeText('${decodeURIComponent(encodedUrl)}').then(()=>{this.textContent='Copied!';setTimeout(()=>this.textContent='Copy Site URL',1500)})" style="background:linear-gradient(135deg,#7c3aed,#a855f7)">
+            Copy Site URL
+          </button>
+          <a href="${appStoreUrl}" target="_blank" style="display:inline-block;padding:10px 20px;background:linear-gradient(135deg,var(--green),var(--green-dim));border-radius:var(--radius-sm);color:#fff;font-weight:600;font-size:.9rem;text-align:center;text-decoration:none">
+            Install ${name} App
+          </a>
+          <button class="dex-deposit-check-btn" onclick="document.getElementById('mobileWalletModal').remove()" style="background:var(--bg4);border:1px solid var(--border)">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
 }
 
