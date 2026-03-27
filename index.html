@@ -118,24 +118,32 @@
     <div class="demo-error" id="demoError"></div>
 
     <div class="demo-input-wrap reveal live-glow" id="demoInputWrap">
-      <div class="demo-input-row">
-        <input type="text" class="demo-input" id="demoInput" placeholder='Describe your token... e.g., "a gaming token called GEMS with 5M supply"'>
-        <button class="demo-create-btn" id="demoBtn" onclick="runDemo()">Deploy Token (Testnet)</button>
-      </div>
-      <div class="presets">
-        <button class="preset-btn" onclick="usePreset('gaming')">Gaming Token</button>
-        <button class="preset-btn" onclick="usePreset('loyalty')">Loyalty Points</button>
-        <button class="preset-btn" onclick="usePreset('governance')">Governance Token</button>
+
+      <!-- Creation Mode Picker -->
+      <div class="create-mode-picker" id="createModePicker">
+        <button class="create-mode-card active" id="createModeQuick" onclick="setCreateMode('quick')">
+          <span class="create-mode-icon">&#9889;</span>
+          <span class="create-mode-label">Quick Create</span>
+          <span class="create-mode-desc">Describe in plain English, AI handles the rest</span>
+        </button>
+        <button class="create-mode-card" id="createModeCustom" onclick="setCreateMode('custom')">
+          <span class="create-mode-icon">&#128736;&#65039;</span>
+          <span class="create-mode-label">Custom Build</span>
+          <span class="create-mode-desc">Set every field yourself — full control</span>
+        </button>
       </div>
 
-      <!-- Customize Toggle -->
-      <div class="customize-toggle" onclick="toggleCustomize()">
-        <span class="arrow open" id="cpArrow">▶</span>
-        <span>⚙️ Token Settings</span>
+      <!-- Quick Create: AI prompt -->
+      <div id="quickCreateWrap">
+        <div class="demo-input-row">
+          <input type="text" class="demo-input" id="demoInput" placeholder='e.g. "a gaming token called GEMS with 5M supply, mintable and burnable"'>
+          <button class="demo-create-btn" id="demoBtn" onclick="runDemo()">Deploy Token (Testnet)</button>
+        </div>
       </div>
 
-      <!-- Customize Panel (open by default) -->
-      <div class="customize-panel show" id="customizePanel">
+      <!-- Custom Build: manual fields -->
+      <div id="customCreateWrap" style="display:none">
+        <div class="customize-panel show" id="customizePanel">
 
         <!-- Basics -->
         <div class="cp-section">
@@ -242,7 +250,9 @@
           <div class="cp-hint">Upload an image or paste a URL for your token logo. Uploaded images are hosted via imgbb (free).</div>
         </div>
 
-      </div>
+      </div><!-- end customizePanel -->
+        <button class="demo-create-btn custom-deploy-btn" id="demoBtnCustom" onclick="runDemo()">Deploy Token (Testnet)</button>
+      </div><!-- end customCreateWrap -->
 
       <div class="demo-disclaimer visible" id="demoDisclaimer">Tokens are deployed on TX testnet. No real value.</div>
     </div>

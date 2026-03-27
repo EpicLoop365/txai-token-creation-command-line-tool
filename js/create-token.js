@@ -72,7 +72,26 @@ function switchTab(tab){
 }
 
 
-/* Customize Panel */
+/* Reset deploy buttons */
+function resetDeployBtns(){
+  resetDeployBtns();
+  const cb = document.getElementById('demoBtnCustom');
+  if(cb) cb.disabled = false;
+}
+
+/* Create Mode Toggle: Quick (AI) vs Custom (manual) */
+let createMode = 'quick';
+function setCreateMode(mode){
+  createMode = mode;
+  document.getElementById('createModeQuick').classList.toggle('active', mode === 'quick');
+  document.getElementById('createModeCustom').classList.toggle('active', mode === 'custom');
+  document.getElementById('quickCreateWrap').style.display = mode === 'quick' ? '' : 'none';
+  document.getElementById('customCreateWrap').style.display = mode === 'custom' ? '' : 'none';
+  if(mode === 'quick') document.getElementById('demoInput').focus();
+  if(mode === 'custom') document.getElementById('cpName').focus();
+}
+
+/* Customize Panel (legacy toggle — kept for compatibility) */
 function toggleCustomize(){
   customizeOpen = !customizeOpen;
   const panel = document.getElementById('customizePanel');
@@ -748,7 +767,7 @@ function closeWalletChoice(){
   overlay.style.display = 'none';
   _pendingPreset = null;
   demoRunning = false;
-  document.getElementById('demoBtn').disabled = false;
+  resetDeployBtns();
 }
 async function chooseWalletMode(mode){
   const overlay = document.getElementById('walletChoiceOverlay');
@@ -777,7 +796,7 @@ async function chooseWalletMode(mode){
     const ok = await connectWalletForChoice();
     if(!ok){
       demoRunning = false;
-      document.getElementById('demoBtn').disabled = false;
+      resetDeployBtns();
       _pendingPreset = null;
       return;
     }
@@ -888,12 +907,30 @@ async function _runDemoInternal(preset){
 
 async function runDemo(preset){
   if(demoRunning)return;
-  // Merge customize panel settings into the input
-  if(!preset) mergeCustomizeIntoInput();
+
+  // In custom mode, check that at least name or symbol is filled
+  if(createMode === 'custom' && !preset){
+    const cpConfig = getCustomizeConfig();
+    if(!cpConfig.name && !cpConfig.symbol){
+      showDemoError('Enter at least a token name or symbol.');
+      return;
+    }
+  }
+
+  // In quick mode, merge customize settings and require text input
+  if(createMode === 'quick' && !preset) mergeCustomizeIntoInput();
   const input=document.getElementById('demoInput').value.trim();
-  if(!input&&!preset)return;
+  if(!input && !preset && createMode === 'quick')return;
+
+  // For custom mode with no text input, build a synthetic prompt from fields
+  if(createMode === 'custom' && !input && !preset){
+    const cpConfig = getCustomizeConfig();
+    document.getElementById('demoInput').value = buildPromptFromCustomize(cpConfig);
+  }
+
   demoRunning=true;
   document.getElementById('demoBtn').disabled=true;
+  if(document.getElementById('demoBtnCustom')) document.getElementById('demoBtnCustom').disabled=true;
   hideDemoError();
 
   // If live mode, always show wallet choice modal
