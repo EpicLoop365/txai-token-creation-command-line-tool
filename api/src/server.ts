@@ -1323,6 +1323,49 @@ app.post("/api/dex/check-demo-ready", async (req, res) => {
   }
 });
 
+// ─── DEX DEMO: Pre-create agent wallets for whitelisting ─────────────────────
+// Returns the agent address + 3 sub-wallet addresses that need whitelisting
+const _preparedWallets: Record<string, { addresses: string[]; mnemonics: string[]; createdAt: number }> = {};
+
+app.post("/api/dex/prepare-wallets", async (req, res) => {
+  const { baseDenom } = req.body as { baseDenom?: string };
+  if (!baseDenom) { res.status(400).json({ error: "Missing baseDenom" }); return; }
+  if (!process.env.AGENT_MNEMONIC) { res.status(500).json({ error: "Server not configured." }); return; }
+
+  try {
+    const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
+    const agentWallet = await importWallet(process.env.AGENT_MNEMONIC, networkName);
+
+    // Check if we already prepared wallets for this denom recently (within 30 min)
+    const existing = _preparedWallets[baseDenom];
+    if (existing && Date.now() - existing.createdAt < 30 * 60 * 1000) {
+      res.json({
+        agentAddress: agentWallet.address,
+        subWallets: existing.addresses,
+      });
+      return;
+    }
+
+    // Create 3 sub-wallets
+    const addresses: string[] = [];
+    const mnemonics: string[] = [];
+    for (let i = 0; i < 3; i++) {
+      const w = await createWallet(networkName);
+      addresses.push(w.address);
+      mnemonics.push(w.mnemonic);
+    }
+
+    _preparedWallets[baseDenom] = { addresses, mnemonics, createdAt: Date.now() };
+
+    res.json({
+      agentAddress: agentWallet.address,
+      subWallets: addresses,
+    });
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
 // ─── DEX DEMO: Reset stuck demo lock ────────────────────────────────────────
 app.post("/api/dex/reset-demo", (_req, res) => {
   resetDemoLock();

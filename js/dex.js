@@ -1065,55 +1065,61 @@ async function dexWhitelistAgent() {
   const agentAddr = document.getElementById('dexDepositAddress').textContent;
   if (!agentAddr || !dexDepositBaseDenom) return;
   btn.disabled = true;
-  btn.textContent = 'Whitelisting...';
+  btn.textContent = 'Preparing wallets...';
 
-  // Determine who does the whitelisting
-  if (walletMode !== 'agent' && connectedAddress && connectedOfflineSigner) {
-    // Client-side: user's wallet signs the whitelist tx
+  try {
+    // Step 1: Get all wallet addresses that need whitelisting (agent + 3 sub-wallets)
+    let allAddresses = [agentAddr];
     try {
-      const messages = [{
+      const prepRes = await fetch(`${API_URL}/api/dex/prepare-wallets`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ baseDenom: dexDepositBaseDenom }),
+      });
+      const prepData = await prepRes.json();
+      if (prepData.subWallets) {
+        allAddresses = [prepData.agentAddress, ...prepData.subWallets];
+      }
+    } catch {
+      // If prepare endpoint not available yet, just whitelist the agent
+      console.warn('prepare-wallets endpoint not available, whitelisting agent only');
+    }
+
+    btn.textContent = `Whitelisting ${allAddresses.length} wallets...`;
+    const whitelistAmount = (10000 * 1e6).toString();
+
+    if (walletMode !== 'agent' && connectedAddress && connectedOfflineSigner) {
+      // Client-side: batch all whitelist messages into one tx
+      const messages = allAddresses.map(addr => ({
         typeUrl: '/coreum.asset.ft.v1.MsgSetWhitelistedLimit',
         value: {
           sender: connectedAddress,
-          account: agentAddr,
-          coin: { denom: dexDepositBaseDenom, amount: (10000 * 1e6).toString() },
+          account: addr,
+          coin: { denom: dexDepositBaseDenom, amount: whitelistAmount },
         },
-      }];
-      const result = await dexBuildAndSignTx(messages, 300000);
-      btn.textContent = 'Whitelisted!';
+      }));
+      await dexBuildAndSignTx(messages, 200000 * messages.length);
+      btn.textContent = `${allAddresses.length} wallets whitelisted!`;
       btn.style.borderColor = 'var(--green)';
       btn.style.color = 'var(--green)';
-    } catch (err) {
-      btn.textContent = 'Failed — try manually';
-      console.error('Whitelist error:', err);
-      alert('Whitelisting failed: ' + (err.message || err));
-      btn.disabled = false;
-    }
-  } else {
-    // Server-side: agent wallet is the issuer
-    try {
-      const res = await fetch(`${API_URL}/api/token/whitelist`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          denom: dexDepositBaseDenom,
-          account: agentAddr,
-          amount: (10000 * 1e6).toString(),
-        }),
-      });
-      const data = await res.json();
-      if (data.success !== false && !data.error) {
-        btn.textContent = 'Whitelisted!';
-        btn.style.borderColor = 'var(--green)';
-        btn.style.color = 'var(--green)';
-      } else {
-        throw new Error(data.error || 'Unknown error');
+    } else {
+      // Server-side: agent is issuer, whitelist each address
+      for (const addr of allAddresses) {
+        await fetch(`${API_URL}/api/token/whitelist`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ denom: dexDepositBaseDenom, account: addr, amount: whitelistAmount }),
+        });
       }
-    } catch (err) {
-      btn.textContent = 'Failed';
-      alert('Whitelisting failed: ' + (err.message || err));
-      btn.disabled = false;
+      btn.textContent = `${allAddresses.length} wallets whitelisted!`;
+      btn.style.borderColor = 'var(--green)';
+      btn.style.color = 'var(--green)';
     }
+  } catch (err) {
+    btn.textContent = 'Failed — try again';
+    console.error('Whitelist error:', err);
+    alert('Whitelisting failed: ' + (err.message || err));
+    btn.disabled = false;
   }
 }
 
