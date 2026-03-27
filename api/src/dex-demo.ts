@@ -54,9 +54,8 @@ interface AgentWallet {
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
-const FAUCET_REQUESTS_PER_WALLET = 1; // 1 request = ~200 TX per wallet (faucet rate-limits fast)
-const FAUCET_DELAY = 6000;            // 6s between faucet requests to avoid 429
-const AGENT_FUND_AMOUNT = 100_000_000; // 100 TX in utestcore — backup funding from agent wallet
+const AGENT_FUND_AMOUNT = 150_000_000; // 150 TX in utestcore per sub-wallet
+const MIN_AGENT_BALANCE = 500_000_000; // 500 TX — below this, try faucet refill
 const ORDER_DELAY = 5000;             // 5s between orders (same wallet)
 const INTERLEAVE_DELAY = 2000;        // 2s between different wallet orders
 const TOKEN_PRECISION = 6;
@@ -195,63 +194,70 @@ export async function runDexDemo(config: DemoConfig): Promise<void> {
       emit("wallet", { agent: def.name, role: def.role, address: w.address });
     }
 
-    // ── Phase 3: Fund Wallets from Faucet ──
-    emit("phase", { phase: "funding", message: "Funding wallets from testnet faucet (this takes ~30s)..." });
+    // ── Phase 3: Fund agent wallet if low, then distribute to sub-wallets ──
+    if (abortSignal?.aborted) throw new Error("Demo aborted");
 
-    for (const agent of agents) {
-      for (let i = 0; i < FAUCET_REQUESTS_PER_WALLET; i++) {
+    let agentBals = await agentClient.getBalances(agentClient.address);
+    let agentTxBal = agentBals.find(b => b.denom === QUOTE_DENOM);
+    let agentTxAmount = agentTxBal ? parseInt(agentTxBal.amount) : 0;
+
+    // If agent wallet is running low, try faucet to refill (best effort)
+    if (agentTxAmount < MIN_AGENT_BALANCE) {
+      emit("phase", { phase: "funding", message: "Refilling agent wallet from faucet..." });
+      for (let i = 0; i < 3; i++) {
         if (abortSignal?.aborted) throw new Error("Demo aborted");
         try {
-          const result = await requestFaucet(agent.address, networkName);
-          emit("funding", {
-            agent: agent.name,
-            request: i + 1,
-            total: FAUCET_REQUESTS_PER_WALLET,
-            success: result.success,
-            message: result.message,
-          });
-        } catch (err) {
-          emit("funding", {
-            agent: agent.name,
-            request: i + 1,
-            total: FAUCET_REQUESTS_PER_WALLET,
-            success: false,
-            message: (err as Error).message,
-          });
+          await requestFaucet(agentClient.address, networkName);
+          emit("log", { message: `Faucet request ${i + 1}/3: success` });
+        } catch {
+          emit("log", { message: `Faucet request ${i + 1}/3: rate limited, skipping` });
+          break; // Don't keep trying if rate limited
         }
-        if (i < FAUCET_REQUESTS_PER_WALLET - 1) await sleep(FAUCET_DELAY);
+        await sleep(6000);
       }
+      await sleep(4000);
+      // Re-check balance
+      agentBals = await agentClient.getBalances(agentClient.address);
+      agentTxBal = agentBals.find(b => b.denom === QUOTE_DENOM);
+      agentTxAmount = agentTxBal ? parseInt(agentTxBal.amount) : 0;
     }
 
-    emit("phase", { phase: "funding", message: "Waiting for faucet transactions..." });
-    await sleep(4000);
+    // Fund sub-wallets directly from agent wallet (no faucet needed)
+    emit("phase", { phase: "funding", message: "Funding trading agents from issuer wallet..." });
+    const fundPerWallet = Math.min(AGENT_FUND_AMOUNT, Math.floor((agentTxAmount - 50_000_000) / agents.length));
 
-    // ── Phase 3.5: Backup fund from agent wallet if faucet was insufficient ──
-    if (abortSignal?.aborted) throw new Error("Demo aborted");
-    const agentBals = await agentClient.getBalances(agentClient.address);
-    const agentTxBal = agentBals.find(b => b.denom === QUOTE_DENOM);
-    const agentTxAmount = agentTxBal ? parseInt(agentTxBal.amount) : 0;
+    if (fundPerWallet < 10_000_000) {
+      emit("error", { message: `Agent wallet too low (${(agentTxAmount / 1e6).toFixed(1)} TX). Please fund it using the Fund Agent button and try again.` });
+      throw new Error("Insufficient agent TX balance");
+    }
 
-    // If agent has enough TX, top up sub-wallets that didn't get enough from faucet
-    if (agentTxAmount > AGENT_FUND_AMOUNT * agents.length + 50_000_000) {
-      emit("phase", { phase: "funding", message: "Topping up agent wallets from issuer..." });
-      for (const agent of agents) {
-        if (abortSignal?.aborted) throw new Error("Demo aborted");
-        try {
-          const sendTx = {
-            typeUrl: "/cosmos.bank.v1beta1.MsgSend",
-            value: {
-              fromAddress: agentClient.address,
-              toAddress: agent.address,
-              amount: [{ denom: QUOTE_DENOM, amount: AGENT_FUND_AMOUNT.toString() }],
-            },
-          };
-          await agentClient.signAndBroadcastMsg(sendTx, 200000);
-          emit("log", { message: `Sent 100 TX to ${agent.name}` });
-          await sleep(2000);
-        } catch (fundErr) {
-          emit("log", { message: `Top-up ${agent.name}: ${(fundErr as Error).message}` });
-        }
+    for (const agent of agents) {
+      if (abortSignal?.aborted) throw new Error("Demo aborted");
+      try {
+        await agentClient.signAndBroadcastMsg({
+          typeUrl: "/cosmos.bank.v1beta1.MsgSend",
+          value: {
+            fromAddress: agentClient.address,
+            toAddress: agent.address,
+            amount: [{ denom: QUOTE_DENOM, amount: fundPerWallet.toString() }],
+          },
+        }, 200000);
+        emit("funding", {
+          agent: agent.name,
+          request: 1,
+          total: 1,
+          success: true,
+          message: `Funded ${(fundPerWallet / 1e6).toFixed(0)} TX`,
+        });
+        await sleep(2000);
+      } catch (fundErr) {
+        emit("funding", {
+          agent: agent.name,
+          request: 1,
+          total: 1,
+          success: false,
+          message: (fundErr as Error).message,
+        });
       }
     }
 

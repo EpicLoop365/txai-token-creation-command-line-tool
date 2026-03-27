@@ -1404,6 +1404,7 @@ function dexDemoProcessEvent(event, data) {
         <div class="demo-stat"><span class="demo-stat-label">Final Bids</span><span class="demo-stat-value green">${data.orderbook?.bids || 0}</span></div>
         <div class="demo-stat"><span class="demo-stat-label">Final Asks</span><span class="demo-stat-value red">${data.orderbook?.asks || 0}</span></div>
       `;
+      dexDemoLog('info', '💰 Unused tokens are being returned to your wallet. TX gas costs (~0.25 TX total) are non-refundable.');
 
       // Load the demo token's orderbook in the main DEX view
       if (data.token?.denom) {
