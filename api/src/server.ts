@@ -1578,8 +1578,15 @@ app.post("/api/dex/reclaim", async (req, res) => {
 
 // ─── START ───────────────────────────────────────────────────────────────────
 
+import { startFaucetBot } from "./faucet-bot";
+
 app.listen(PORT, () => {
   const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
   console.log(`TXAI Smart Token Studio API on port ${PORT}`);
   console.log(`Network: ${networkName}`);
+
+  // Start faucet bot if enabled (set FAUCET_BOT=true on ONE instance only)
+  if (process.env.FAUCET_BOT === "true") {
+    startFaucetBot().catch(err => console.error("[faucet-bot] Start error:", err.message));
+  }
 });
