@@ -197,12 +197,12 @@ export async function runDexDemo(config: DemoConfig): Promise<void> {
     // ── Phase 3: Fund agent wallet if low, then distribute to sub-wallets ──
     if (abortSignal?.aborted) throw new Error("Demo aborted");
 
-    let agentBals = await agentClient.getBalances(agentClient.address);
-    let agentTxBal = agentBals.find(b => b.denom === QUOTE_DENOM);
-    let agentTxAmount = agentTxBal ? parseInt(agentTxBal.amount) : 0;
+    let fundBals = await agentClient.getBalances(agentClient.address);
+    let fundTxBal = fundBals.find(b => b.denom === QUOTE_DENOM);
+    let fundTxAmount = fundTxBal ? parseInt(fundTxBal.amount) : 0;
 
     // If agent wallet is running low, try faucet to refill (best effort)
-    if (agentTxAmount < MIN_AGENT_BALANCE) {
+    if (fundTxAmount < MIN_AGENT_BALANCE) {
       emit("phase", { phase: "funding", message: "Refilling agent wallet from faucet..." });
       for (let i = 0; i < 3; i++) {
         if (abortSignal?.aborted) throw new Error("Demo aborted");
@@ -211,23 +211,22 @@ export async function runDexDemo(config: DemoConfig): Promise<void> {
           emit("log", { message: `Faucet request ${i + 1}/3: success` });
         } catch {
           emit("log", { message: `Faucet request ${i + 1}/3: rate limited, skipping` });
-          break; // Don't keep trying if rate limited
+          break;
         }
         await sleep(6000);
       }
       await sleep(4000);
-      // Re-check balance
-      agentBals = await agentClient.getBalances(agentClient.address);
-      agentTxBal = agentBals.find(b => b.denom === QUOTE_DENOM);
-      agentTxAmount = agentTxBal ? parseInt(agentTxBal.amount) : 0;
+      fundBals = await agentClient.getBalances(agentClient.address);
+      fundTxBal = fundBals.find(b => b.denom === QUOTE_DENOM);
+      fundTxAmount = fundTxBal ? parseInt(fundTxBal.amount) : 0;
     }
 
     // Fund sub-wallets directly from agent wallet (no faucet needed)
     emit("phase", { phase: "funding", message: "Funding trading agents from issuer wallet..." });
-    const fundPerWallet = Math.min(AGENT_FUND_AMOUNT, Math.floor((agentTxAmount - 50_000_000) / agents.length));
+    const fundPerWallet = Math.min(AGENT_FUND_AMOUNT, Math.floor((fundTxAmount - 50_000_000) / agents.length));
 
     if (fundPerWallet < 10_000_000) {
-      emit("error", { message: `Agent wallet too low (${(agentTxAmount / 1e6).toFixed(1)} TX). Please fund it using the Fund Agent button and try again.` });
+      emit("error", { message: `Agent wallet too low (${(fundTxAmount / 1e6).toFixed(1)} TX). Please fund it using the Fund Agent button and try again.` });
       throw new Error("Insufficient agent TX balance");
     }
 

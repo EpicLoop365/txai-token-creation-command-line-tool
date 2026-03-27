@@ -1411,7 +1411,7 @@ function dexDemoProcessEvent(event, data) {
 
     case 'summary':
       document.getElementById('dexDemoBar').style.width = '100%';
-      document.getElementById('dexDemoPhase').textContent = 'Demo complete!';
+      document.getElementById('dexDemoPhase').textContent = 'Market making complete!';
       document.getElementById('dexDemoSummary').style.display = 'block';
       document.getElementById('demoSummaryGrid').innerHTML = `
         <div class="demo-stat"><span class="demo-stat-label">Token</span><span class="demo-stat-value">${data.token?.symbol || '?'}</span></div>
@@ -1441,7 +1441,7 @@ function dexDemoProcessEvent(event, data) {
       break;
 
     case 'done':
-      dexDemoLog('success', '🏁 Demo complete! The orderbook is now populated.');
+      dexDemoLog('success', '🏁 Market making complete! The orderbook is now populated.');
       if (dexDemoTimerInterval) clearInterval(dexDemoTimerInterval);
       // Final orderbook refresh
       setTimeout(() => dexLoadOrderbook(), 1000);

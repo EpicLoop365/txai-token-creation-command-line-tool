@@ -23,6 +23,7 @@ import { getDexChatSystemPrompt } from "./dex-tools";
 import { executeTrade } from "./dex-agent";
 import {
   importWallet,
+  createWallet,
   NETWORKS,
   NetworkName,
   TxClient,
@@ -1155,12 +1156,12 @@ app.post("/api/auth/grant", async (req, res) => {
     if (authorizationType.includes("SendAuthorization")) {
       authorization = {
         typeUrl: "/cosmos.bank.v1beta1.SendAuthorization",
-        ...(authorizationValue || {}),
+        value: authorizationValue || {},
       };
     } else {
       authorization = {
         typeUrl: "/cosmos.authz.v1beta1.GenericAuthorization",
-        ...(authorizationValue || {}),
+        value: authorizationValue || {},
       };
     }
 
