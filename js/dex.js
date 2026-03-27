@@ -1017,11 +1017,22 @@ async function dexStartDemo() {
       document.getElementById('dexDepositStatus').textContent = '';
       document.getElementById('dexDepositStatus').className = 'dex-deposit-status';
       document.getElementById('dexDepositCheckBtn').disabled = false;
-      // Show/hide whitelisting warning
+      // Check whitelisting: try server flag first, fall back to client-side REST query
+      let hasWhitelisting = checkData.hasWhitelisting || false;
+      if (!hasWhitelisting) {
+        try {
+          const infoRes = await fetch(`${COREUM_REST}/coreum/asset/ft/v1/tokens/${dexBaseDenom}`);
+          if (infoRes.ok) {
+            const infoData = await infoRes.json();
+            const features = infoData?.token?.features || [];
+            hasWhitelisting = features.includes('whitelisting');
+          }
+        } catch { /* non-fatal */ }
+      }
       const wlWarn = document.getElementById('dexDepositWhitelistWarn');
       if (wlWarn) {
-        wlWarn.style.display = checkData.hasWhitelisting ? '' : 'none';
-        if (checkData.hasWhitelisting) {
+        wlWarn.style.display = hasWhitelisting ? '' : 'none';
+        if (hasWhitelisting) {
           wlWarn.querySelector('.wl-agent-addr').textContent = checkData.agentAddress;
         }
       }
