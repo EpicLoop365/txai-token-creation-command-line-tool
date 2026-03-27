@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/styles.css?v=12">
+<link rel="stylesheet" href="css/styles.css?v=13">
 </head>
 <body>
 
@@ -32,14 +32,18 @@
   <div class="container">
 
     <!-- Tab Bar: Create vs Chat -->
-    <div class="chat-tab-bar reveal">
-      <button class="chat-tab active" id="tabCreate" onclick="switchTab('create')">🚀 Create Smart Token</button>
-      <button class="chat-tab" id="tabChat" onclick="switchTab('chat')">💬 Smart Token Advisor Chat</button>
-      <button class="chat-tab" id="tabDex" onclick="switchTab('dex')">📊 Exchange (Order Book)</button>
-      <button class="chat-tab" id="tabSwarm" onclick="switchTab('swarm')">🤖 AI Agent Swarm</button>
-      <button class="chat-tab" id="tabNft" onclick="switchTab('nft')">🎨 Create Smart NFT</button>
-      <button class="chat-tab" id="tabManage" onclick="switchTab('manage')">⚙️ Manage Smart Token</button>
-      <button class="chat-tab" id="tabAuth" onclick="switchTab('auth')">🔐 Auth & Permissions</button>
+    <div class="tab-bar-wrap reveal">
+      <button class="tab-scroll-arrow tab-arrow-left" id="tabArrowL" onclick="scrollTabs(-200)" style="display:none">‹</button>
+      <div class="chat-tab-bar" id="chatTabBar">
+        <button class="chat-tab active" id="tabCreate" onclick="switchTab('create')">🚀 Create Smart Token</button>
+        <button class="chat-tab" id="tabChat" onclick="switchTab('chat')">💬 Smart Token Advisor Chat</button>
+        <button class="chat-tab" id="tabDex" onclick="switchTab('dex')">📊 Exchange (Order Book)</button>
+        <button class="chat-tab" id="tabSwarm" onclick="switchTab('swarm')">🤖 AI Agent Swarm</button>
+        <button class="chat-tab" id="tabNft" onclick="switchTab('nft')">🎨 Create Smart NFT</button>
+        <button class="chat-tab" id="tabManage" onclick="switchTab('manage')">⚙️ Manage Smart Token</button>
+        <button class="chat-tab" id="tabAuth" onclick="switchTab('auth')">🔐 Auth & Permissions</button>
+      </div>
+      <button class="tab-scroll-arrow tab-arrow-right" id="tabArrowR" onclick="scrollTabs(200)">›</button>
     </div>
 
     <!-- Wallet Choice Modal -->
@@ -1320,6 +1324,34 @@
 <script src="js/manage.js?v=10"></script>
 <script src="js/swarm.js?v=10"></script>
 <script src="js/auth.js?v=10"></script>
+<script>
+// Tab bar scroll arrows + fade indicators
+(function(){
+  const bar = document.getElementById('chatTabBar');
+  const wrap = bar?.parentElement;
+  const arrowL = document.getElementById('tabArrowL');
+  const arrowR = document.getElementById('tabArrowR');
+  if(!bar||!wrap) return;
+  function updateArrows(){
+    const sl = bar.scrollLeft, sw = bar.scrollWidth, cw = bar.clientWidth;
+    const canLeft = sl > 4, canRight = sl < sw - cw - 4;
+    arrowL.style.display = canLeft ? 'flex' : 'none';
+    arrowR.style.display = canRight ? 'flex' : 'none';
+    wrap.classList.toggle('fade-right', canRight && !arrowR);
+    wrap.classList.toggle('fade-left', canLeft && !arrowL);
+  }
+  bar.addEventListener('scroll', updateArrows);
+  window.addEventListener('resize', updateArrows);
+  setTimeout(updateArrows, 100);
+  // scroll active tab into view on load
+  const active = bar.querySelector('.chat-tab.active');
+  if(active) active.scrollIntoView({behavior:'auto',block:'nearest',inline:'nearest'});
+})();
+function scrollTabs(px){
+  const bar = document.getElementById('chatTabBar');
+  if(bar) bar.scrollBy({left:px,behavior:'smooth'});
+}
+</script>
 
 </body>
 </html>

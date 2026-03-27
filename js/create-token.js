@@ -69,6 +69,9 @@ function switchTab(tab){
     tabCreate.classList.add('active');
     createWrap.style.display = '';
   }
+  // Scroll active tab into view
+  const activeTab = document.querySelector('.chat-tab.active');
+  if(activeTab) activeTab.scrollIntoView({behavior:'smooth',block:'nearest',inline:'nearest'});
 }
 
 
