@@ -1028,6 +1028,19 @@ function dexCloseDeposit() {
   document.getElementById('dexDepositModal').style.display = 'none';
 }
 
+function dexDepositAddToWallet() {
+  if (!dexBaseDenom) return;
+  const symbol = dexBaseDenom.split('-')[0].toUpperCase();
+
+  // Try programmatic registration first
+  if (walletMode !== 'agent' && connectedAddress) {
+    try { registerTokenWithWallet(dexBaseDenom, symbol, 6); } catch {}
+  }
+
+  // Show the helper modal with manual instructions
+  dexShowAddTokenModal(symbol);
+}
+
 function dexCopyDepositAddr() {
   const addr = document.getElementById('dexDepositAddress').textContent;
   navigator.clipboard.writeText(addr).then(() => {

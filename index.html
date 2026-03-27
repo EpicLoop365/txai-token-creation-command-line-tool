@@ -429,19 +429,40 @@
               The AI trading agents need <b><span id="dexDepositAmount">7,000</span>
               <span id="dexDepositSymbol">TOKEN</span></b> to populate your orderbook.
             </p>
-            <p class="dex-deposit-instruction">
-              Send tokens to this address from your wallet:
-            </p>
-            <div class="dex-deposit-address-row">
-              <code id="dexDepositAddress">testcore1...</code>
-              <button class="dex-deposit-copy" onclick="dexCopyDepositAddr()">📋 Copy</button>
+
+            <!-- Step-by-step instructions -->
+            <div class="dex-deposit-steps">
+              <div class="dex-deposit-step">
+                <span class="dex-deposit-step-num">1</span>
+                <div class="dex-deposit-step-text">
+                  <strong>Add token to your wallet</strong> so you can see your balance
+                  <button class="dex-deposit-add-btn" id="dexDepositAddBtn" onclick="dexDepositAddToWallet()">➕ Add to Wallet</button>
+                </div>
+              </div>
+              <div class="dex-deposit-step">
+                <span class="dex-deposit-step-num">2</span>
+                <div class="dex-deposit-step-text">
+                  <strong>Send tokens</strong> to the agent address below
+                  <div class="dex-deposit-address-row">
+                    <code id="dexDepositAddress">testcore1...</code>
+                    <button class="dex-deposit-copy" onclick="dexCopyDepositAddr()">📋 Copy</button>
+                  </div>
+                </div>
+              </div>
+              <div class="dex-deposit-step">
+                <span class="dex-deposit-step-num">3</span>
+                <div class="dex-deposit-step-text">
+                  <strong>Click below</strong> to verify deposit & launch the swarm
+                </div>
+              </div>
             </div>
+
             <p class="dex-deposit-note">
               After the demo completes, unused tokens will be returned to your wallet automatically.
             </p>
             <div class="dex-deposit-actions">
               <button class="dex-deposit-check-btn" id="dexDepositCheckBtn" onclick="dexCheckAndStart()">
-                🔍 Check & Start Demo
+                🟢 Check & Start Demo
               </button>
               <div class="dex-deposit-status" id="dexDepositStatus"></div>
             </div>
