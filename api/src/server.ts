@@ -83,10 +83,15 @@ const app = express();
 const PORT = parseInt(process.env.PORT || "3001", 10);
 
 // CORS
-const allowedOrigins = (process.env.CORS_ORIGINS || "")
-  .split(",")
-  .map((o) => o.trim())
-  .filter(Boolean);
+const allowedOrigins = [
+  "https://solomentelabs.com",
+  "https://www.solomentelabs.com",
+  "https://epicloop365.github.io",
+  ...(process.env.CORS_ORIGINS || "")
+    .split(",")
+    .map((o) => o.trim())
+    .filter(Boolean),
+];
 
 app.use(
   cors({
