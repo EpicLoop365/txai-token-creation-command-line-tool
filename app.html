@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/styles.css?v=13">
+<link rel="stylesheet" href="css/styles.css?v=14">
 </head>
 <body>
 
@@ -1011,17 +1011,41 @@
           </div>
         </div>
 
-        <!-- Progress -->
-        <div class="swarm-progress">
-          <div class="swarm-phase" id="swarmPhase">Initializing...</div>
-          <div class="dex-demo-bar-wrap">
-            <div class="dex-demo-bar" id="swarmBar" style="width:0%"></div>
+        <!-- Live Orderbook + Progress split -->
+        <div class="swarm-book-row">
+          <!-- Orderbook -->
+          <div class="swarm-orderbook" id="swarmOrderbook">
+            <div class="swarm-ob-title">Live Orderbook</div>
+            <div class="swarm-ob-header">
+              <span>Price</span><span>Size</span><span>Total</span>
+            </div>
+            <div class="swarm-ob-asks" id="swarmObAsks">
+              <div class="swarm-ob-empty">Waiting for orders...</div>
+            </div>
+            <div class="swarm-ob-spread" id="swarmObSpread">
+              <span class="spread-label">Spread</span>
+              <span class="spread-value" id="swarmSpreadVal">--</span>
+            </div>
+            <div class="swarm-ob-bids" id="swarmObBids"></div>
+            <div class="swarm-ob-stats">
+              <span>Bids: <b id="swarmObBidCount">0</b></span>
+              <span>Asks: <b id="swarmObAskCount">0</b></span>
+              <span>Fills: <b id="swarmObFillCount">0</b></span>
+            </div>
           </div>
-        </div>
 
-        <!-- Timeline -->
-        <div class="swarm-timeline" id="swarmTimeline">
-          <div class="demo-log-entry info">Swarm starting...</div>
+          <!-- Timeline -->
+          <div class="swarm-timeline-col">
+            <div class="swarm-progress">
+              <div class="swarm-phase" id="swarmPhase">Initializing...</div>
+              <div class="dex-demo-bar-wrap">
+                <div class="dex-demo-bar" id="swarmBar" style="width:0%"></div>
+              </div>
+            </div>
+            <div class="swarm-timeline" id="swarmTimeline">
+              <div class="demo-log-entry info">Swarm starting...</div>
+            </div>
+          </div>
         </div>
 
         <!-- Summary -->
@@ -1322,7 +1346,7 @@
 <script src="js/create-nft.js?v=10"></script>
 <script src="js/dex.js?v=10"></script>
 <script src="js/manage.js?v=10"></script>
-<script src="js/swarm.js?v=10"></script>
+<script src="js/swarm.js?v=11"></script>
 <script src="js/auth.js?v=10"></script>
 <script>
 // Tab bar scroll arrows + fade indicators

@@ -1922,12 +1922,69 @@ footer{
 .swarm-agent-card.agent-buyer{border-top:3px solid #22c55e}
 .swarm-agent-card.agent-seller{border-top:3px solid #ef4444}
 .swarm-agent-card.agent-taker{border-top:3px solid #7c3aed}
+/* Orderbook + Timeline row */
+.swarm-book-row{
+  display:grid;grid-template-columns:280px 1fr;gap:0;
+  border-top:1px solid #21262d;
+}
+.swarm-orderbook{
+  background:#0a0e14;border-right:1px solid #21262d;
+  display:flex;flex-direction:column;min-height:300px;
+}
+.swarm-ob-title{
+  padding:10px 14px;font-size:.75rem;font-weight:700;color:#8b949e;
+  text-transform:uppercase;letter-spacing:.08em;border-bottom:1px solid #161b22;
+}
+.swarm-ob-header{
+  display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;
+  padding:6px 14px;font-size:.65rem;color:#484f58;font-weight:600;
+  text-transform:uppercase;letter-spacing:.06em;
+}
+.swarm-ob-asks,.swarm-ob-bids{
+  flex:1;overflow-y:auto;max-height:140px;
+  font-family:'Fira Code','SF Mono',monospace;font-size:.72rem;
+}
+.swarm-ob-asks{display:flex;flex-direction:column-reverse;justify-content:flex-start}
+.swarm-ob-row{
+  display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;
+  padding:2px 14px;position:relative;
+  animation:obFlash .4s ease-out;
+}
+@keyframes obFlash{0%{background:rgba(255,255,255,.06)}100%{background:transparent}}
+.swarm-ob-row.ask{color:#ef4444}
+.swarm-ob-row.bid{color:#22c55e}
+.swarm-ob-row .ob-depth{
+  position:absolute;top:0;bottom:0;right:0;opacity:.08;
+}
+.swarm-ob-row.ask .ob-depth{background:#ef4444}
+.swarm-ob-row.bid .ob-depth{background:#22c55e}
+.swarm-ob-spread{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:6px 14px;border-top:1px solid #161b22;border-bottom:1px solid #161b22;
+  background:#0d1117;
+}
+.spread-label{font-size:.65rem;color:#484f58;font-weight:600;text-transform:uppercase}
+.spread-value{font-family:'Fira Code','SF Mono',monospace;font-size:.75rem;color:#f59e0b;font-weight:600}
+.swarm-ob-stats{
+  display:flex;gap:16px;padding:8px 14px;font-size:.7rem;color:#484f58;
+  border-top:1px solid #161b22;
+}
+.swarm-ob-stats b{color:#8b949e}
+.swarm-ob-empty{
+  padding:20px 14px;text-align:center;font-size:.75rem;color:#30363d;
+}
+
+.swarm-timeline-col{display:flex;flex-direction:column;min-height:0}
 .swarm-progress{padding:12px 20px}
 .swarm-phase{font-size:.82rem;color:#8b949e;margin-bottom:6px}
 .swarm-timeline{
-  max-height:350px;overflow-y:auto;padding:12px 20px;
+  flex:1;max-height:350px;overflow-y:auto;padding:12px 20px;
   font-family:'Fira Code','SF Mono',monospace;font-size:.75rem;
-  background:#0a0e14;border-top:1px solid #21262d;
+  background:#0a0e14;
+}
+@media(max-width:768px){
+  .swarm-book-row{grid-template-columns:1fr}
+  .swarm-orderbook{border-right:none;border-bottom:1px solid #21262d;min-height:200px}
 }
 .swarm-summary{
   padding:16px 20px;border-top:1px solid #30363d;

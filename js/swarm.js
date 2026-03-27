@@ -8,6 +8,107 @@ let swarmHistory = txdbGetSwarmHistory();
 let swarmCurrentDenom = '';
 let swarmCurrentSymbol = '';
 
+/* ── Live Orderbook State ── */
+let swarmOB = { bids: {}, asks: {}, fillCount: 0 };
+
+function swarmOBReset() {
+  swarmOB = { bids: {}, asks: {}, fillCount: 0 };
+  swarmOBRender();
+}
+
+function swarmOBAddOrder(side, price, quantity) {
+  const book = side === 'buy' ? swarmOB.bids : swarmOB.asks;
+  const p = parseFloat(price);
+  if (!p || isNaN(p)) return;
+  book[p] = (book[p] || 0) + parseFloat(quantity || 0);
+  swarmOBRender();
+}
+
+function swarmOBAddFill(price, quantity) {
+  swarmOB.fillCount++;
+  // Remove matched quantity from both sides at this price
+  const p = parseFloat(price);
+  const qty = parseFloat(quantity || 0);
+  if (swarmOB.bids[p]) {
+    swarmOB.bids[p] = Math.max(0, swarmOB.bids[p] - qty);
+    if (swarmOB.bids[p] <= 0) delete swarmOB.bids[p];
+  }
+  if (swarmOB.asks[p]) {
+    swarmOB.asks[p] = Math.max(0, swarmOB.asks[p] - qty);
+    if (swarmOB.asks[p] <= 0) delete swarmOB.asks[p];
+  }
+  swarmOBRender();
+}
+
+function swarmOBRender() {
+  const asksEl = document.getElementById('swarmObAsks');
+  const bidsEl = document.getElementById('swarmObBids');
+  const spreadEl = document.getElementById('swarmSpreadVal');
+  const bidCountEl = document.getElementById('swarmObBidCount');
+  const askCountEl = document.getElementById('swarmObAskCount');
+  const fillCountEl = document.getElementById('swarmObFillCount');
+  if (!asksEl) return;
+
+  // Sort asks ascending (lowest first, displayed bottom-up via column-reverse)
+  const askPrices = Object.keys(swarmOB.asks).map(Number).sort((a, b) => a - b).slice(0, 8);
+  // Sort bids descending (highest first)
+  const bidPrices = Object.keys(swarmOB.bids).map(Number).sort((a, b) => b - a).slice(0, 8);
+
+  // Max size for depth bar
+  const allSizes = [...askPrices.map(p => swarmOB.asks[p]), ...bidPrices.map(p => swarmOB.bids[p])];
+  const maxSize = Math.max(...allSizes, 1);
+
+  // Render asks
+  if (askPrices.length === 0) {
+    asksEl.innerHTML = '<div class="swarm-ob-empty">No asks yet</div>';
+  } else {
+    let cumAsk = 0;
+    const askRows = askPrices.map(p => {
+      const size = swarmOB.asks[p];
+      cumAsk += size;
+      const depthPct = (size / maxSize) * 100;
+      return `<div class="swarm-ob-row ask"><span>${p.toFixed(4)}</span><span>${fmtOBSize(size)}</span><span>${fmtOBSize(cumAsk)}</span><div class="ob-depth" style="width:${depthPct}%"></div></div>`;
+    });
+    asksEl.innerHTML = askRows.join('');
+  }
+
+  // Render bids
+  if (bidPrices.length === 0) {
+    bidsEl.innerHTML = '';
+  } else {
+    let cumBid = 0;
+    const bidRows = bidPrices.map(p => {
+      const size = swarmOB.bids[p];
+      cumBid += size;
+      const depthPct = (size / maxSize) * 100;
+      return `<div class="swarm-ob-row bid"><span>${p.toFixed(4)}</span><span>${fmtOBSize(size)}</span><span>${fmtOBSize(cumBid)}</span><div class="ob-depth" style="width:${depthPct}%"></div></div>`;
+    });
+    bidsEl.innerHTML = bidRows.join('');
+  }
+
+  // Spread
+  const bestBid = bidPrices[0] || 0;
+  const bestAsk = askPrices[0] || 0;
+  if (bestBid && bestAsk) {
+    const spread = bestAsk - bestBid;
+    const spreadPct = ((spread / bestAsk) * 100).toFixed(2);
+    spreadEl.textContent = `${spread.toFixed(4)} TX (${spreadPct}%)`;
+  } else {
+    spreadEl.textContent = '--';
+  }
+
+  // Counts
+  bidCountEl.textContent = Object.keys(swarmOB.bids).length;
+  askCountEl.textContent = Object.keys(swarmOB.asks).length;
+  fillCountEl.textContent = swarmOB.fillCount;
+}
+
+function fmtOBSize(n) {
+  if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+  if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
+  return n.toFixed(0);
+}
+
 /* ── Template Selection ── */
 function swarmSelectTemplate(templateId) {
   if (templateId !== 'market-maker') {
@@ -134,6 +235,7 @@ async function swarmDeploy() {
   document.getElementById('swarmOrdersB').textContent = '0';
   document.getElementById('swarmOrdersTaker').textContent = '0';
   swarmOrderCounts = { A: 0, B: 0, Taker: 0 };
+  swarmOBReset();
 
   // Start timer
   swarmStartTime = Date.now();
@@ -282,7 +384,11 @@ function swarmProcessEvent(event, data, historyEntry) {
       swarmLog(data.status === 'error' ? 'error' : 'order',
         `${sideIcon} ${statusIcon} ${data.agent?.split(' ')[0] || '?'}: ${data.side?.toUpperCase()} <b>${data.quantity || '?'} ${data.symbol || ''}</b> @ ${data.priceDisplay || data.price} TX${overlap}${tx}`);
 
-      if (data.status === 'placed') historyEntry.orders++;
+      // Update live orderbook
+      if (data.status === 'placed') {
+        swarmOBAddOrder(data.side, data.priceDisplay || data.price, data.quantity);
+        historyEntry.orders++;
+      }
 
       if (data.agent?.includes('Maker A')) {
         swarmOrderCounts.A++;
@@ -301,12 +407,14 @@ function swarmProcessEvent(event, data, historyEntry) {
 
     case 'fill':
       swarmLog('fill', `⚡ FILL: <b>${data.buyQty || data.quantity} ${data.symbol}</b> @ ${data.priceDisplay} TX — ${data.buyer} ↔ ${data.seller}${txLink(data.txHash)}`);
+      swarmOBAddFill(data.priceDisplay, data.buyQty || data.quantity);
       historyEntry.fills++;
       break;
 
     case 'taker': {
       const takerIcon = data.action === 'buy' ? '🟢' : '🔴';
       swarmLog('taker', `${takerIcon} Taker ${data.action?.toUpperCase()}: <b>${data.quantity || '?'}</b> @ ${data.price}${txLink(data.txHash)}`);
+      swarmOBAddOrder(data.action, data.price, data.quantity);
       swarmOrderCounts.Taker++;
       document.getElementById('swarmOrdersTaker').textContent = swarmOrderCounts.Taker;
       historyEntry.orders++;
