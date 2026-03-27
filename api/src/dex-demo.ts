@@ -54,8 +54,9 @@ interface AgentWallet {
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
-const FAUCET_REQUESTS_PER_WALLET = 3; // ~200 TX each × 3 = ~600 TX per wallet
-const FAUCET_DELAY = 5000;            // 5s between faucet requests
+const FAUCET_REQUESTS_PER_WALLET = 1; // 1 request = ~200 TX per wallet (faucet rate-limits fast)
+const FAUCET_DELAY = 6000;            // 6s between faucet requests to avoid 429
+const AGENT_FUND_AMOUNT = 100_000_000; // 100 TX in utestcore — backup funding from agent wallet
 const ORDER_DELAY = 5000;             // 5s between orders (same wallet)
 const INTERLEAVE_DELAY = 2000;        // 2s between different wallet orders
 const TOKEN_PRECISION = 6;
@@ -223,7 +224,36 @@ export async function runDexDemo(config: DemoConfig): Promise<void> {
     }
 
     emit("phase", { phase: "funding", message: "Waiting for faucet transactions..." });
-    await sleep(6000);
+    await sleep(4000);
+
+    // ── Phase 3.5: Backup fund from agent wallet if faucet was insufficient ──
+    if (abortSignal?.aborted) throw new Error("Demo aborted");
+    const agentBals = await agentClient.getBalances(agentClient.address);
+    const agentTxBal = agentBals.find(b => b.denom === QUOTE_DENOM);
+    const agentTxAmount = agentTxBal ? parseInt(agentTxBal.amount) : 0;
+
+    // If agent has enough TX, top up sub-wallets that didn't get enough from faucet
+    if (agentTxAmount > AGENT_FUND_AMOUNT * agents.length + 50_000_000) {
+      emit("phase", { phase: "funding", message: "Topping up agent wallets from issuer..." });
+      for (const agent of agents) {
+        if (abortSignal?.aborted) throw new Error("Demo aborted");
+        try {
+          const sendTx = {
+            typeUrl: "/cosmos.bank.v1beta1.MsgSend",
+            value: {
+              fromAddress: agentClient.address,
+              toAddress: agent.address,
+              amount: [{ denom: QUOTE_DENOM, amount: AGENT_FUND_AMOUNT.toString() }],
+            },
+          };
+          await agentClient.signAndBroadcastMsg(sendTx, 200000);
+          emit("log", { message: `Sent 100 TX to ${agent.name}` });
+          await sleep(2000);
+        } catch (fundErr) {
+          emit("log", { message: `Top-up ${agent.name}: ${(fundErr as Error).message}` });
+        }
+      }
+    }
 
     // ── Phase 4: Connect Trading Clients ──
     emit("phase", { phase: "connecting", message: "Connecting trading agents to blockchain..." });
