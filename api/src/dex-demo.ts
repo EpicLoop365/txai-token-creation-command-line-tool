@@ -351,6 +351,22 @@ export async function runDexDemo(config: DemoConfig): Promise<void> {
 
     await sleep(3000);
 
+    // Log agent balances before placing orders
+    for (const agent of agents) {
+      const bals = await agent.client!.getBalances(agent.address);
+      const txBal = bals.find(b => b.denom === QUOTE_DENOM);
+      const tokenBal = bals.find(b => b.denom === baseDenom);
+      const txAmt = txBal ? parseInt(txBal.amount) / 1e6 : 0;
+      const tokenAmt = tokenBal ? parseInt(tokenBal.amount) / 1e6 : 0;
+      emit("balance", {
+        agent: agent.name,
+        address: agent.address,
+        txBalance: txAmt.toFixed(2) + " TX",
+        tokenBalance: tokenAmt.toFixed(0) + " " + tokenSymbol,
+      });
+      console.log(`[dex-demo] ${agent.name}: ${txAmt.toFixed(2)} TX, ${tokenAmt.toFixed(0)} ${tokenSymbol}`);
+    }
+
     // ── Phase 6: Place Limit Orders ──
     // 12 buy orders (MM-A) + 11 sell orders (MM-B)
     // 6 prices overlap → instant fills when both sides hit
@@ -424,10 +440,12 @@ export async function runDexDemo(config: DemoConfig): Promise<void> {
         return result;
       } catch (err) {
         errorCount++;
+        const errMsg = (err as Error).message.slice(0, 200);
+        console.error(`[dex-demo] Order error (${agentName} ${sideStr} ${quantity} @ ${priceStr}): ${errMsg}`);
         emit("order", {
           agent: agentName, side: sideStr, price: priceStr, priceDisplay: price,
           quantity, symbol: tokenSymbol, status: "error",
-          error: (err as Error).message.slice(0, 120), overlap,
+          error: errMsg, overlap,
         });
         return null;
       }

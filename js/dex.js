@@ -1491,8 +1491,9 @@ function dexDemoProcessEvent(event, data) {
       const overlap = data.overlap ? ' <span class="demo-overlap-badge">MATCH</span>' : '';
       const tx = data.txHash ? txLink(data.txHash) : '';
       const sideClass = data.side === 'buy' ? 'demo-side-buy' : 'demo-side-sell';
+      const errDetail = data.status === 'error' && data.error ? ` <span style="color:#8b949e;font-size:.72rem">${data.error.slice(0, 80)}</span>` : '';
       dexDemoLog(data.status === 'error' ? 'error' : 'order',
-        `${sideIcon} ${statusIcon} <span class="${sideClass}">${data.side?.toUpperCase()}</span> <b>${data.quantity || '?'} ${data.symbol || ''}</b> @ <span class="demo-price">${data.priceDisplay || data.price} TX</span>${overlap}${tx}`);
+        `${sideIcon} ${statusIcon} <span class="${sideClass}">${data.side?.toUpperCase()}</span> <b>${data.quantity || '?'} ${data.symbol || ''}</b> @ <span class="demo-price">${data.priceDisplay || data.price} TX</span>${overlap}${tx}${errDetail}`);
 
       // Update order count
       if (data.agent?.includes('Maker A')) {
