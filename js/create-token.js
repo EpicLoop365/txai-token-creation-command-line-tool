@@ -209,13 +209,23 @@ function setRandomPlaceholder(){
   const input = document.getElementById('demoInput');
   if(!input) return;
   _currentSuggestion = _TSG.generate();
-  input.setAttribute('placeholder', _currentSuggestion.prompt);
-  // Show use case hint
+  input.setAttribute('placeholder', 'Describe your token or just hit Deploy \u2192');
+  // Show full suggestion + use case in hint box
   const hint = document.getElementById('suggestionHint');
   if(hint){
-    hint.innerHTML = '<strong>' + _currentSuggestion.symbol + ':</strong> ' + _currentSuggestion.useCase
-      + ' <button class="suggestion-shuffle" onclick="setRandomPlaceholder()" title="New suggestion">&#8635;</button>';
+    hint.innerHTML = '<span class="suggestion-prompt" onclick="useSuggestion()" title="Click to use this suggestion">\u26A1 ' + _currentSuggestion.prompt + '</span>'
+      + '<span class="suggestion-usecase"><strong>' + _currentSuggestion.symbol + ':</strong> ' + _currentSuggestion.useCase + '</span>'
+      + '<button class="suggestion-shuffle" onclick="setRandomPlaceholder()" title="New suggestion">&#8635; New idea</button>';
     hint.style.display = '';
+  }
+}
+
+/* Fill input with the current suggestion */
+function useSuggestion(){
+  const input = document.getElementById('demoInput');
+  if(input && _currentSuggestion){
+    input.value = _currentSuggestion.prompt;
+    input.focus();
   }
 }
 
