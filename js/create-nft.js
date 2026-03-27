@@ -19,11 +19,21 @@ async function nftIssueClass(){
   }
 
   const features = {};
-  if(document.getElementById('nftFeatBurning').checked) features.burning = true;
-  if(document.getElementById('nftFeatFreezing').checked) features.freezing = true;
-  if(document.getElementById('nftFeatWhitelisting').checked) features.whitelisting = true;
-  if(document.getElementById('nftFeatDisableSending').checked) features.disableSending = true;
-  if(document.getElementById('nftFeatSoulbound').checked) features.soulbound = true;
+  // Read features from .cp-feature toggles (new UI) or checkboxes (legacy)
+  const nftFeatContainer = document.getElementById('nftFeatures');
+  if(nftFeatContainer){
+    nftFeatContainer.querySelectorAll('.cp-feature.active').forEach(el => {
+      const f = el.dataset.feature;
+      if(f) features[f] = true;
+    });
+  } else {
+    // Legacy checkbox fallback
+    if(document.getElementById('nftFeatBurning')?.checked) features.burning = true;
+    if(document.getElementById('nftFeatFreezing')?.checked) features.freezing = true;
+    if(document.getElementById('nftFeatWhitelisting')?.checked) features.whitelisting = true;
+    if(document.getElementById('nftFeatDisableSending')?.checked) features.disableSending = true;
+    if(document.getElementById('nftFeatSoulbound')?.checked) features.soulbound = true;
+  }
 
   const royaltyRate = royaltyPct > 0 ? (royaltyPct / 100).toString() : undefined;
 

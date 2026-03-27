@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/styles.css?v=30">
+<link rel="stylesheet" href="css/styles.css?v=31">
 <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
 <script src="/charting_library/charting_library.standalone.js"></script>
 </head>
@@ -52,8 +52,6 @@
         <button class="chat-tab active" id="tabCreate" onclick="switchTab('create')">Create</button>
         <button class="chat-tab" id="tabManage" onclick="switchTab('manage')">Manage</button>
         <button class="chat-tab" id="tabDex" onclick="switchTab('dex')">Exchange</button>
-        <button class="chat-tab" id="tabSwarm" onclick="switchTab('swarm')">Swarm</button>
-        <button class="chat-tab" id="tabNft" onclick="switchTab('nft')">NFT</button>
         <button class="chat-tab" id="tabSubs" onclick="switchTab('subs')">Subscriptions</button>
         <button class="chat-tab" id="tabAi" onclick="switchTab('ai')">AI</button>
       </div>
@@ -122,13 +120,14 @@
 
     <div class="demo-input-wrap reveal" id="demoInputWrap">
 
-      <!-- Create mode toggle -->
+      <!-- Create type toggle -->
       <div class="create-mode-toggle" id="createModePicker">
-        <button class="create-mode-btn active" id="createModeCustom" onclick="setCreateMode('custom')">Manual</button>
+        <button class="create-mode-btn active" id="createModeCustom" onclick="setCreateMode('custom')">Token</button>
+        <button class="create-mode-btn" id="createModeNft" onclick="setCreateMode('nft')">NFT</button>
         <button class="create-mode-btn" id="createModeQuick" onclick="setCreateMode('quick')">AI Prompt</button>
       </div>
 
-      <!-- Quick Create: AI prompt -->
+      <!-- AI Prompt mode -->
       <div id="quickCreateWrap" style="display:none">
         <div class="demo-input-row">
           <input type="text" class="demo-input" id="demoInput" placeholder='Describe your token in plain English...'>
@@ -250,7 +249,115 @@
         <button class="demo-create-btn custom-deploy-btn" id="demoBtnCustom" onclick="runDemo()">Deploy Token (Testnet)</button>
       </div><!-- end customCreateWrap -->
 
-      <div class="demo-disclaimer visible" id="demoDisclaimer">Tokens are deployed on TX testnet. No real value.</div>
+      <!-- NFT Create mode -->
+      <div id="nftCreateWrap" style="display:none">
+
+        <!-- Create Collection -->
+        <div class="cp-section">
+          <div class="cp-section-title"><em class="icon">🎨</em> Collection</div>
+          <div class="cp-row">
+            <div class="cp-field">
+              <label class="cp-label">Collection Symbol</label>
+              <input class="cp-input" id="nftSymbol" placeholder="e.g. PUNKS">
+            </div>
+            <div class="cp-field">
+              <label class="cp-label">Collection Name</label>
+              <input class="cp-input" id="nftName" placeholder="e.g. CryptoPunks Collection">
+            </div>
+          </div>
+          <div class="cp-row triple">
+            <div class="cp-field">
+              <label class="cp-label">Royalty Rate (%)</label>
+              <input class="cp-input" id="nftRoyalty" type="number" placeholder="5" min="0" max="100" step="0.1">
+            </div>
+            <div class="cp-field">
+              <label class="cp-label">URI (metadata)</label>
+              <input class="cp-input" id="nftUri" placeholder="https://...">
+            </div>
+            <div class="cp-field">
+              <label class="cp-label">Description</label>
+              <input class="cp-input" id="nftDescription" placeholder="Describe your collection...">
+            </div>
+          </div>
+        </div>
+
+        <!-- Features -->
+        <div class="cp-section">
+          <div class="cp-section-title"><em class="icon">⚙️</em> Features</div>
+          <div class="cp-features" id="nftFeatures">
+            <div class="cp-feature active" data-feature="burning" onclick="toggleFeature(this)">
+              <div class="cp-feature-check"><svg viewBox="0 0 12 12" fill="none" stroke="var(--bg)" stroke-width="2"><path d="M2 6l3 3 5-5"/></svg></div>
+              <div><div class="cp-feature-label">Burning</div><div class="cp-feature-tip">Destroy NFTs</div></div>
+            </div>
+            <div class="cp-feature" data-feature="freezing" onclick="toggleFeature(this)">
+              <div class="cp-feature-check"><svg viewBox="0 0 12 12" fill="none" stroke="var(--bg)" stroke-width="2"><path d="M2 6l3 3 5-5"/></svg></div>
+              <div><div class="cp-feature-label">Freezing</div><div class="cp-feature-tip">Freeze transfers</div></div>
+            </div>
+            <div class="cp-feature" data-feature="whitelisting" onclick="toggleFeature(this)">
+              <div class="cp-feature-check"><svg viewBox="0 0 12 12" fill="none" stroke="var(--bg)" stroke-width="2"><path d="M2 6l3 3 5-5"/></svg></div>
+              <div><div class="cp-feature-label">Whitelist</div><div class="cp-feature-tip">Restrict holders</div></div>
+            </div>
+            <div class="cp-feature" data-feature="disableSending" onclick="toggleFeature(this)">
+              <div class="cp-feature-check"><svg viewBox="0 0 12 12" fill="none" stroke="var(--bg)" stroke-width="2"><path d="M2 6l3 3 5-5"/></svg></div>
+              <div><div class="cp-feature-label">Non-transferable</div><div class="cp-feature-tip">Disable sending</div></div>
+            </div>
+            <div class="cp-feature" data-feature="soulbound" onclick="toggleFeature(this)">
+              <div class="cp-feature-check"><svg viewBox="0 0 12 12" fill="none" stroke="var(--bg)" stroke-width="2"><path d="M2 6l3 3 5-5"/></svg></div>
+              <div><div class="cp-feature-label">Soulbound</div><div class="cp-feature-tip">Bound to wallet</div></div>
+            </div>
+          </div>
+        </div>
+
+        <button class="demo-create-btn custom-deploy-btn" id="nftCreateBtn" onclick="nftIssueClass()">
+          <span id="nftCreateBtnText">Create Collection (Testnet)</span>
+          <span id="nftCreateSpinner" class="nft-spinner" style="display:none"></span>
+        </button>
+
+        <!-- Result -->
+        <div class="nft-result" id="nftCreateResult" style="display:none">
+          <div class="nft-result-icon" id="nftCreateResultIcon">✓</div>
+          <div class="nft-result-msg" id="nftCreateResultMsg"></div>
+          <div class="nft-result-classid" id="nftCreateResultClassId"></div>
+          <a class="nft-result-link" id="nftCreateResultLink" target="_blank">View on Explorer</a>
+        </div>
+
+        <!-- Mint into existing collection -->
+        <div class="cp-section" style="margin-top:24px">
+          <div class="cp-section-title"><em class="icon">⚡</em> Mint NFT</div>
+          <div class="cp-row">
+            <div class="cp-field">
+              <label class="cp-label">Class ID</label>
+              <input class="cp-input" id="nftMintClassId" placeholder="symbol-testcore1...">
+            </div>
+            <div class="cp-field">
+              <label class="cp-label">NFT ID</label>
+              <input class="cp-input" id="nftMintId" placeholder="e.g. nft-001">
+            </div>
+          </div>
+          <div class="cp-row">
+            <div class="cp-field">
+              <label class="cp-label">Metadata URI</label>
+              <input class="cp-input" id="nftMintUri" placeholder="https://...metadata.json">
+            </div>
+            <div class="cp-field">
+              <label class="cp-label">Recipient (optional)</label>
+              <input class="cp-input" id="nftMintRecipient" placeholder="testcore1... (default: issuer)">
+            </div>
+          </div>
+          <button class="demo-create-btn custom-deploy-btn" style="background:var(--green) !important;color:#000 !important" id="nftMintBtn" onclick="nftMintToken()">
+            <span id="nftMintBtnText">Mint NFT</span>
+            <span id="nftMintSpinner" class="nft-spinner" style="display:none"></span>
+          </button>
+          <div class="nft-result" id="nftMintResult" style="display:none">
+            <div class="nft-result-icon" id="nftMintResultIcon">✓</div>
+            <div class="nft-result-msg" id="nftMintResultMsg"></div>
+            <a class="nft-result-link" id="nftMintResultLink" target="_blank">View on Explorer</a>
+          </div>
+        </div>
+
+      </div><!-- end nftCreateWrap -->
+
+      <div class="demo-disclaimer visible" id="demoDisclaimer">Deployed on TX testnet. No real value.</div>
     </div>
 
     <!-- Sidebar progress panel (appears alongside input when deploying) -->
@@ -516,391 +623,11 @@
     </div>
 
     <!-- ===== NFT TAB ===== -->
-    <div class="nft-wrap" id="nftWrap">
+    <!-- nft-wrap kept as hidden placeholder for switchTab compatibility -->
+    <div class="nft-wrap" id="nftWrap" style="display:none"></div>
 
-      <!-- Create Collection -->
-      <div class="nft-section">
-        <h3 class="nft-section-title">🎨 Create Smart NFT</h3>
-        <p class="nft-section-desc">Issue a new NFT class on the TX blockchain with native features like royalties, freezing, and soulbound.</p>
-
-        <div class="nft-form-grid">
-          <div class="nft-field">
-            <label>Collection Symbol <span class="nft-required">*</span></label>
-            <input type="text" class="nft-input" id="nftSymbol" placeholder="e.g. PUNKS" maxlength="20">
-          </div>
-          <div class="nft-field">
-            <label>Collection Name <span class="nft-required">*</span></label>
-            <input type="text" class="nft-input" id="nftName" placeholder="e.g. CryptoPunks Collection">
-          </div>
-          <div class="nft-field nft-field-full">
-            <label>Description</label>
-            <textarea class="nft-input nft-textarea" id="nftDescription" placeholder="Describe your NFT collection..." rows="2"></textarea>
-          </div>
-          <div class="nft-field">
-            <label>URI (metadata link)</label>
-            <input type="text" class="nft-input" id="nftUri" placeholder="https://...">
-          </div>
-          <div class="nft-field">
-            <label>Royalty Rate (%)</label>
-            <input type="number" class="nft-input" id="nftRoyalty" placeholder="e.g. 5" min="0" max="100" step="0.1">
-          </div>
-        </div>
-
-        <!-- Features -->
-        <div class="nft-features-bar">
-          <label class="nft-feature-toggle">
-            <input type="checkbox" id="nftFeatBurning" checked> <span>🔥 Burning</span>
-          </label>
-          <label class="nft-feature-toggle">
-            <input type="checkbox" id="nftFeatFreezing"> <span>❄️ Freezing</span>
-          </label>
-          <label class="nft-feature-toggle">
-            <input type="checkbox" id="nftFeatWhitelisting"> <span>✅ Whitelisting</span>
-          </label>
-          <label class="nft-feature-toggle">
-            <input type="checkbox" id="nftFeatDisableSending"> <span>🚫 Disable Sending</span>
-          </label>
-          <label class="nft-feature-toggle">
-            <input type="checkbox" id="nftFeatSoulbound"> <span>🔗 Soulbound</span>
-          </label>
-        </div>
-
-        <button class="nft-create-btn" id="nftCreateBtn" onclick="nftIssueClass()">
-          <span id="nftCreateBtnText">🚀 Create Collection</span>
-          <span id="nftCreateSpinner" class="nft-spinner" style="display:none"></span>
-        </button>
-
-        <!-- Result -->
-        <div class="nft-result" id="nftCreateResult" style="display:none">
-          <div class="nft-result-icon" id="nftCreateResultIcon">✓</div>
-          <div class="nft-result-msg" id="nftCreateResultMsg"></div>
-          <div class="nft-result-classid" id="nftCreateResultClassId"></div>
-          <a class="nft-result-link" id="nftCreateResultLink" target="_blank">View on Explorer</a>
-        </div>
-      </div>
-
-      <!-- Divider -->
-      <div class="nft-divider"></div>
-
-      <!-- Mint NFTs -->
-      <div class="nft-section">
-        <h3 class="nft-section-title">⚡ Mint NFTs</h3>
-        <p class="nft-section-desc">Mint individual NFTs into an existing collection.</p>
-
-        <div class="nft-form-grid">
-          <div class="nft-field">
-            <label>Class ID <span class="nft-required">*</span></label>
-            <input type="text" class="nft-input" id="nftMintClassId" placeholder="symbol-testcore1...">
-          </div>
-          <div class="nft-field">
-            <label>NFT ID <span class="nft-required">*</span></label>
-            <input type="text" class="nft-input" id="nftMintId" placeholder="e.g. nft-001">
-          </div>
-          <div class="nft-field">
-            <label>Metadata URI</label>
-            <input type="text" class="nft-input" id="nftMintUri" placeholder="https://...metadata.json">
-          </div>
-          <div class="nft-field">
-            <label>Recipient (optional)</label>
-            <input type="text" class="nft-input" id="nftMintRecipient" placeholder="testcore1... (default: issuer)">
-          </div>
-        </div>
-
-        <!-- Batch Mint -->
-        <div class="nft-batch-bar">
-          <label class="nft-batch-label">
-            <input type="checkbox" id="nftBatchMode" onchange="nftToggleBatch()"> Batch Mint
-          </label>
-          <div class="nft-batch-fields" id="nftBatchFields" style="display:none">
-            <label>Count</label>
-            <input type="number" class="nft-input nft-input-sm" id="nftBatchCount" value="10" min="1" max="100">
-            <label>ID Prefix</label>
-            <input type="text" class="nft-input nft-input-sm" id="nftBatchPrefix" value="nft-" placeholder="nft-">
-          </div>
-        </div>
-
-        <button class="nft-create-btn nft-mint-btn" id="nftMintBtn" onclick="nftMintToken()">
-          <span id="nftMintBtnText">⚡ Mint NFT</span>
-          <span id="nftMintSpinner" class="nft-spinner" style="display:none"></span>
-        </button>
-
-        <!-- Mint Result -->
-        <div class="nft-result" id="nftMintResult" style="display:none">
-          <div class="nft-result-icon" id="nftMintResultIcon">✓</div>
-          <div class="nft-result-msg" id="nftMintResultMsg"></div>
-          <a class="nft-result-link" id="nftMintResultLink" target="_blank">View on Explorer</a>
-        </div>
-      </div>
-
-      <!-- Divider -->
-      <div class="nft-divider"></div>
-
-      <!-- Browse NFTs -->
-      <div class="nft-section">
-        <h3 class="nft-section-title">🔍 Browse NFTs</h3>
-
-        <div class="nft-browse-bar">
-          <input type="text" class="nft-input" id="nftBrowseInput" placeholder="Enter Class ID or wallet address..." style="flex:1">
-          <button class="nft-browse-btn" onclick="nftBrowse()">Search</button>
-        </div>
-
-        <!-- Class Info Card -->
-        <div class="nft-class-card" id="nftClassCard" style="display:none">
-          <div class="nft-class-header">
-            <div class="nft-class-name" id="nftClassName">--</div>
-            <div class="nft-class-id" id="nftClassId">--</div>
-          </div>
-          <div class="nft-class-meta">
-            <span id="nftClassIssuer">Issuer: --</span>
-            <span id="nftClassRoyalty">Royalty: --</span>
-          </div>
-          <div class="nft-class-features" id="nftClassFeatures"></div>
-        </div>
-
-        <!-- NFT Grid -->
-        <div class="nft-grid" id="nftGrid"></div>
-
-        <!-- Empty State -->
-        <div class="nft-empty" id="nftEmpty" style="display:none">
-          No NFTs found.
-        </div>
-      </div>
-
-    </div><!-- end nft-wrap -->
-
-    <!-- ===== AI AGENT SWARM TAB ===== -->
-    <div class="swarm-wrap" id="swarmWrap">
-
-      <!-- Hero Section -->
-      <div class="swarm-hero">
-        <div class="swarm-hero-icon">🤖</div>
-        <h2 class="swarm-hero-title">AI Agent Swarms on Blockchain</h2>
-        <p class="swarm-hero-subtitle">
-          Deploy coordinated AI agents that execute real on-chain trades autonomously.
-          Each agent has its own wallet, funds itself, and operates independently on the Coreum DEX.
-        </p>
-        <div class="swarm-hero-stats">
-          <div class="swarm-hero-stat">
-            <span class="swarm-hero-stat-value">3</span>
-            <span class="swarm-hero-stat-label">Agent Types</span>
-          </div>
-          <div class="swarm-hero-stat">
-            <span class="swarm-hero-stat-value">23+</span>
-            <span class="swarm-hero-stat-label">Orders Per Run</span>
-          </div>
-          <div class="swarm-hero-stat">
-            <span class="swarm-hero-stat-value">100%</span>
-            <span class="swarm-hero-stat-label">On-Chain</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Swarm Templates -->
-      <div class="swarm-templates">
-        <h3 class="swarm-section-title">Swarm Strategies</h3>
-        <div class="swarm-template-grid">
-
-          <!-- Market Maker Swarm (ACTIVE) -->
-          <div class="swarm-template-card active" data-template="market-maker" onclick="swarmSelectTemplate('market-maker')">
-            <div class="swarm-card-accent green"></div>
-            <div class="swarm-card-icon">📈</div>
-            <h4>Market Maker Swarm</h4>
-            <p class="swarm-card-desc">
-              3 AI agents create a full orderbook for your token — buy walls, sell walls,
-              overlapping fills, and taker sweeps. Real liquidity in minutes.
-            </p>
-            <div class="swarm-card-meta">
-              <span>🤖 3 Agents</span>
-              <span>⏱️ ~3 min</span>
-              <span>🔗 Coreum DEX</span>
-            </div>
-            <button class="swarm-launch-btn">Launch Swarm</button>
-          </div>
-
-          <!-- Smart NFT Swarm (COMING SOON) -->
-          <div class="swarm-template-card soon" data-template="nft-minter" onclick="swarmSelectTemplate('nft-minter')">
-            <div class="swarm-card-accent purple"></div>
-            <span class="swarm-soon-badge">COMING SOON</span>
-            <div class="swarm-card-icon">🎨</div>
-            <h4>Smart NFT Swarm</h4>
-            <p class="swarm-card-desc">
-              AI agents mint, list, and trade NFT collections autonomously.
-              Dynamic pricing, rarity-based strategies, and automated floor management.
-            </p>
-            <div class="swarm-card-meta">
-              <span>🤖 4 Agents</span>
-              <span>⏱️ ~5 min</span>
-              <span>🔗 Coreum NFT</span>
-            </div>
-          </div>
-
-          <!-- Arbitrage Swarm (COMING SOON) -->
-          <div class="swarm-template-card soon" data-template="arbitrage" onclick="swarmSelectTemplate('arbitrage')">
-            <div class="swarm-card-accent amber"></div>
-            <span class="swarm-soon-badge">COMING SOON</span>
-            <div class="swarm-card-icon">⚡</div>
-            <h4>Arbitrage Swarm</h4>
-            <p class="swarm-card-desc">
-              Multi-agent cross-pair arbitrage. Monitors price discrepancies across
-              trading pairs and executes profitable trades in real-time.
-            </p>
-            <div class="swarm-card-meta">
-              <span>🤖 5 Agents</span>
-              <span>⏱️ Continuous</span>
-              <span>🔗 Multi-Pair</span>
-            </div>
-          </div>
-
-          <!-- Sentiment Trader (COMING SOON) -->
-          <div class="swarm-template-card soon" data-template="sentiment" onclick="swarmSelectTemplate('sentiment')">
-            <div class="swarm-card-accent blue"></div>
-            <span class="swarm-soon-badge">COMING SOON</span>
-            <div class="swarm-card-icon">🧠</div>
-            <h4>Sentiment Trader</h4>
-            <p class="swarm-card-desc">
-              AI-powered sentiment analysis drives autonomous trading decisions.
-              Agents analyze market signals and coordinate entries and exits.
-            </p>
-            <div class="swarm-card-meta">
-              <span>🤖 3 Agents</span>
-              <span>⏱️ Continuous</span>
-              <span>🔗 AI + DEX</span>
-            </div>
-          </div>
-
-        </div>
-      </div>
-
-      <!-- Launch Configuration Panel (hidden until template selected) -->
-      <div class="swarm-launch-panel" id="swarmLaunchPanel" style="display:none">
-        <h3 class="swarm-section-title">Configure & Deploy</h3>
-        <div class="swarm-launch-config">
-          <div class="swarm-config-row">
-            <label>Token Denom</label>
-            <div class="swarm-config-input-row">
-              <input type="text" id="swarmTokenDenom" placeholder="e.g. mytoken-testcore1abc..." class="swarm-input">
-              <button class="swarm-load-btn" onclick="swarmLoadToken()">Load Token</button>
-            </div>
-          </div>
-          <div id="swarmTokenInfo" style="display:none"></div>
-          <div class="swarm-config-summary">
-            <div class="swarm-config-item">
-              <span class="swarm-config-label">Strategy</span>
-              <span class="swarm-config-value">Market Maker</span>
-            </div>
-            <div class="swarm-config-item">
-              <span class="swarm-config-label">Agents</span>
-              <span class="swarm-config-value">Market Maker A (Buyer) + Market Maker B (Seller) + Taker Bot</span>
-            </div>
-            <div class="swarm-config-item">
-              <span class="swarm-config-label">Orders</span>
-              <span class="swarm-config-value">12 buy limits + 11 sell limits + 6 overlapping fills + 2 taker sweeps</span>
-            </div>
-            <div class="swarm-config-item">
-              <span class="swarm-config-label">Funding</span>
-              <span class="swarm-config-value">Auto-funded from testnet faucet (~600 TX per agent)</span>
-            </div>
-          </div>
-          <button class="swarm-deploy-btn" id="swarmDeployBtn" onclick="swarmDeploy()" disabled>
-            🚀 Deploy Swarm
-          </button>
-        </div>
-      </div>
-
-      <!-- Live Swarm Monitor (hidden until running) -->
-      <div class="swarm-monitor" id="swarmMonitor" style="display:none">
-        <div class="swarm-monitor-header">
-          <h3>🤖 Live Swarm — <span id="swarmMonitorTitle">TOKEN</span></h3>
-          <div class="swarm-monitor-header-right">
-            <span class="swarm-timer" id="swarmTimer">00:00</span>
-            <button class="swarm-stop-btn" onclick="swarmStop()">✕</button>
-          </div>
-        </div>
-
-        <!-- Agent Cards -->
-        <div class="swarm-agents">
-          <div class="swarm-agent-card agent-buyer">
-            <div class="agent-role">🟢 Market Maker A</div>
-            <div class="agent-label">BUYER</div>
-            <div class="agent-addr" id="swarmAddrA">Creating wallet...</div>
-            <div class="agent-stats">
-              <span>Balance: <b id="swarmBalA">--</b></span>
-              <span>Orders: <b id="swarmOrdersA">0</b></span>
-            </div>
-          </div>
-          <div class="swarm-agent-card agent-seller">
-            <div class="agent-role">🔴 Market Maker B</div>
-            <div class="agent-label">SELLER</div>
-            <div class="agent-addr" id="swarmAddrB">Creating wallet...</div>
-            <div class="agent-stats">
-              <span>Balance: <b id="swarmBalB">--</b></span>
-              <span>Orders: <b id="swarmOrdersB">0</b></span>
-            </div>
-          </div>
-          <div class="swarm-agent-card agent-taker">
-            <div class="agent-role">🟣 Taker Bot</div>
-            <div class="agent-label">MARKET TAKER</div>
-            <div class="agent-addr" id="swarmAddrTaker">Creating wallet...</div>
-            <div class="agent-stats">
-              <span>Balance: <b id="swarmBalTaker">--</b></span>
-              <span>Orders: <b id="swarmOrdersTaker">0</b></span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Live Orderbook + Progress split -->
-        <div class="swarm-book-row">
-          <!-- Orderbook -->
-          <div class="swarm-orderbook" id="swarmOrderbook">
-            <div class="swarm-ob-title">Live Orderbook</div>
-            <div class="swarm-ob-header">
-              <span>Price</span><span>Size</span><span>Total</span>
-            </div>
-            <div class="swarm-ob-asks" id="swarmObAsks">
-              <div class="swarm-ob-empty">Waiting for orders...</div>
-            </div>
-            <div class="swarm-ob-spread" id="swarmObSpread">
-              <span class="spread-label">Spread</span>
-              <span class="spread-value" id="swarmSpreadVal">--</span>
-            </div>
-            <div class="swarm-ob-bids" id="swarmObBids"></div>
-            <div class="swarm-ob-stats">
-              <span>Bids: <b id="swarmObBidCount">0</b></span>
-              <span>Asks: <b id="swarmObAskCount">0</b></span>
-              <span>Fills: <b id="swarmObFillCount">0</b></span>
-            </div>
-          </div>
-
-          <!-- Timeline -->
-          <div class="swarm-timeline-col">
-            <div class="swarm-progress">
-              <div class="swarm-phase" id="swarmPhase">Initializing...</div>
-              <div class="dex-demo-bar-wrap">
-                <div class="dex-demo-bar" id="swarmBar" style="width:0%"></div>
-              </div>
-            </div>
-            <div class="swarm-timeline" id="swarmTimeline">
-              <div class="demo-log-entry info">Swarm starting...</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Summary -->
-        <div class="swarm-summary" id="swarmSummary" style="display:none">
-          <div class="demo-summary-title">Swarm Complete!</div>
-          <div class="demo-summary-grid" id="swarmSummaryGrid"></div>
-        </div>
-      </div>
-
-      <!-- Swarm History -->
-      <div class="swarm-history">
-        <h3 class="swarm-section-title">Run History</h3>
-        <div id="swarmHistoryList">
-          <div class="swarm-history-empty">No swarm runs yet. Deploy your first swarm above!</div>
-        </div>
-      </div>
-
-    </div><!-- end swarm-wrap -->
+    <!-- swarmWrap kept as hidden placeholder for backward compat -->
+    <div class="swarm-wrap" id="swarmWrap" style="display:none"></div>
 
     <!-- ===== MANAGE TAB ===== -->
     <div class="manage-wrap" id="manageWrap">
@@ -1254,25 +981,182 @@
 
     <!-- AI Advisor Tab -->
     <div id="aiModeWrap" style="display:none">
-      <div class="ai-advisor-pane">
-        <div class="ai-advisor-header">AI Advisor</div>
-        <div class="ai-advisor-desc">Ask anything about tokens, smart features, compliance, trading, or the AI swarm.</div>
-        <div class="chat-messages" id="chatMessages">
-          <div class="chat-welcome">
-            <div class="chat-welcome-title">What can I help with?</div>
-            <div class="chat-welcome-sub">I know everything about this platform — token creation, compliance setup, AI swarm orchestration, DEX trading, and more.</div>
-            <div class="chat-starters">
-              <button class="chat-starter" onclick="chatFromStarter('What can I build with TXAI?')">What can I build?</button>
-              <button class="chat-starter" onclick="chatFromStarter('Help me design a token for my project')">Design a token</button>
-              <button class="chat-starter" onclick="chatFromStarter('How does the AI agent swarm work?')">How does the swarm work?</button>
-              <button class="chat-starter" onclick="chatFromStarter('What smart token features should I use?')">Token features guide</button>
+      <!-- AI sub-tab toggle -->
+      <div class="create-mode-toggle" style="margin-bottom:18px">
+        <button class="create-mode-btn active" id="aiModeAdvisor" onclick="setAiMode('advisor')">Advisor</button>
+        <button class="create-mode-btn" id="aiModeSwarm" onclick="setAiMode('swarm')">Agent Swarm</button>
+      </div>
+
+      <!-- Advisor sub-pane -->
+      <div id="aiAdvisorPane">
+        <div class="ai-advisor-pane">
+          <div class="ai-advisor-header">AI Advisor</div>
+          <div class="ai-advisor-desc">Ask anything about tokens, smart features, compliance, trading, or the AI swarm.</div>
+          <div class="chat-messages" id="chatMessages">
+            <div class="chat-welcome">
+              <div class="chat-welcome-title">What can I help with?</div>
+              <div class="chat-welcome-sub">I know everything about this platform — token creation, compliance setup, AI swarm orchestration, DEX trading, and more.</div>
+              <div class="chat-starters">
+                <button class="chat-starter" onclick="chatFromStarter('What can I build with TXAI?')">What can I build?</button>
+                <button class="chat-starter" onclick="chatFromStarter('Help me design a token for my project')">Design a token</button>
+                <button class="chat-starter" onclick="chatFromStarter('How does the AI agent swarm work?')">How does the swarm work?</button>
+                <button class="chat-starter" onclick="chatFromStarter('What smart token features should I use?')">Token features guide</button>
+              </div>
+            </div>
+          </div>
+          <div class="chat-input-row">
+            <input type="text" class="chat-input" id="chatInput" placeholder="Ask about tokens, features, strategy..." onkeydown="if(event.key==='Enter')sendChatMessage()">
+            <button class="chat-send-btn" id="chatSendBtn" onclick="sendChatMessage()">→</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Swarm sub-pane (moved from standalone tab) -->
+      <div id="aiSwarmPane" style="display:none">
+
+        <!-- Hero Section -->
+        <div class="swarm-hero">
+          <div class="swarm-hero-icon">🤖</div>
+          <h2 class="swarm-hero-title">AI Agent Swarms on Blockchain</h2>
+          <p class="swarm-hero-subtitle">
+            Deploy coordinated AI agents that execute real on-chain trades autonomously.
+            Each agent has its own wallet, funds itself, and operates independently on the Coreum DEX.
+          </p>
+          <div class="swarm-hero-stats">
+            <div class="swarm-hero-stat">
+              <span class="swarm-hero-stat-value">3</span>
+              <span class="swarm-hero-stat-label">Agent Types</span>
+            </div>
+            <div class="swarm-hero-stat">
+              <span class="swarm-hero-stat-value">23+</span>
+              <span class="swarm-hero-stat-label">Orders Per Run</span>
+            </div>
+            <div class="swarm-hero-stat">
+              <span class="swarm-hero-stat-value">100%</span>
+              <span class="swarm-hero-stat-label">On-Chain</span>
             </div>
           </div>
         </div>
-        <div class="chat-input-row">
-          <input type="text" class="chat-input" id="chatInput" placeholder="Ask about tokens, features, strategy..." onkeydown="if(event.key==='Enter')sendChatMessage()">
-          <button class="chat-send-btn" id="chatSendBtn" onclick="sendChatMessage()">→</button>
+
+        <!-- Swarm Templates -->
+        <div class="swarm-templates">
+          <h3 class="swarm-section-title">Swarm Strategies</h3>
+          <div class="swarm-template-grid">
+            <div class="swarm-template-card active" data-template="market-maker" onclick="swarmSelectTemplate('market-maker')">
+              <div class="swarm-card-accent green"></div>
+              <div class="swarm-card-icon">📈</div>
+              <h4>Market Maker Swarm</h4>
+              <p class="swarm-card-desc">3 AI agents create a full orderbook for your token — buy walls, sell walls, overlapping fills, and taker sweeps. Real liquidity in minutes.</p>
+              <div class="swarm-card-meta"><span>🤖 3 Agents</span><span>⏱️ ~3 min</span><span>🔗 Coreum DEX</span></div>
+              <button class="swarm-launch-btn">Launch Swarm</button>
+            </div>
+            <div class="swarm-template-card soon" data-template="nft-minter" onclick="swarmSelectTemplate('nft-minter')">
+              <div class="swarm-card-accent purple"></div>
+              <span class="swarm-soon-badge">COMING SOON</span>
+              <div class="swarm-card-icon">🎨</div>
+              <h4>Smart NFT Swarm</h4>
+              <p class="swarm-card-desc">AI agents mint, list, and trade NFT collections autonomously. Dynamic pricing, rarity-based strategies, and automated floor management.</p>
+              <div class="swarm-card-meta"><span>🤖 4 Agents</span><span>⏱️ ~5 min</span><span>🔗 Coreum NFT</span></div>
+            </div>
+            <div class="swarm-template-card soon" data-template="arbitrage" onclick="swarmSelectTemplate('arbitrage')">
+              <div class="swarm-card-accent amber"></div>
+              <span class="swarm-soon-badge">COMING SOON</span>
+              <div class="swarm-card-icon">⚡</div>
+              <h4>Arbitrage Swarm</h4>
+              <p class="swarm-card-desc">Multi-agent cross-pair arbitrage. Monitors price discrepancies across trading pairs and executes profitable trades in real-time.</p>
+              <div class="swarm-card-meta"><span>🤖 5 Agents</span><span>⏱️ Continuous</span><span>🔗 Multi-Pair</span></div>
+            </div>
+            <div class="swarm-template-card soon" data-template="sentiment" onclick="swarmSelectTemplate('sentiment')">
+              <div class="swarm-card-accent blue"></div>
+              <span class="swarm-soon-badge">COMING SOON</span>
+              <div class="swarm-card-icon">🧠</div>
+              <h4>Sentiment Trader</h4>
+              <p class="swarm-card-desc">AI-powered sentiment analysis drives autonomous trading decisions. Agents analyze market signals and coordinate entries and exits.</p>
+              <div class="swarm-card-meta"><span>🤖 3 Agents</span><span>⏱️ Continuous</span><span>🔗 AI + DEX</span></div>
+            </div>
+          </div>
         </div>
+
+        <!-- Launch Configuration Panel -->
+        <div class="swarm-launch-panel" id="swarmLaunchPanel" style="display:none">
+          <h3 class="swarm-section-title">Configure & Deploy</h3>
+          <div class="swarm-launch-config">
+            <div class="swarm-config-row">
+              <label>Token Denom</label>
+              <div class="swarm-config-input-row">
+                <input type="text" id="swarmTokenDenom" placeholder="e.g. mytoken-testcore1abc..." class="swarm-input">
+                <button class="swarm-load-btn" onclick="swarmLoadToken()">Load Token</button>
+              </div>
+            </div>
+            <div id="swarmTokenInfo" style="display:none"></div>
+            <div class="swarm-config-summary">
+              <div class="swarm-config-item"><span class="swarm-config-label">Strategy</span><span class="swarm-config-value">Market Maker</span></div>
+              <div class="swarm-config-item"><span class="swarm-config-label">Agents</span><span class="swarm-config-value">Market Maker A (Buyer) + Market Maker B (Seller) + Taker Bot</span></div>
+              <div class="swarm-config-item"><span class="swarm-config-label">Orders</span><span class="swarm-config-value">12 buy limits + 11 sell limits + 6 overlapping fills + 2 taker sweeps</span></div>
+              <div class="swarm-config-item"><span class="swarm-config-label">Funding</span><span class="swarm-config-value">Auto-funded from testnet faucet (~600 TX per agent)</span></div>
+            </div>
+            <button class="swarm-deploy-btn" id="swarmDeployBtn" onclick="swarmDeploy()" disabled>Deploy Swarm</button>
+          </div>
+        </div>
+
+        <!-- Live Swarm Monitor -->
+        <div class="swarm-monitor" id="swarmMonitor" style="display:none">
+          <div class="swarm-monitor-header">
+            <h3>🤖 Live Swarm — <span id="swarmMonitorTitle">TOKEN</span></h3>
+            <div class="swarm-monitor-header-right">
+              <span class="swarm-timer" id="swarmTimer">00:00</span>
+              <button class="swarm-stop-btn" onclick="swarmStop()">✕</button>
+            </div>
+          </div>
+          <div class="swarm-agents">
+            <div class="swarm-agent-card agent-buyer">
+              <div class="agent-role">🟢 Market Maker A</div>
+              <div class="agent-label">BUYER</div>
+              <div class="agent-addr" id="swarmAddrA">Creating wallet...</div>
+              <div class="agent-stats"><span>Balance: <b id="swarmBalA">--</b></span><span>Orders: <b id="swarmOrdersA">0</b></span></div>
+            </div>
+            <div class="swarm-agent-card agent-seller">
+              <div class="agent-role">🔴 Market Maker B</div>
+              <div class="agent-label">SELLER</div>
+              <div class="agent-addr" id="swarmAddrB">Creating wallet...</div>
+              <div class="agent-stats"><span>Balance: <b id="swarmBalB">--</b></span><span>Orders: <b id="swarmOrdersB">0</b></span></div>
+            </div>
+            <div class="swarm-agent-card agent-taker">
+              <div class="agent-role">🟣 Taker Bot</div>
+              <div class="agent-label">MARKET TAKER</div>
+              <div class="agent-addr" id="swarmAddrTaker">Creating wallet...</div>
+              <div class="agent-stats"><span>Balance: <b id="swarmBalTaker">--</b></span><span>Orders: <b id="swarmOrdersTaker">0</b></span></div>
+            </div>
+          </div>
+          <div class="swarm-book-row">
+            <div class="swarm-orderbook" id="swarmOrderbook">
+              <div class="swarm-ob-title">Live Orderbook</div>
+              <div class="swarm-ob-header"><span>Price</span><span>Size</span><span>Total</span></div>
+              <div class="swarm-ob-asks" id="swarmObAsks"><div class="swarm-ob-empty">Waiting for orders...</div></div>
+              <div class="swarm-ob-spread" id="swarmObSpread"><span class="spread-label">Spread</span><span class="spread-value" id="swarmSpreadVal">--</span></div>
+              <div class="swarm-ob-bids" id="swarmObBids"></div>
+              <div class="swarm-ob-stats"><span>Bids: <b id="swarmObBidCount">0</b></span><span>Asks: <b id="swarmObAskCount">0</b></span><span>Fills: <b id="swarmObFillCount">0</b></span></div>
+            </div>
+            <div class="swarm-timeline-col">
+              <div class="swarm-progress">
+                <div class="swarm-phase" id="swarmPhase">Initializing...</div>
+                <div class="dex-demo-bar-wrap"><div class="dex-demo-bar" id="swarmBar" style="width:0%"></div></div>
+              </div>
+              <div class="swarm-timeline" id="swarmTimeline"><div class="demo-log-entry info">Swarm starting...</div></div>
+            </div>
+          </div>
+          <div class="swarm-summary" id="swarmSummary" style="display:none">
+            <div class="demo-summary-title">Swarm Complete!</div>
+            <div class="demo-summary-grid" id="swarmSummaryGrid"></div>
+          </div>
+        </div>
+
+        <!-- Swarm History -->
+        <div class="swarm-history">
+          <h3 class="swarm-section-title">Run History</h3>
+          <div id="swarmHistoryList"><div class="swarm-history-empty">No swarm runs yet. Deploy your first swarm above!</div></div>
+        </div>
+
       </div>
     </div>
 
@@ -1305,7 +1189,7 @@
 <script src="js/config.js?v=11"></script>
 <script src="js/wallet.js?v=10"></script>
 <script src="js/chat.js?v=10"></script>
-<script src="js/create-token.js?v=14"></script>
+<script src="js/create-token.js?v=15"></script>
 <script src="js/create-nft.js?v=10"></script>
 <script src="js/tradingview-chart.js?v=1"></script>
 <script src="js/ws-client.js?v=1"></script>

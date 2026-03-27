@@ -2,13 +2,11 @@
 
 /* Tab Switching */
 function switchTab(tab){
-  const tabs = ['create','manage','dex','swarm','nft','subs','ai'];
+  const tabs = ['create','manage','dex','subs','ai'];
   const wraps = {
     create: document.getElementById('createModeWrap'),
     manage: document.getElementById('manageWrap'),
     dex: document.getElementById('dexWrap'),
-    swarm: document.getElementById('swarmWrap'),
-    nft: document.getElementById('nftWrap'),
     subs: document.getElementById('subsWrap'),
     ai: document.getElementById('aiModeWrap'),
   };
@@ -23,7 +21,7 @@ function switchTab(tab){
     else w.classList.remove('show');
   });
 
-  // Reset container width when leaving DEX/Swarm
+  // Reset container width when leaving DEX
   const container = wraps.dex?.closest('.container');
   if(container) container.style.maxWidth = '';
   chatMode = false;
@@ -37,10 +35,6 @@ function switchTab(tab){
     if(!dexAgentWallet) dexFetchWallet();
     if(!document.getElementById('dexPairSelect').options.length || document.getElementById('dexPairSelect').options.length <= 1) dexFetchPairs();
     setTimeout(() => dexDrawDepthChart(), 100);
-  } else if(tab === 'swarm'){
-    wraps.swarm.classList.add('show');
-  } else if(tab === 'nft'){
-    wraps.nft.classList.add('show');
   } else if(tab === 'manage'){
     wraps.manage.classList.add('show');
     const manageInput = document.getElementById('manageTokenDenom');
@@ -52,7 +46,6 @@ function switchTab(tab){
       }
     }
     if(manageInput) manageInput.focus();
-    // Load permissions/grants
     if(typeof authLoadGrants === 'function') authLoadGrants();
   } else if(tab === 'subs'){
     wraps.subs.classList.add('show');
@@ -62,10 +55,19 @@ function switchTab(tab){
   } else {
     wraps.create.style.display = '';
   }
-  // Scroll active tab into view
   const activeTab = document.querySelector('.chat-tab.active');
   if(activeTab) activeTab.scrollIntoView({behavior:'smooth',block:'nearest',inline:'nearest'});
   if(typeof showAgentBar === 'function') showAgentBar(tab);
+}
+
+/* AI sub-tab toggle: Advisor / Agent Swarm */
+let aiMode = 'advisor';
+function setAiMode(mode){
+  aiMode = mode;
+  document.getElementById('aiModeAdvisor').classList.toggle('active', mode === 'advisor');
+  document.getElementById('aiModeSwarm').classList.toggle('active', mode === 'swarm');
+  document.getElementById('aiAdvisorPane').style.display = mode === 'advisor' ? '' : 'none';
+  document.getElementById('aiSwarmPane').style.display = mode === 'swarm' ? '' : 'none';
 }
 
 
@@ -190,16 +192,21 @@ function resetDeployBtns(){
   if(cb) cb.disabled = false;
 }
 
-/* Create Mode Toggle: Quick (AI) vs Custom (manual) */
+/* Create Mode Toggle: Token / NFT / AI Prompt */
 let createMode = 'custom';
 function setCreateMode(mode){
   createMode = mode;
   document.getElementById('createModeQuick').classList.toggle('active', mode === 'quick');
   document.getElementById('createModeCustom').classList.toggle('active', mode === 'custom');
+  const nftBtn = document.getElementById('createModeNft');
+  if(nftBtn) nftBtn.classList.toggle('active', mode === 'nft');
   document.getElementById('quickCreateWrap').style.display = mode === 'quick' ? '' : 'none';
   document.getElementById('customCreateWrap').style.display = mode === 'custom' ? '' : 'none';
+  const nftWrap = document.getElementById('nftCreateWrap');
+  if(nftWrap) nftWrap.style.display = mode === 'nft' ? '' : 'none';
   if(mode === 'quick') document.getElementById('demoInput').focus();
   if(mode === 'custom') document.getElementById('cpName').focus();
+  if(mode === 'nft') { const el = document.getElementById('nftSymbol'); if(el) el.focus(); }
 }
 
 /* Customize Panel (legacy toggle — kept for compatibility) */
