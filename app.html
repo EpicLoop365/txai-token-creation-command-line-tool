@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/styles.css?v=10">
+<link rel="stylesheet" href="css/styles.css?v=11">
 </head>
 <body>
 
@@ -117,6 +117,7 @@
 
     <div class="demo-error" id="demoError"></div>
 
+    <div class="create-split-layout" id="createSplitLayout">
     <div class="demo-input-wrap reveal live-glow" id="demoInputWrap">
 
       <!-- Creation Mode Picker -->
@@ -258,6 +259,7 @@
       <div class="demo-disclaimer visible" id="demoDisclaimer">Tokens are deployed on TX testnet. No real value.</div>
     </div>
 
+    <!-- Sidebar progress panel (appears alongside input when deploying) -->
     <div class="demo-processing" id="demoProcessing">
       <div class="processing-header">
         <div class="processing-spinner"></div>
@@ -265,6 +267,8 @@
       </div>
       <div class="processing-stream" id="demoStream"></div>
     </div>
+
+    </div><!-- end createSplitLayout -->
 
     <div class="token-card" id="tokenCard">
       <div class="tc-header">

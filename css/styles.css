@@ -91,6 +91,24 @@ nav .gh-btn svg{width:16px;height:16px}
 }
 .preset-btn:hover{border-color:var(--purple);color:var(--purple);background:rgba(124,109,250,.08)}
 
+/* Split Layout: input left + progress sidebar right */
+.create-split-layout{
+  display:flex;gap:20px;align-items:flex-start;
+}
+.create-split-layout .demo-input-wrap{flex:1;min-width:0}
+.create-split-layout .demo-processing{
+  flex:0 0 380px;position:sticky;top:90px;
+  max-height:calc(100vh - 120px);overflow-y:auto;
+  border-left:2px solid var(--purple);margin-bottom:0;
+}
+.create-split-layout .demo-processing::-webkit-scrollbar{width:4px}
+.create-split-layout .demo-processing::-webkit-scrollbar-track{background:transparent}
+.create-split-layout .demo-processing::-webkit-scrollbar-thumb{background:var(--border-light);border-radius:4px}
+@media(max-width:900px){
+  .create-split-layout{flex-direction:column}
+  .create-split-layout .demo-processing{flex:none;width:100%;position:static;max-height:none;border-left:none}
+}
+
 /* Processing */
 .demo-processing{
   background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);
