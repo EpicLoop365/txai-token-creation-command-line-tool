@@ -3585,6 +3585,54 @@ app.post("/api/smart-airdrop/execute", requireFlag("smart_airdrop"), async (req,
 
   const { networkName, network } = getNetwork(req);
 
+  // ── PREFLIGHT SAFETY CHECK ───────────────────────────────────────────
+  // Run compliance checks BEFORE sending any tokens
+  try {
+    const preflight = await runPreflight({
+      txType: "airdrop",
+      sender: sender || "agent",
+      params: {
+        denom,
+        recipients,
+      },
+      network: networkName,
+    });
+
+    airdropLog.info("Execute preflight completed", {
+      correlationId: req.correlationId,
+      data: {
+        canProceed: preflight.canProceed,
+        errors: preflight.summary.errors,
+        warnings: preflight.summary.warnings,
+        totalChecks: preflight.summary.totalChecks,
+        recipientCount: recipients.length,
+      },
+    });
+
+    // Block execution if preflight has errors
+    if (!preflight.canProceed && preflight.summary.errors > 0) {
+      const errorChecks = preflight.checks
+        .filter((c: any) => c.severity === "error")
+        .map((c: any) => c.message || c.checkId);
+      airdropLog.warn("Execute blocked by preflight", {
+        correlationId: req.correlationId,
+        data: { errors: errorChecks },
+      });
+      res.status(400).json({
+        error: "Preflight checks failed. Airdrop cannot proceed.",
+        preflight,
+      });
+      return;
+    }
+  } catch (err) {
+    airdropLog.error("Preflight error during execute", {
+      correlationId: req.correlationId,
+      error: err as Error,
+    });
+    // If preflight itself fails, log but allow execution to continue
+    // (preflight failure shouldn't block all airdrops)
+  }
+
   // Setup SSE — disable ALL proxy buffering
   res.writeHead(200, {
     "Content-Type": "text/event-stream",
