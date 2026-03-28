@@ -42,7 +42,7 @@ function smartAirdropClose() {
 }
 
 function _saResetState() {
-  _saState = { step: 1, parsed: null, resolved: null, recipients: [], csvFile: null, executing: false, showHistory: false, dryRunResult: null, showScheduleForm: false };
+  _saState = { step: 1, parsed: null, resolved: null, recipients: [], csvFile: null, executing: false, showHistory: false, dryRunResult: null, showScheduleForm: false, exclusions: [], vestingSchedule: null, lastAirdropId: null };
 }
 
 /* ── Main HTML ── */
@@ -54,6 +54,7 @@ function _saBuildHTML() {
       '<div class="sa-header-actions">' +
         '<button class="sa-btn sa-btn-sm sa-btn-secondary" onclick="_saShowHistory()" title="Airdrop History">History</button>' +
         '<button class="sa-btn sa-btn-sm sa-btn-secondary" onclick="_saShowSchedules()" title="Scheduled Airdrops">Scheduled</button>' +
+        '<button class="sa-btn sa-btn-sm sa-btn-secondary" onclick="_saShowVestingPlans()" title="Vesting Plans">Vesting</button>' +
         '<button class="sa-close-btn" onclick="smartAirdropClose()">&times;</button>' +
       '</div>' +
     '</div>' +
@@ -271,6 +272,7 @@ function _saBuildStep2() {
         _saSummaryItem('Gas Estimate', r.gasEstimate || 'N/A') +
         _saSummaryItem('Invalid Removed', r.invalidCount || 0) +
         _saSummaryItem('Duplicates Removed', r.duplicatesRemoved || 0) +
+        _saSummaryItem('Excluded', r.excludedCount || (_saState.exclusions || []).length || 0) +
       '</div>' +
     '</div>';
 
@@ -285,6 +287,33 @@ function _saBuildStep2() {
         '</div>';
       });
       html += '</div>';
+    }
+
+    // Exclusion List section
+    html += '<div class="sa-exclusion-section">' +
+      '<div class="sa-section-label">Exclusion List' +
+        ((_saState.exclusions || []).length > 0 ? ' (' + _saState.exclusions.length + ' excluded)' : '') +
+      '</div>' +
+      '<textarea class="sa-exclusion-textarea" id="saExclusionInput" rows="3" placeholder="Paste addresses to exclude (one per line)..."></textarea>' +
+      '<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">' +
+        '<button class="sa-btn sa-btn-sm sa-btn-secondary" onclick="_saAddExclusions()">Add to Exclusions</button>' +
+        '<button class="sa-btn sa-btn-sm sa-btn-secondary" onclick="_saExcludeKnownExchanges()">Exclude Known Exchanges</button>' +
+        '<button class="sa-btn sa-btn-sm sa-btn-secondary" onclick="_saClearExclusions()">Clear Exclusions</button>' +
+      '</div>';
+    if ((_saState.exclusions || []).length > 0) {
+      html += '<div class="sa-exclusion-tags">';
+      _saState.exclusions.forEach(function(addr, idx) {
+        var short = addr.length > 20 ? addr.slice(0, 10) + '...' + addr.slice(-6) : addr;
+        html += '<span class="sa-exclusion-tag" title="' + _saEsc(addr) + '">' + _saEsc(short) +
+          '<button onclick="_saRemoveExclusion(' + idx + ')">&times;</button></span>';
+      });
+      html += '</div>';
+    }
+    html += '</div>';
+
+    // Excluded count in summary
+    if (r.excludedCount && r.excludedCount > 0) {
+      // Already included in the summary grid above — show inline note
     }
 
     // Preflight results
@@ -527,6 +556,59 @@ function _saBuildStep3() {
     '</div>' +
     '<div class="sa-final-summary" id="saFinalSummary" style="display:none"></div>' +
 
+    // Vesting Options section
+    '<div class="sa-vesting-section" id="saVestingSection">' +
+      '<div class="sa-section-label" style="cursor:pointer" onclick="_saToggleVesting()">Vesting Options <span id="saVestingToggleIcon">+</span></div>' +
+      '<div id="saVestingOptions" style="display:none">' +
+        '<div class="sa-vesting-radios" style="display:flex;flex-wrap:wrap;gap:10px;margin:10px 0">' +
+          '<label class="sa-vesting-option"><input type="radio" name="saVestType" value="none" checked onchange="_saVestTypeChanged()"> No vesting</label>' +
+          '<label class="sa-vesting-option"><input type="radio" name="saVestType" value="cliff" onchange="_saVestTypeChanged()"> Cliff</label>' +
+          '<label class="sa-vesting-option"><input type="radio" name="saVestType" value="linear" onchange="_saVestTypeChanged()"> Linear</label>' +
+          '<label class="sa-vesting-option"><input type="radio" name="saVestType" value="cliff_linear" onchange="_saVestTypeChanged()"> Cliff + Linear</label>' +
+          '<label class="sa-vesting-option"><input type="radio" name="saVestType" value="milestone" onchange="_saVestTypeChanged()"> Custom Milestones</label>' +
+        '</div>' +
+        '<div id="saVestCliffFields" style="display:none">' +
+          '<label class="sa-form-label">Cliff Date:</label>' +
+          '<input type="date" class="sa-delivery-input" id="saVestCliffDate">' +
+        '</div>' +
+        '<div id="saVestLinearFields" style="display:none">' +
+          '<label class="sa-form-label">Start Date:</label>' +
+          '<input type="date" class="sa-delivery-input" id="saVestStartDate">' +
+          '<label class="sa-form-label">End Date:</label>' +
+          '<input type="date" class="sa-delivery-input" id="saVestEndDate">' +
+          '<label class="sa-form-label">Interval:</label>' +
+          '<select class="sa-delivery-input" id="saVestInterval">' +
+            '<option value="1">Monthly</option>' +
+            '<option value="3">Quarterly</option>' +
+            '<option value="6">Semi-annual</option>' +
+            '<option value="12">Annual</option>' +
+          '</select>' +
+        '</div>' +
+        '<div id="saVestCliffLinearFields" style="display:none">' +
+          '<label class="sa-form-label">Cliff Date:</label>' +
+          '<input type="date" class="sa-delivery-input" id="saVestCLCliffDate">' +
+          '<label class="sa-form-label">Linear End Date:</label>' +
+          '<input type="date" class="sa-delivery-input" id="saVestCLEndDate">' +
+          '<label class="sa-form-label">Interval:</label>' +
+          '<select class="sa-delivery-input" id="saVestCLInterval">' +
+            '<option value="1">Monthly</option>' +
+            '<option value="3">Quarterly</option>' +
+            '<option value="6">Semi-annual</option>' +
+            '<option value="12">Annual</option>' +
+          '</select>' +
+        '</div>' +
+        '<div id="saVestMilestoneFields" style="display:none">' +
+          '<div id="saVestMilestoneRows"></div>' +
+          '<button class="sa-btn sa-btn-sm sa-btn-secondary" onclick="_saAddMilestone()" style="margin-top:8px">+ Add Milestone</button>' +
+          '<div id="saVestMilestoneTotal" style="font-size:.82rem;color:#9ca3af;margin-top:4px"></div>' +
+        '</div>' +
+        '<div style="margin-top:12px">' +
+          '<button class="sa-btn sa-btn-sm sa-btn-secondary" id="saVestPreviewBtn" onclick="_saPreviewVesting()" style="display:none">Preview Vesting Timeline</button>' +
+        '</div>' +
+        '<div id="saVestTimeline" style="display:none;margin-top:12px"></div>' +
+      '</div>' +
+    '</div>' +
+
     // Schedule form (hidden by default)
     '<div class="sa-schedule-form" id="saScheduleForm" style="display:none">' +
       '<div class="sa-section-label">Schedule Airdrop</div>' +
@@ -562,7 +644,7 @@ function _saBuildStep3() {
     '<div class="smart-airdrop-actions" id="saStep3Actions">' +
       '<button class="sa-btn sa-btn-secondary" id="saBackBtn3" onclick="_saGoToStep(2)">Back</button>' +
       '<button class="sa-btn sa-btn-secondary" id="saScheduleBtn" onclick="_saToggleSchedule()">Schedule Instead</button>' +
-      '<button class="sa-btn sa-btn-execute" id="saExecuteBtn" onclick="_saExecute()">Execute Airdrop</button>' +
+      '<button class="sa-btn sa-btn-execute" id="saExecuteBtn" onclick="_saExecuteOrVested()">Execute Airdrop</button>' +
     '</div>' +
   '</div>';
 
@@ -635,6 +717,15 @@ async function _saExecute() {
       }
     }
 
+    // Try to fetch the latest airdrop ID for receipt link
+    try {
+      var histRes = await fetch(API_URL + '/api/smart-airdrop/history');
+      var histData = await histRes.json();
+      if (histData.history && histData.history.length > 0) {
+        _saState.lastAirdropId = histData.history[0].id;
+      }
+    } catch (e) { /* ignore */ }
+
     // Final summary
     _saShowFinalSummary(totalSent, totalFailed);
   } catch (err) {
@@ -682,7 +773,12 @@ function _saShowFinalSummary(sent, failed, errorMsg) {
   if (errorMsg) {
     html += '<div class="sa-final-error">' + _saEsc(errorMsg) + '</div>';
   }
-  html += '<div style="margin-top:12px"><button class="sa-btn sa-btn-secondary" onclick="smartAirdropClose()">Close</button></div>';
+  html += '<div style="margin-top:12px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">';
+  if (_saState.lastAirdropId) {
+    html += '<a class="sa-btn sa-btn-secondary sa-receipt-link" href="' + API_URL + '/receipt/' + encodeURIComponent(_saState.lastAirdropId) + '" target="_blank" rel="noopener">View Receipt</a>';
+    html += '<button class="sa-btn sa-btn-secondary" onclick="_saCopyReceiptLink()">Copy Receipt Link</button>';
+  }
+  html += '<button class="sa-btn sa-btn-secondary" onclick="smartAirdropClose()">Close</button></div>';
   el.innerHTML = html;
 }
 
@@ -964,6 +1060,7 @@ async function _saShowHistoryDetail(id) {
     html += '<div class="smart-airdrop-actions" style="margin-top:16px">' +
       '<button class="sa-btn sa-btn-secondary" onclick="_saShowHistory()">Back to History</button>' +
       '<button class="sa-btn sa-btn-secondary" onclick="_saExportCsv(\'' + rec.id + '\')">Export CSV</button>' +
+      '<a class="sa-btn sa-btn-secondary sa-receipt-link" href="' + API_URL + '/receipt/' + encodeURIComponent(rec.id) + '" target="_blank" rel="noopener">View Receipt</a>' +
       '<button class="sa-btn sa-btn-primary" onclick="_saShareProof(\'' + rec.id + '\')">Share Proof</button>' +
     '</div></div>';
 
@@ -1003,6 +1100,372 @@ async function _saShareProof(id) {
     alert('Proof copied to clipboard!');
   } catch (err) {
     alert('Failed to copy proof: ' + err.message);
+  }
+}
+
+/* ── Feature 4: Exclusion List ── */
+
+function _saAddExclusions() {
+  var input = document.getElementById('saExclusionInput');
+  if (!input || !input.value.trim()) return;
+  var lines = input.value.split(/[\r\n,]+/).map(function(l) { return l.trim(); }).filter(Boolean);
+  var existing = new Set(_saState.exclusions || []);
+  lines.forEach(function(addr) {
+    if ((addr.startsWith('core1') || addr.startsWith('testcore1')) && !existing.has(addr)) {
+      existing.add(addr);
+    }
+  });
+  _saState.exclusions = Array.from(existing);
+  input.value = '';
+  _saReResolveWithExclusions();
+}
+
+function _saExcludeKnownExchanges() {
+  // Placeholder exchange addresses
+  var exchanges = [
+    'core1exchangeplaceholder1',
+    'core1exchangeplaceholder2',
+    'core1exchangeplaceholder3',
+  ];
+  var existing = new Set(_saState.exclusions || []);
+  exchanges.forEach(function(addr) { existing.add(addr); });
+  _saState.exclusions = Array.from(existing);
+  _saReResolveWithExclusions();
+}
+
+function _saClearExclusions() {
+  _saState.exclusions = [];
+  _saReResolveWithExclusions();
+}
+
+function _saRemoveExclusion(idx) {
+  _saState.exclusions.splice(idx, 1);
+  _saReResolveWithExclusions();
+}
+
+function _saReResolveWithExclusions() {
+  // Update the parsed intent with exclusion addresses and re-render
+  if (_saState.parsed) {
+    _saState.parsed.excludeAddresses = _saState.exclusions;
+  }
+  // Re-render step 2
+  _saGoToStep(2);
+}
+
+/* ── Feature 5: Receipt Link ── */
+
+function _saCopyReceiptLink() {
+  if (!_saState.lastAirdropId) return;
+  var url = API_URL + '/receipt/' + encodeURIComponent(_saState.lastAirdropId);
+  navigator.clipboard.writeText(url).then(function() {
+    alert('Receipt link copied to clipboard!');
+  }).catch(function(err) {
+    alert('Failed to copy: ' + err.message);
+  });
+}
+
+/* ── Feature 6: Vesting UI ── */
+
+function _saToggleVesting() {
+  var opts = document.getElementById('saVestingOptions');
+  var icon = document.getElementById('saVestingToggleIcon');
+  if (!opts) return;
+  var visible = opts.style.display !== 'none';
+  opts.style.display = visible ? 'none' : 'block';
+  if (icon) icon.textContent = visible ? '+' : '-';
+}
+
+function _saVestTypeChanged() {
+  var radios = document.querySelectorAll('input[name="saVestType"]');
+  var val = 'none';
+  radios.forEach(function(r) { if (r.checked) val = r.value; });
+
+  var fields = ['saVestCliffFields', 'saVestLinearFields', 'saVestCliffLinearFields', 'saVestMilestoneFields'];
+  fields.forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+
+  var previewBtn = document.getElementById('saVestPreviewBtn');
+  var execBtn = document.getElementById('saExecuteBtn');
+
+  if (val === 'cliff') {
+    document.getElementById('saVestCliffFields').style.display = 'block';
+  } else if (val === 'linear') {
+    document.getElementById('saVestLinearFields').style.display = 'block';
+  } else if (val === 'cliff_linear') {
+    document.getElementById('saVestCliffLinearFields').style.display = 'block';
+  } else if (val === 'milestone') {
+    document.getElementById('saVestMilestoneFields').style.display = 'block';
+    if (!document.getElementById('saVestMilestoneRows').children.length) {
+      _saAddMilestone();
+    }
+  }
+
+  if (previewBtn) previewBtn.style.display = val !== 'none' ? 'inline-block' : 'none';
+  if (execBtn) execBtn.textContent = val !== 'none' ? 'Execute Vested Airdrop' : 'Execute Airdrop';
+
+  // Clear timeline when type changes
+  var timeline = document.getElementById('saVestTimeline');
+  if (timeline) timeline.style.display = 'none';
+}
+
+var _saMilestoneCount = 0;
+
+function _saAddMilestone() {
+  var container = document.getElementById('saVestMilestoneRows');
+  if (!container) return;
+  _saMilestoneCount++;
+  var row = document.createElement('div');
+  row.className = 'sa-vesting-milestone';
+  row.id = 'saMs' + _saMilestoneCount;
+  row.innerHTML =
+    '<input type="date" class="sa-delivery-input" style="flex:1" data-ms-date>' +
+    '<input type="number" class="sa-delivery-input" style="width:80px" placeholder="%" min="0" max="100" data-ms-pct onchange="_saUpdateMilestoneTotal()">' +
+    '<button class="sa-row-remove" onclick="this.parentElement.remove();_saUpdateMilestoneTotal()">&times;</button>';
+  container.appendChild(row);
+  _saUpdateMilestoneTotal();
+}
+
+function _saUpdateMilestoneTotal() {
+  var pctInputs = document.querySelectorAll('[data-ms-pct]');
+  var total = 0;
+  pctInputs.forEach(function(inp) { total += parseFloat(inp.value) || 0; });
+  var el = document.getElementById('saVestMilestoneTotal');
+  if (el) {
+    el.textContent = 'Total: ' + total + '% ' + (Math.abs(total - 100) < 0.01 ? '(OK)' : '(must equal 100%)');
+    el.style.color = Math.abs(total - 100) < 0.01 ? '#06d6a0' : '#ef4444';
+  }
+}
+
+function _saGetVestingSchedule() {
+  var radios = document.querySelectorAll('input[name="saVestType"]');
+  var val = 'none';
+  radios.forEach(function(r) { if (r.checked) val = r.value; });
+
+  if (val === 'none') return null;
+
+  var schedule = { type: val };
+
+  if (val === 'cliff') {
+    var d = document.getElementById('saVestCliffDate');
+    if (!d || !d.value) { alert('Select a cliff date.'); return undefined; }
+    schedule.cliffDate = new Date(d.value).toISOString();
+  } else if (val === 'linear') {
+    var s = document.getElementById('saVestStartDate');
+    var e = document.getElementById('saVestEndDate');
+    var iv = document.getElementById('saVestInterval');
+    if (!s || !s.value || !e || !e.value) { alert('Select start and end dates.'); return undefined; }
+    schedule.startDate = new Date(s.value).toISOString();
+    schedule.endDate = new Date(e.value).toISOString();
+    schedule.intervalMonths = parseInt(iv ? iv.value : '1');
+  } else if (val === 'cliff_linear') {
+    var cd = document.getElementById('saVestCLCliffDate');
+    var ed = document.getElementById('saVestCLEndDate');
+    var civ = document.getElementById('saVestCLInterval');
+    if (!cd || !cd.value || !ed || !ed.value) { alert('Select cliff date and linear end date.'); return undefined; }
+    schedule.cliffDate = new Date(cd.value).toISOString();
+    schedule.linearStartDate = new Date(cd.value).toISOString();
+    schedule.linearEndDate = new Date(ed.value).toISOString();
+    schedule.intervalMonths = parseInt(civ ? civ.value : '1');
+  } else if (val === 'milestone') {
+    var dateInputs = document.querySelectorAll('[data-ms-date]');
+    var pctInputs = document.querySelectorAll('[data-ms-pct]');
+    var milestones = [];
+    var totalPct = 0;
+    for (var i = 0; i < dateInputs.length; i++) {
+      var dv = dateInputs[i].value;
+      var pv = parseFloat(pctInputs[i].value) || 0;
+      if (!dv) { alert('All milestone dates must be filled in.'); return undefined; }
+      milestones.push({ date: new Date(dv).toISOString(), percentage: pv });
+      totalPct += pv;
+    }
+    if (Math.abs(totalPct - 100) > 0.01) { alert('Milestone percentages must total 100%. Currently: ' + totalPct + '%'); return undefined; }
+    schedule.milestones = milestones;
+  }
+
+  return schedule;
+}
+
+async function _saPreviewVesting() {
+  var schedule = _saGetVestingSchedule();
+  if (schedule === undefined) return; // validation error
+  if (!schedule) { alert('Select a vesting type first.'); return; }
+
+  var btn = document.getElementById('saVestPreviewBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Loading...'; }
+
+  try {
+    var res = await fetch(API_URL + '/api/smart-airdrop/vesting-preview', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        recipients: _saState.recipients,
+        schedule: schedule,
+      }),
+    });
+    var data = await res.json();
+    if (data.error) throw new Error(data.error);
+
+    _saRenderVestingTimeline(data.steps, data.totalSteps);
+  } catch (err) {
+    alert('Vesting preview failed: ' + err.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Preview Vesting Timeline'; }
+  }
+}
+
+function _saRenderVestingTimeline(steps, totalSteps) {
+  var container = document.getElementById('saVestTimeline');
+  if (!container) return;
+  container.style.display = 'block';
+
+  // Group steps by date
+  var byDate = {};
+  steps.forEach(function(s) {
+    var dateKey = new Date(s.date).toLocaleDateString();
+    if (!byDate[dateKey]) byDate[dateKey] = [];
+    byDate[dateKey].push(s);
+  });
+
+  var html = '<div class="sa-section-label">Vesting Timeline (' + totalSteps + ' steps)</div>' +
+    '<div class="sa-vesting-timeline">';
+
+  var dates = Object.keys(byDate);
+  dates.forEach(function(dateKey, idx) {
+    var isLast = idx === dates.length - 1;
+    var evts = byDate[dateKey];
+    html += '<div class="sa-vesting-timeline-item">' +
+      '<div class="sa-vesting-timeline-dot' + (isLast ? ' sa-vesting-timeline-dot-last' : '') + '"></div>' +
+      '<div class="sa-vesting-timeline-content">' +
+        '<div class="sa-vesting-timeline-date">' + _saEsc(dateKey) + '</div>' +
+        '<div class="sa-vesting-timeline-detail">' + evts.length + ' action' + (evts.length > 1 ? 's' : '') + ': ' +
+          _saEsc(evts[0].action) + (evts.length > 1 ? ' (' + evts.length + ' recipients)' : ' for ' + _saEsc(evts[0].address.slice(0, 12) + '...')) +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  });
+
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+function _saExecuteOrVested() {
+  var schedule = _saGetVestingSchedule();
+  if (schedule === undefined) return; // validation error shown
+  if (schedule) {
+    _saState.vestingSchedule = schedule;
+    _saExecuteVested();
+  } else {
+    _saExecute();
+  }
+}
+
+async function _saExecuteVested() {
+  if (_saState.executing) return;
+  _saState.executing = true;
+
+  var btn = document.getElementById('saExecuteBtn');
+  var backBtn = document.getElementById('saBackBtn3');
+  var progressWrap = document.getElementById('saProgressWrap');
+  if (btn) { btn.disabled = true; btn.textContent = 'Creating vesting plan...'; }
+  if (backBtn) backBtn.disabled = true;
+  if (progressWrap) progressWrap.style.display = 'block';
+
+  try {
+    var denom = _saState.parsed?.token || _saState.parsed?.denom || _saState.parsed?.tokenDenom || '';
+    var sender = typeof walletAddress !== 'undefined' ? walletAddress : '';
+    var network = typeof currentNetwork !== 'undefined' ? currentNetwork : 'testnet';
+
+    var res = await fetch(API_URL + '/api/smart-airdrop/execute-vested', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        denom: denom,
+        recipients: _saState.recipients,
+        sender: sender,
+        network: network,
+        schedule: _saState.vestingSchedule,
+      }),
+    });
+    var data = await res.json();
+    if (data.error) throw new Error(data.error);
+
+    _saState.lastAirdropId = data.record ? data.record.id : null;
+
+    var bar = document.getElementById('saProgressBar');
+    var text = document.getElementById('saProgressText');
+    if (bar) bar.style.width = '100%';
+    if (text) text.textContent = 'Vesting plan created!';
+
+    _saShowFinalSummary(
+      _saState.recipients.length,
+      0,
+      null
+    );
+
+    // Show extra info about the plan
+    var el = document.getElementById('saFinalSummary');
+    if (el) {
+      el.innerHTML += '<div style="margin-top:8px;font-size:.85rem;color:#9ca3af">' +
+        'Vesting plan <b>' + _saEsc(data.plan.id) + '</b> created with ' + data.totalSteps + ' scheduled unlock steps.' +
+      '</div>';
+    }
+  } catch (err) {
+    _saShowFinalSummary(0, _saState.recipients.length, err.message);
+  } finally {
+    _saState.executing = false;
+    if (btn) { btn.disabled = false; btn.textContent = 'Execute Vested Airdrop'; }
+  }
+}
+
+/* ── Feature 7: Vesting Plans View ── */
+
+async function _saShowVestingPlans() {
+  var container = document.getElementById('saStepContainer');
+  if (!container) return;
+
+  container.innerHTML = '<div class="smart-airdrop-step"><div class="sa-loading" style="display:flex"><div class="sa-spinner"></div><span>Loading vesting plans...</span></div></div>';
+
+  try {
+    var res = await fetch(API_URL + '/api/smart-airdrop/vesting-plans');
+    var data = await res.json();
+    var plans = data.plans || [];
+
+    var html = '<div class="smart-airdrop-step">' +
+      '<div class="sa-section-label">Vesting Plans</div>';
+
+    if (plans.length === 0) {
+      html += '<div class="sa-empty-msg">No vesting plans yet.</div>';
+    } else {
+      html += '<div class="sa-vesting-plans">';
+      plans.forEach(function(p) {
+        var progress = p.steps.length > 0 ? Math.round((p.completedSteps / p.steps.length) * 100) : 0;
+        var statusClass = p.status === 'active' ? 'sa-status-pending' : p.status === 'completed' ? 'sa-status-completed' : 'sa-status-cancelled';
+        html += '<div class="sa-schedule-item ' + statusClass + '">' +
+          '<div class="sa-schedule-item-header">' +
+            '<span class="sa-schedule-denom">' + _saEsc(p.denom) + ' (' + _saEsc(p.schedule.type) + ')</span>' +
+            '<span class="sa-schedule-status">' + _saEsc(p.status) + '</span>' +
+          '</div>' +
+          '<div class="sa-schedule-item-detail">' + p.recipients.length + ' recipients, ' + p.steps.length + ' unlock steps</div>' +
+          '<div class="sa-schedule-item-detail">Progress: ' + p.completedSteps + '/' + p.steps.length + ' (' + progress + '%)</div>' +
+          '<div class="sa-progress-bar-wrap" style="margin-top:6px;height:6px">' +
+            '<div class="sa-progress-bar" style="width:' + progress + '%;height:6px"></div>' +
+          '</div>' +
+          '<div class="sa-schedule-item-detail">Created: ' + new Date(p.createdAt).toLocaleString() + '</div>' +
+        '</div>';
+      });
+      html += '</div>';
+    }
+
+    html += '<div class="smart-airdrop-actions" style="margin-top:16px">' +
+      '<button class="sa-btn sa-btn-secondary" onclick="_saGoToStep(_saState.step)">Back</button>' +
+    '</div></div>';
+
+    container.innerHTML = html;
+  } catch (err) {
+    container.innerHTML = '<div class="smart-airdrop-step"><div class="sa-empty-msg">Failed to load vesting plans: ' + _saEsc(err.message) + '</div>' +
+      '<div class="smart-airdrop-actions"><button class="sa-btn sa-btn-secondary" onclick="_saGoToStep(_saState.step)">Back</button></div></div>';
   }
 }
 

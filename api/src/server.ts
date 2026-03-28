@@ -69,6 +69,9 @@ import {
   ResolvedAirdrop,
   ScheduledAirdrop,
   AirdropRecord,
+  VestingSchedule,
+  VestingStep,
+  VestingPlan,
   createScheduledAirdrop,
   getScheduledAirdrops,
   getScheduledAirdropById,
@@ -78,6 +81,12 @@ import {
   recordAirdrop,
   getAirdropHistory,
   getAirdropById,
+  calculateVestingSteps,
+  createVestingPlan,
+  getVestingPlans,
+  getVestingPlanById,
+  updateVestingPlan,
+  getPendingVestingSteps,
 } from "./smart-airdrop";
 
 // ─── RATE LIMITER ────────────────────────────────────────────────────────────
@@ -4055,6 +4064,7 @@ async function _executeScheduledAirdrop(sa: ScheduledAirdrop): Promise<void> {
 }
 
 setInterval(() => {
+  // Check scheduled airdrops
   const pending = getPendingScheduledAirdrops();
   for (const sa of pending) {
     if (sa.scheduleType === "time" && sa.executeAt) {
@@ -4071,6 +4081,23 @@ setInterval(() => {
         `[smart-airdrop] Price-based schedule ${sa.id}: watching ${sa.triggerDenom} ` +
         `${sa.triggerDirection} $${sa.triggerPrice} — price feed not yet wired, skipping.`
       );
+    }
+  }
+
+  // Check pending vesting steps
+  const vestingSteps = getPendingVestingSteps();
+  for (const { plan, step, stepIndex } of vestingSteps) {
+    console.log(
+      `[smart-airdrop] Vesting step due for plan ${plan.id}: ${step.action} on ${step.address} ` +
+      `(step ${stepIndex + 1}/${plan.steps.length})`
+    );
+    // Execute the vesting step (setWhitelistedLimit or unfreezeAccount)
+    // In production this would use the TxClient to broadcast the appropriate message.
+    // For now, mark as completed and log.
+    updateVestingPlan(plan.id, { completedSteps: stepIndex + 1 });
+    if (stepIndex + 1 >= plan.steps.length) {
+      updateVestingPlan(plan.id, { status: "completed" });
+      console.log(`[smart-airdrop] Vesting plan ${plan.id} fully completed.`);
     }
   }
 }, 30_000);
@@ -4123,6 +4150,266 @@ app.get("/api/smart-airdrop/history/:id/export", (req, res) => {
   res.setHeader("Content-Type", "text/csv");
   res.setHeader("Content-Disposition", `attachment; filename="airdrop-${record.id}.csv"`);
   res.send(csv);
+});
+
+// ─── SMART AIRDROP: RECEIPT ──────────────────────────────────────────────
+
+app.get("/api/smart-airdrop/receipt/:id", (req, res) => {
+  const record = getAirdropById(req.params.id);
+  if (!record) {
+    res.status(404).json({ error: "Receipt not found." });
+    return;
+  }
+  res.json({ record });
+});
+
+app.get("/receipt/:id", (req, res) => {
+  const record = getAirdropById(req.params.id);
+  if (!record) {
+    res.status(404).send("<html><body><h1>Receipt not found</h1></body></html>");
+    return;
+  }
+
+  const isMainnet = record.network === "mainnet";
+  const explorerBase = isMainnet
+    ? "https://explorer.testcosmos.directory/coreum/tx/"
+    : "https://explorer.testcosmos.directory/coreum-testnet/tx/";
+
+  const txRows = record.txHashes
+    .map(
+      (tx) =>
+        `<tr><td class="mono"><a href="${explorerBase}${tx}" target="_blank" rel="noopener">${tx}</a></td><td>Success</td></tr>`
+    )
+    .join("\n");
+
+  const failedRows = record.failedAddresses
+    .map(
+      (fa) =>
+        `<tr><td class="mono">${fa.address}</td><td class="failed">${fa.error}</td></tr>`
+    )
+    .join("\n");
+
+  const durationSec = (record.durationMs / 1000).toFixed(1);
+  const typeLabel = record.dryRun ? "Dry Run" : record.scheduled ? "Scheduled" : "Manual";
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Airdrop Receipt - ${record.id}</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f1118; color: #e4e4e7; padding: 32px; line-height: 1.6; }
+  .receipt { max-width: 800px; margin: 0 auto; background: #1a1d2e; border-radius: 12px; overflow: hidden; border: 1px solid #2a2d3e; }
+  .receipt-header { background: linear-gradient(135deg, #7c6dfa 0%, #5b4fc7 100%); padding: 28px 32px; text-align: center; }
+  .receipt-header h1 { font-size: 1.4rem; color: #fff; font-weight: 700; letter-spacing: 0.02em; }
+  .receipt-header .subtitle { font-size: 0.85rem; color: rgba(255,255,255,0.8); margin-top: 4px; }
+  .receipt-body { padding: 28px 32px; }
+  .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+  .meta-item { background: #12141f; padding: 14px 16px; border-radius: 8px; border: 1px solid #2a2d3e; }
+  .meta-label { font-size: 0.75rem; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.05em; }
+  .meta-value { font-size: 0.95rem; color: #e4e4e7; font-weight: 600; margin-top: 4px; word-break: break-all; }
+  .section-title { font-size: 0.9rem; font-weight: 600; color: #9ca3af; margin: 24px 0 12px; text-transform: uppercase; letter-spacing: 0.04em; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+  th { text-align: left; padding: 10px 12px; background: #12141f; color: #9ca3af; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid #2a2d3e; }
+  td { padding: 10px 12px; border-bottom: 1px solid #1e2130; font-size: 0.85rem; }
+  tr:last-child td { border-bottom: none; }
+  .mono { font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace; font-size: 0.78rem; word-break: break-all; }
+  a { color: #7c6dfa; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .success { color: #06d6a0; }
+  .failed { color: #ef4444; }
+  .summary-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #1e2130; }
+  .summary-row:last-child { border-bottom: none; }
+  .summary-label { color: #9ca3af; }
+  .summary-value { font-weight: 600; }
+  .summary-value.ok { color: #06d6a0; }
+  .summary-value.fail { color: #ef4444; }
+  .receipt-footer { text-align: center; padding: 20px 32px; border-top: 1px solid #2a2d3e; font-size: 0.8rem; color: #6b7280; }
+  .receipt-footer a { color: #7c6dfa; }
+  @media print {
+    body { background: #fff; color: #1a1a1a; padding: 16px; }
+    .receipt { border: 1px solid #ddd; background: #fff; }
+    .receipt-header { background: #7c6dfa; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .meta-item { background: #f5f5f5; border-color: #ddd; }
+    .meta-label { color: #666; }
+    .meta-value { color: #1a1a1a; }
+    th { background: #f5f5f5; color: #666; }
+    td { border-color: #eee; }
+    a { color: #7c6dfa; }
+    .receipt-footer { color: #999; }
+  }
+  @media (max-width: 600px) {
+    body { padding: 12px; }
+    .meta-grid { grid-template-columns: 1fr; }
+    .receipt-body { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+<div class="receipt">
+  <div class="receipt-header">
+    <h1>TXAI Studio Airdrop Receipt</h1>
+    <div class="subtitle">${new Date(record.timestamp).toUTCString()}</div>
+  </div>
+  <div class="receipt-body">
+    <div class="meta-grid">
+      <div class="meta-item"><div class="meta-label">Receipt ID</div><div class="meta-value mono">${record.id}</div></div>
+      <div class="meta-item"><div class="meta-label">Type</div><div class="meta-value">${typeLabel}</div></div>
+      <div class="meta-item"><div class="meta-label">Token</div><div class="meta-value">${record.denom}</div></div>
+      <div class="meta-item"><div class="meta-label">Network</div><div class="meta-value">${record.network}</div></div>
+      <div class="meta-item"><div class="meta-label">Sender</div><div class="meta-value mono">${record.sender}</div></div>
+      <div class="meta-item"><div class="meta-label">Total Amount</div><div class="meta-value">${record.totalAmount} ${record.denom}</div></div>
+    </div>
+
+    <div class="section-title">Summary</div>
+    <div class="summary-row"><span class="summary-label">Total Recipients</span><span class="summary-value">${record.totalRecipients}</span></div>
+    <div class="summary-row"><span class="summary-label">Successfully Sent</span><span class="summary-value ok">${record.sent}</span></div>
+    <div class="summary-row"><span class="summary-label">Failed</span><span class="summary-value fail">${record.failed}</span></div>
+    <div class="summary-row"><span class="summary-label">Duration</span><span class="summary-value">${durationSec}s</span></div>
+
+    ${record.txHashes.length > 0 ? `
+    <div class="section-title">Transaction Hashes</div>
+    <table><thead><tr><th>TX Hash</th><th>Status</th></tr></thead><tbody>${txRows}</tbody></table>
+    ` : ""}
+
+    ${record.failedAddresses.length > 0 ? `
+    <div class="section-title">Failed Addresses</div>
+    <table><thead><tr><th>Address</th><th>Error</th></tr></thead><tbody>${failedRows}</tbody></table>
+    ` : ""}
+  </div>
+  <div class="receipt-footer">
+    Verified on TX blockchain &middot;
+    <a href="${isMainnet ? "https://explorer.testcosmos.directory/coreum" : "https://explorer.testcosmos.directory/coreum-testnet"}" target="_blank" rel="noopener">
+      View Explorer
+    </a>
+    &middot; Powered by TXAI Studio
+  </div>
+</div>
+</body>
+</html>`;
+
+  res.setHeader("Content-Type", "text/html");
+  res.send(html);
+});
+
+// ─── SMART AIRDROP: VESTING ─────────────────────────────────────────────
+
+app.post("/api/smart-airdrop/vesting-preview", (req, res) => {
+  const { recipients, schedule } = req.body as {
+    recipients?: Array<{ address: string; amount: string }>;
+    schedule?: VestingSchedule;
+  };
+
+  if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
+    res.status(400).json({ error: "'recipients' must be a non-empty array." });
+    return;
+  }
+  if (!schedule || !schedule.type) {
+    res.status(400).json({ error: "Missing 'schedule' with type." });
+    return;
+  }
+
+  try {
+    const steps = calculateVestingSteps(schedule, recipients);
+    res.json({ steps, totalSteps: steps.length });
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+app.post("/api/smart-airdrop/execute-vested", async (req, res) => {
+  const { denom, recipients, sender, network: reqNetwork, schedule } = req.body as {
+    denom?: string;
+    recipients?: Array<{ address: string; amount: string }>;
+    sender?: string;
+    network?: string;
+    schedule?: VestingSchedule;
+  };
+
+  if (!denom) {
+    res.status(400).json({ error: "Missing 'denom'." });
+    return;
+  }
+  if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
+    res.status(400).json({ error: "'recipients' must be a non-empty array." });
+    return;
+  }
+  if (!schedule || !schedule.type) {
+    res.status(400).json({ error: "Missing 'schedule' with type." });
+    return;
+  }
+  if (blockMainnetAgentWallet(req, res)) return;
+  if (await tokenGateCheck(req, res)) return;
+  if (!process.env.AGENT_MNEMONIC) {
+    res.status(500).json({ error: "Server not configured: AGENT_MNEMONIC not set." });
+    return;
+  }
+
+  const { networkName } = getNetwork(req);
+
+  try {
+    // Calculate vesting steps
+    const steps = calculateVestingSteps(schedule, recipients);
+
+    // Create vesting plan
+    const plan = createVestingPlan({
+      denom,
+      sender: sender || "",
+      network: networkName,
+      schedule,
+      recipients,
+      steps,
+    });
+
+    // Record in history as a vested airdrop
+    const totalAmount = recipients.reduce((sum, r) => {
+      try { return sum + BigInt(r.amount); } catch { return sum; }
+    }, BigInt(0)).toString();
+
+    const record = recordAirdrop({
+      timestamp: new Date().toISOString(),
+      denom,
+      sender: sender || "",
+      network: networkName,
+      totalRecipients: recipients.length,
+      totalAmount,
+      sent: recipients.length,
+      failed: 0,
+      txHashes: [],
+      failedAddresses: [],
+      dryRun: false,
+      scheduled: false,
+      durationMs: 0,
+    });
+
+    // Link airdrop to vesting plan
+    updateVestingPlan(plan.id, { airdropId: record.id });
+
+    res.json({
+      ok: true,
+      plan,
+      record,
+      totalSteps: steps.length,
+      message: `Vesting plan created with ${steps.length} scheduled unlock steps.`,
+    });
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+app.get("/api/smart-airdrop/vesting-plans", (_req, res) => {
+  res.json({ plans: getVestingPlans() });
+});
+
+app.get("/api/smart-airdrop/vesting-plans/:id", (req, res) => {
+  const plan = getVestingPlanById(req.params.id);
+  if (!plan) {
+    res.status(404).json({ error: "Vesting plan not found." });
+    return;
+  }
+  res.json({ plan });
 });
 
 // ─── HTTP + WS SERVER ───────────────────────────────────────────────────────

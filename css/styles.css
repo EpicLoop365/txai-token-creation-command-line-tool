@@ -4036,6 +4036,71 @@ textarea.agent-resume-input{resize:vertical}
   text-align:center;padding:32px 16px;color:var(--text-2,#888);font-size:.9rem;
 }
 
+/* Exclusion List */
+.sa-exclusion-section{
+  margin-top:16px;padding:14px;background:rgba(239,68,68,.04);border:1px solid rgba(239,68,68,.15);border-radius:8px;
+}
+.sa-exclusion-textarea{
+  width:100%;padding:10px 12px;background:var(--bg-2,#12141f);border:1px solid var(--border-light,#2a2d3e);border-radius:6px;color:var(--text,#e4e4e7);font-family:'SF Mono',Monaco,'Cascadia Code',monospace;font-size:.82rem;resize:vertical;
+}
+.sa-exclusion-textarea:focus{outline:none;border-color:var(--purple,#7c6dfa)}
+.sa-exclusion-tags{
+  display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;
+}
+.sa-exclusion-tags .sa-exclusion-tag{
+  display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);border-radius:14px;font-size:.75rem;color:#ef4444;font-family:'SF Mono',Monaco,monospace;
+}
+.sa-exclusion-tags .sa-exclusion-tag button{
+  background:none;border:none;color:#ef4444;cursor:pointer;font-size:.9rem;padding:0;margin-left:2px;line-height:1;
+}
+.sa-exclusion-tags .sa-exclusion-tag button:hover{color:#fff}
+
+/* Receipt Link */
+.sa-receipt-link{
+  display:inline-flex;align-items:center;text-decoration:none;
+}
+
+/* Vesting Section */
+.sa-vesting-section{
+  margin-top:16px;padding:14px;background:rgba(124,109,250,.04);border:1px solid rgba(124,109,250,.15);border-radius:8px;
+}
+.sa-vesting-option{
+  display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:var(--bg-2,#12141f);border:1px solid var(--border-light,#2a2d3e);border-radius:6px;font-size:.82rem;color:var(--text-dim,#9ca3af);cursor:pointer;
+}
+.sa-vesting-option:has(input:checked){
+  border-color:var(--purple,#7c6dfa);color:var(--text,#e4e4e7);background:rgba(124,109,250,.08);
+}
+.sa-vesting-option input[type="radio"]{accent-color:var(--purple,#7c6dfa)}
+
+/* Vesting Timeline */
+.sa-vesting-timeline{
+  position:relative;padding-left:24px;
+}
+.sa-vesting-timeline-item{
+  position:relative;padding-bottom:16px;display:flex;gap:12px;
+}
+.sa-vesting-timeline-item:last-child{padding-bottom:0}
+.sa-vesting-timeline-dot{
+  position:absolute;left:-24px;top:2px;width:12px;height:12px;border-radius:50%;background:var(--purple,#7c6dfa);border:2px solid var(--bg-1,#1a1d2e);z-index:1;
+}
+.sa-vesting-timeline-dot-last{background:var(--green,#06d6a0)}
+.sa-vesting-timeline-item::before{
+  content:'';position:absolute;left:-19px;top:14px;bottom:0;width:2px;background:var(--border-light,#2a2d3e);
+}
+.sa-vesting-timeline-item:last-child::before{display:none}
+.sa-vesting-timeline-content{flex:1}
+.sa-vesting-timeline-date{font-size:.85rem;font-weight:600;color:var(--text,#e4e4e7)}
+.sa-vesting-timeline-detail{font-size:.78rem;color:var(--text-dim,#9ca3af);margin-top:2px}
+
+/* Vesting Milestone Row */
+.sa-vesting-milestone{
+  display:flex;align-items:center;gap:8px;margin-bottom:6px;
+}
+.sa-vesting-milestone input{flex:1}
+
+/* Vesting Plans List */
+.sa-vesting-plans{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+
 /* Responsive */
 @media(max-width:600px){
   .smart-airdrop-modal{max-width:100vw;border-radius:12px 12px 0 0;max-height:95vh}
@@ -4047,4 +4112,6 @@ textarea.agent-resume-input{resize:vertical}
   .sa-schedule-options{flex-direction:column}
   .sa-dryrun-batch-table{font-size:.78rem}
   .sa-history-table{font-size:.78rem}
+  .sa-vesting-option{padding:4px 8px;font-size:.78rem}
+  .sa-vesting-milestone{flex-wrap:wrap}
 }
