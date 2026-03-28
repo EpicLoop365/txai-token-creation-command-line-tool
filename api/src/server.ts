@@ -1,3 +1,4 @@
+import "dotenv/config";
 /**
  * server.ts — Express API server for the TX Agent demo
  *

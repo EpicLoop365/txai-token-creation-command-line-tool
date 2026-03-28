@@ -2538,6 +2538,54 @@ footer{
 .token-gate-btn:hover{opacity:.85}
 .token-gate-dismiss{position:absolute;top:6px;right:8px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:.8rem;padding:2px;opacity:.5}
 .token-gate-dismiss:hover{opacity:1}
+.token-gate-current{display:block;margin-top:4px;font-size:.65rem;color:var(--text-dim)}
+
+/* ───── Gate Upgrade Modal ───── */
+.gate-modal-overlay{position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:20px;animation:wizFade .2s ease}
+.gate-modal{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);max-width:720px;width:100%;max-height:90vh;overflow-y:auto;padding:28px}
+.gate-modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.gate-modal-title{font-size:1.1rem;font-weight:700;color:var(--text)}
+.gate-modal-close{background:none;border:none;color:var(--muted);font-size:1.2rem;cursor:pointer;padding:4px 8px}
+.gate-modal-close:hover{color:var(--text)}
+.gate-modal-subtitle{font-size:.75rem;color:var(--muted);margin-bottom:22px}
+.gate-tiers-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media(max-width:640px){.gate-tiers-grid{grid-template-columns:1fr}}
+.gate-tier-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:18px 14px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px;transition:all .2s;position:relative}
+.gate-tier-card.target{border-color:var(--purple);box-shadow:0 0 20px rgba(124,109,250,.15)}
+.gate-tier-card.owned{border-color:var(--green);opacity:.85}
+.gate-tier-card.current::after{content:'CURRENT';position:absolute;top:-8px;right:10px;font-size:.5rem;font-weight:700;color:var(--green);background:var(--bg2);padding:2px 8px;border-radius:4px;border:1px solid var(--green);letter-spacing:.5px}
+.gate-tier-icon{font-size:2rem;line-height:1}
+.gate-tier-name{font-size:.9rem;font-weight:700;color:var(--text)}
+.gate-soul-badge{display:inline-block;font-size:.52rem;font-weight:600;padding:2px 8px;border-radius:10px;letter-spacing:.3px;text-transform:uppercase;margin-bottom:2px}
+.gate-soul-badge.soulbound{color:#f59e0b;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.2)}
+.gate-soul-badge.whitelisted{color:var(--purple);background:rgba(124,109,250,.1);border:1px solid rgba(124,109,250,.2)}
+.gate-soul-badge.tradeable{color:var(--green);background:rgba(6,214,160,.1);border:1px solid rgba(6,214,160,.2)}
+.gate-tier-price{font-size:.82rem;font-weight:600;color:var(--green);margin-bottom:4px}
+.gate-tier-desc{font-size:.62rem;color:var(--muted);line-height:1.3;margin-bottom:8px}
+.gate-tier-features{width:100%;text-align:left;margin-bottom:12px}
+.gate-feature-item{font-size:.62rem;color:var(--text-dim);padding:3px 0;border-bottom:1px solid rgba(255,255,255,.03)}
+.gate-feature-item:last-child{border-bottom:none}
+.gate-tier-buy-btn{width:100%;padding:10px 0;border:none;border-radius:8px;font-family:var(--sans);font-size:.72rem;font-weight:600;cursor:pointer;background:linear-gradient(135deg,var(--purple),#9b59b6);color:#fff;transition:all .2s}
+.gate-tier-buy-btn:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(124,109,250,.3)}
+.gate-tier-buy-btn:disabled{opacity:.5;cursor:wait;transform:none}
+.gate-tier-owned{font-size:.72rem;font-weight:600;color:var(--green);padding:10px 0}
+.gate-tier-locked{font-size:.62rem;color:var(--muted);padding:8px 0}
+.gate-modal-footer{text-align:center;margin-top:18px;font-size:.6rem;color:var(--text-muted);font-style:italic}
+
+/* Upgrade Success */
+.gate-upgrade-success{display:flex;flex-direction:column;align-items:center;text-align:center;padding:30px 20px;gap:12px}
+.gate-success-icon{font-size:3rem}
+.gate-success-title{font-size:1.2rem;font-weight:700;color:var(--green)}
+.gate-success-desc{font-size:.8rem;color:var(--text-dim);max-width:400px}
+.gate-success-class{font-size:.65rem;font-family:var(--mono);color:var(--muted);background:rgba(0,0,0,.2);padding:6px 12px;border-radius:6px}
+
+/* Pass Badge (nav) */
+.gate-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:12px;font-size:.6rem;font-weight:600;cursor:pointer;border:1px solid var(--border);transition:all .15s;font-family:var(--mono)}
+.gate-badge:hover{opacity:.8}
+.gate-badge.none{color:var(--muted);border-style:dashed}
+.gate-badge.scout{color:#6b7280;background:rgba(107,114,128,.08)}
+.gate-badge.creator{color:var(--purple);background:rgba(124,109,250,.08)}
+.gate-badge.pro{color:var(--green);background:rgba(6,214,160,.08)}
 
 /* ───── Agent NFT Grid ───── */
 .agent-nft-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px}
@@ -2548,6 +2596,65 @@ footer{
 .agent-nft-card-desc{font-size:.65rem;color:var(--muted);line-height:1.35}
 .agent-nft-card-btn{margin-top:auto;padding:6px 0;border:1px solid var(--border);border-radius:6px;font-family:var(--font);font-size:.65rem;font-weight:600;cursor:pointer;background:transparent;color:var(--accent);transition:all .15s;text-align:center}
 .agent-nft-card:hover .agent-nft-card-btn{border-color:var(--accent);background:rgba(124,109,250,.08)}
+.agent-nft-card-dev{border-color:rgba(239,68,68,.3) !important;background:rgba(239,68,68,.03) !important}
+.agent-nft-card-dev:hover{border-color:rgba(239,68,68,.6) !important}
+.agent-nft-dev-badge{display:inline-block;font-size:.5rem;font-weight:700;color:#ef4444;background:rgba(239,68,68,.12);padding:1px 5px;border-radius:3px;vertical-align:middle;margin-left:4px;letter-spacing:.5px}
+
+/* ───── Agent Script Editor ───── */
+.agent-script-section{margin-top:14px;border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden}
+.agent-script-section[open]{border-color:var(--purple-dim)}
+.agent-script-toggle{display:flex;align-items:center;gap:8px;padding:10px 14px;font-size:.78rem;font-weight:600;color:var(--text);cursor:pointer;background:var(--bg3);list-style:none}
+.agent-script-toggle::-webkit-details-marker{display:none}
+.agent-script-toggle::before{content:'▸';font-size:.7rem;color:var(--muted);transition:transform .2s}
+.agent-script-section[open] .agent-script-toggle::before{transform:rotate(90deg)}
+.agent-script-toggle-icon{font-size:1rem}
+.agent-script-badge{margin-left:auto;font-size:.58rem;font-weight:500;color:var(--muted);background:rgba(255,255,255,.06);padding:2px 8px;border-radius:10px;text-transform:uppercase;letter-spacing:.5px}
+.agent-script-editor-wrap{padding:0}
+.agent-script-toolbar{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(0,0,0,.2);border-bottom:1px solid var(--border);flex-wrap:wrap;gap:6px}
+.agent-script-templates-bar{display:flex;gap:4px;flex-wrap:wrap}
+.agent-script-tpl-btn{padding:4px 10px;font-size:.62rem;font-family:var(--mono);border:1px solid var(--border);border-radius:4px;background:transparent;color:var(--muted);cursor:pointer;transition:all .15s}
+.agent-script-tpl-btn:hover{border-color:var(--purple-dim);color:var(--text)}
+.agent-script-tpl-btn.active{border-color:var(--purple);color:var(--purple);background:rgba(124,109,250,.08)}
+.agent-script-actions{display:flex;gap:4px}
+.agent-script-action-btn{padding:4px 10px;font-size:.62rem;font-family:var(--mono);border:1px solid var(--green-dim);border-radius:4px;background:transparent;color:var(--green);cursor:pointer;transition:all .15s}
+.agent-script-action-btn:hover{background:rgba(6,214,160,.1)}
+.agent-script-info{display:flex;align-items:center;gap:6px;padding:6px 12px;font-size:.6rem;color:var(--muted);background:rgba(124,109,250,.04);border-bottom:1px solid var(--border)}
+.agent-script-info-icon{font-size:.75rem}
+.agent-script-editor{width:100%;min-height:280px;max-height:500px;resize:vertical;background:var(--bg);color:var(--green);font-family:var(--mono);font-size:.72rem;line-height:1.6;padding:14px;border:none;outline:none;tab-size:2;-moz-tab-size:2}
+.agent-script-editor::placeholder{color:var(--text-muted);opacity:.5}
+.agent-script-footer{display:flex;justify-content:space-between;align-items:center;padding:6px 12px;background:rgba(0,0,0,.2);border-top:1px solid var(--border);font-size:.58rem;font-family:var(--mono);color:var(--muted)}
+.agent-script-status{display:flex;align-items:center;gap:6px}
+.agent-script-dot{width:6px;height:6px;border-radius:50%;display:inline-block}
+.agent-script-dot.idle{background:#6b7280}
+.agent-script-dot.running{background:#f59e0b;animation:pulse-dot .8s infinite}
+.agent-script-dot.success{background:var(--green)}
+.agent-script-dot.error{background:#ef4444}
+@keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:.3}}
+.agent-script-meta{display:flex;gap:8px;align-items:center}
+.agent-script-sep{color:var(--border)}
+
+/* Dry Run Output */
+.agent-script-dry-run-output{margin:0;padding:10px 12px;background:rgba(0,0,0,.3);border-top:1px solid var(--border);max-height:200px;overflow-y:auto;font-size:.62rem;font-family:var(--mono)}
+.dry-run-header{font-weight:700;color:var(--green);margin-bottom:6px;font-size:.68rem}
+.dry-run-header.error{color:#ef4444}
+.dry-run-alerts{margin-bottom:8px}
+.dry-run-alert-item{color:#f59e0b;padding:2px 0}
+.dry-run-log{color:var(--muted)}
+.dry-run-log-line{padding:1px 0;border-bottom:1px solid rgba(255,255,255,.03)}
+.dry-run-log-line.dim{opacity:.4}
+.dry-run-error{color:#ef4444;font-weight:600}
+.dry-run-info{color:var(--purple);font-style:italic}
+
+/* Agent Permissions */
+.agent-permissions{margin-top:12px;padding:12px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm)}
+.agent-permissions-title{font-size:.75rem;font-weight:700;color:var(--text);margin-bottom:10px}
+.agent-perm-toggle{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:.7rem;color:var(--text-dim);cursor:pointer;border-bottom:1px solid rgba(255,255,255,.03)}
+.agent-perm-toggle:last-child{border-bottom:none}
+.agent-perm-toggle input[type="checkbox"]{accent-color:var(--purple);width:14px;height:14px}
+.agent-perm-tag{margin-left:auto;font-size:.55rem;font-weight:600;padding:2px 6px;border-radius:4px;text-transform:uppercase;letter-spacing:.3px}
+.agent-perm-tag.safe{color:var(--green);background:rgba(6,214,160,.1)}
+.agent-perm-tag.warn{color:#f59e0b;background:rgba(245,158,11,.1)}
+.agent-perm-tag.danger{color:#ef4444;background:rgba(239,68,68,.1)}
 
 /* ───── NFT Airdrop Wizard ───── */
 .wiz-steps{display:flex;align-items:center;justify-content:center;gap:0;margin-bottom:22px}

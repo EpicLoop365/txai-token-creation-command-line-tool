@@ -31,6 +31,7 @@
           <option value="mainnet">Mainnet</option>
         </select>
       </div>
+      <span id="gatePassBadge"></span>
       <button class="nav-connect-btn" id="navConnectBtn" onclick="globalShowWalletOptions()">Connect Wallet</button>
       <span class="nav-connected-badge" id="navConnectedBadge" style="display:none">
         <span class="nav-connected-dot"></span>
@@ -427,7 +428,81 @@
               </div>
             </div>
 
-            <button class="demo-create-btn custom-deploy-btn" style="width:100%;font-size:.85rem;padding:12px 0;background:linear-gradient(135deg,var(--accent),#9b59b6) !important;border-radius:10px" id="agentNftMintBtn" onclick="agentNftMint()">
+            <!-- Script Editor (Advanced) -->
+            <details class="agent-script-section" id="agentScriptSection">
+              <summary class="agent-script-toggle">
+                <span class="agent-script-toggle-icon">&#x1F4DD;</span> Advanced: Custom Script
+                <span class="agent-script-badge">Optional</span>
+              </summary>
+              <div class="agent-script-editor-wrap">
+                <div class="agent-script-toolbar">
+                  <div class="agent-script-templates-bar">
+                    <button class="agent-script-tpl-btn active" onclick="agentScriptLoadTemplate('blank')">Blank</button>
+                    <button class="agent-script-tpl-btn" onclick="agentScriptLoadTemplate('monitor-alert')">Monitor + Alert</button>
+                    <button class="agent-script-tpl-btn" onclick="agentScriptLoadTemplate('monitor-tx')">Monitor + Transact</button>
+                    <button class="agent-script-tpl-btn" onclick="agentScriptLoadTemplate('watchdog')">Watchdog</button>
+                  </div>
+                  <div class="agent-script-actions">
+                    <button class="agent-script-action-btn" onclick="agentScriptDryRun()" title="Test against testnet">&#x25B6; Dry Run</button>
+                    <button class="agent-script-action-btn" onclick="agentScriptFormat()" title="Auto-format">Format</button>
+                  </div>
+                </div>
+                <div class="agent-script-info">
+                  <span class="agent-script-info-icon">&#x1F512;</span>
+                  Sandboxed — read-only chain access by default. Signing requires explicit permission. Script is stored in NFT metadata.
+                </div>
+                <textarea class="agent-script-editor" id="agentScriptEditor" spellcheck="false" placeholder="// Write your agent logic here...
+// Available APIs:
+//   chain.query(path)        — query chain REST endpoint
+//   chain.getBalance(addr, denom)  — get token balance
+//   chain.getStakers(validator)    — get delegators
+//   chain.getHolders(denom)        — get token holders
+//   agent.alert(message)     — send alert/notification
+//   agent.log(message)       — log to agent history
+//   agent.getParam(key)      — read config params
+//
+// Trigger: runs on the interval set above
+"></textarea>
+                <div class="agent-script-footer">
+                  <div class="agent-script-status" id="agentScriptStatus">
+                    <span class="agent-script-dot idle"></span> Idle
+                  </div>
+                  <div class="agent-script-meta">
+                    <span id="agentScriptLineCount">0 lines</span>
+                    <span class="agent-script-sep">|</span>
+                    <span id="agentScriptCharCount">0 chars</span>
+                  </div>
+                </div>
+                <div class="agent-script-dry-run-output" id="agentScriptDryRunOutput" style="display:none"></div>
+              </div>
+            </details>
+
+            <!-- Permissions -->
+            <div class="agent-permissions" id="agentPermissions" style="display:none">
+              <div class="agent-permissions-title">&#x1F6E1; Agent Permissions</div>
+              <label class="agent-perm-toggle">
+                <input type="checkbox" id="agentPermReadChain" checked disabled>
+                <span>Read chain data</span>
+                <span class="agent-perm-tag safe">Always on</span>
+              </label>
+              <label class="agent-perm-toggle">
+                <input type="checkbox" id="agentPermAlert" checked>
+                <span>Send alerts / notifications</span>
+                <span class="agent-perm-tag safe">Safe</span>
+              </label>
+              <label class="agent-perm-toggle">
+                <input type="checkbox" id="agentPermSign">
+                <span>Sign &amp; broadcast transactions</span>
+                <span class="agent-perm-tag danger">Requires approval</span>
+              </label>
+              <label class="agent-perm-toggle">
+                <input type="checkbox" id="agentPermWebhook">
+                <span>Call external webhooks</span>
+                <span class="agent-perm-tag warn">Review URLs</span>
+              </label>
+            </div>
+
+            <button class="demo-create-btn custom-deploy-btn" style="width:100%;font-size:.85rem;padding:12px 0;background:linear-gradient(135deg,var(--accent),#9b59b6) !important;border-radius:10px;margin-top:16px" id="agentNftMintBtn" onclick="agentNftMint()">
               <span id="agentNftMintBtnText">Mint Agent NFT</span>
               <span id="agentNftMintSpinner" class="nft-spinner" style="display:none"></span>
             </button>

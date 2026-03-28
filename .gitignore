@@ -1,0 +1,14 @@
+# Never commit secrets
+.env
+*.env
+*.env.local
+**/secrets/
+*.pem
+*.key
+*.mnemonic
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/

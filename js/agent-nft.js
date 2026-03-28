@@ -97,8 +97,117 @@ const AGENT_NFT_TEMPLATES = [
       { key: 'tweetTemplate', label: 'Tweet template', type: 'text', placeholder: '🐋 Whale alert! {amount} ${symbol} moved' },
       { key: 'interval', label: 'Check every (minutes)', type: 'number', placeholder: '15', default: 15 }
     ]
+  },
+  {
+    id: 'custom-script',
+    name: 'Custom Script',
+    desc: 'Write your own agent logic. Full sandboxed access to chain queries, alerts, and transactions.',
+    icon: '\u{1F4BB}',
+    symbol: 'SCRIPT',
+    hasScript: true,
+    params: [
+      { key: 'trigger', label: 'Trigger type', type: 'text', placeholder: 'cron | event | threshold | webhook' },
+      { key: 'interval', label: 'Check every (minutes)', type: 'number', placeholder: '15', default: 15 },
+      { key: 'description', label: 'What does this script do?', type: 'text', placeholder: 'Describe your agent logic...' }
+    ]
+  },
+  // ── Hidden templates (dev mode only) ──
+  {
+    id: 'fund-rescue',
+    name: 'Fund Recovery',
+    desc: 'Monitors unstaking events and races to recover funds from compromised wallets. Cosmo Rescue style.',
+    icon: '\u{1F6A8}',
+    symbol: 'RESCUE',
+    hidden: true,
+    hasScript: true,
+    params: [
+      { key: 'watchAddress', label: 'Address to watch', type: 'text', placeholder: 'testcore1... or core1...' },
+      { key: 'safeAddress', label: 'Safe recovery address', type: 'text', placeholder: 'Your safe wallet address' },
+      { key: 'denom', label: 'Token denom', type: 'text', placeholder: 'utestcore', default: 'utestcore' },
+      { key: 'interval', label: 'Check every (seconds)', type: 'number', placeholder: '5', default: 5 }
+    ]
   }
 ];
+
+/* ── Dev Mode — unlocked by NFT, URL param, or console ── */
+let agentNftDevMode = false;
+const DEV_PASS_CLASSES = [
+  'devpass',    // Generic dev pass NFT class prefix
+  'rescue',     // Cosmo Rescue provider pass
+  'provider',   // Verified provider pass
+  'txaidev',    // TXAI team dev pass
+];
+
+/* Check if wallet holds a dev/provider NFT */
+async function agentNftCheckDevNft() {
+  const wallet = (window.txaiWallet && window.txaiWallet.address)
+    || (typeof connectedAddress !== 'undefined' && connectedAddress)
+    || null;
+
+  if (!wallet) return false;
+
+  try {
+    // Query NFTs owned by this wallet from the chain
+    const network = (window.txaiWallet && window.txaiWallet.chainId === 'coreum-mainnet-1') ? 'mainnet' : 'testnet';
+    const restBase = network === 'mainnet'
+      ? 'https://full-node.mainnet-1.coreum.dev:1317'
+      : 'https://full-node.testnet-1.coreum.dev:1317';
+
+    const res = await fetch(`${restBase}/coreum/nft/v1beta1/nfts?owner=${wallet}`);
+    const data = await res.json();
+    const nfts = data.nfts || [];
+
+    // Check if any NFT class matches a dev pass pattern
+    for (const nft of nfts) {
+      const classId = (nft.class_id || '').toLowerCase();
+      for (const prefix of DEV_PASS_CLASSES) {
+        if (classId.includes(prefix)) {
+          return { unlocked: true, classId: nft.class_id, nftId: nft.id };
+        }
+      }
+    }
+
+    return false;
+  } catch (err) {
+    console.warn('Dev NFT check failed:', err.message);
+    return false;
+  }
+}
+
+/* Enable dev mode */
+function agentNftEnableDevMode(source) {
+  if (agentNftDevMode) return;
+  agentNftDevMode = true;
+  agentNftRenderTemplates();
+  const label = source || 'manual';
+  agentNftLog('info', `Dev mode enabled (${label}) — hidden templates unlocked.`);
+  console.log('%c🔓 TXAI Dev Mode — hidden agent templates unlocked via ' + label, 'color:#06d6a0;font-size:14px;font-weight:bold');
+}
+
+/* Auto-check for dev NFT when wallet connects */
+async function agentNftAutoCheckDev() {
+  const result = await agentNftCheckDevNft();
+  if (result && result.unlocked) {
+    agentNftEnableDevMode('NFT: ' + result.classId + ' #' + result.nftId);
+    return true;
+  }
+  return false;
+}
+
+// Auto-enable if URL has ?dev=1 or #dev (fallback for testing)
+(function() {
+  try {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get('dev') === '1' || url.hash.includes('dev')) {
+      document.addEventListener('DOMContentLoaded', () => {
+        agentNftEnableDevMode('url-param');
+      });
+    }
+  } catch {}
+})();
+
+// Console shortcut
+window.txaiDev = function() { agentNftEnableDevMode('console'); };
 
 let agentNftHistory = [];
 let agentNftInitialized = false;
@@ -120,6 +229,9 @@ function agentNftInit() {
     mintBtn.addEventListener('click', agentNftMint);
   }
 
+  // Check for dev/provider NFT to unlock hidden templates
+  agentNftAutoCheckDev();
+
   agentNftLog('info', 'Agent NFT system ready.');
 }
 
@@ -130,10 +242,14 @@ function agentNftRenderTemplates() {
 
   let html = '';
   for (const tpl of AGENT_NFT_TEMPLATES) {
+    // Skip hidden templates unless dev mode
+    if (tpl.hidden && !agentNftDevMode) continue;
+
+    const hiddenBadge = tpl.hidden ? '<span class="agent-nft-dev-badge">DEV</span>' : '';
     html += `
-      <div class="agent-nft-card" onclick="agentNftSelectTemplate('${tpl.id}')">
+      <div class="agent-nft-card ${tpl.hidden ? 'agent-nft-card-dev' : ''}" onclick="agentNftSelectTemplate('${tpl.id}')">
         <div class="agent-nft-card-icon">${tpl.icon}</div>
-        <div class="agent-nft-card-name">${escapeHtml(tpl.name)}</div>
+        <div class="agent-nft-card-name">${escapeHtml(tpl.name)} ${hiddenBadge}</div>
         <div class="agent-nft-card-desc">${escapeHtml(tpl.desc)}</div>
         <button class="agent-nft-configure-btn" onclick="event.stopPropagation(); agentNftSelectTemplate('${tpl.id}')">Configure</button>
       </div>`;
@@ -183,6 +299,15 @@ function agentNftSelectTemplate(templateId) {
     fieldsEl.innerHTML = fieldsHtml;
   }
 
+  // Script editor visibility + init
+  agentScriptUpdateVisibility();
+  agentScriptInitEditor();
+  if (tpl.hasScript) {
+    // Auto-load matching script template if one exists
+    const autoTemplate = tpl.id === 'fund-rescue' ? 'fund-rescue' : 'blank';
+    agentScriptLoadTemplate(autoTemplate);
+  }
+
   agentNftLog('info', `Selected template: ${tpl.name}`);
 }
 
@@ -228,6 +353,10 @@ async function agentNftMint() {
     }
   }
 
+  // Collect script if present
+  const scriptCode = agentScriptGetCode();
+  const permissions = agentScriptGetPermissions();
+
   // Build metadata
   const metadata = {
     type: tpl.id,
@@ -236,6 +365,13 @@ async function agentNftMint() {
     status: 'active',
     created: new Date().toISOString()
   };
+
+  // Attach script + permissions if code exists
+  if (scriptCode) {
+    metadata.script = scriptCode;
+    metadata.permissions = permissions;
+    metadata.scriptHash = await agentScriptHash(scriptCode);
+  }
 
   const metadataUri = 'data:application/json;base64,' + btoa(JSON.stringify(metadata));
 
@@ -281,6 +417,7 @@ async function agentNftMint() {
       classId: classId,
       wallet: walletAddr,
       metadata: metadata,
+      hasScript: !!scriptCode,
       date: new Date().toISOString(),
       status: 'active',
     };
@@ -334,7 +471,7 @@ function agentNftRenderHistory() {
         <div class="agent-nft-history-icon">${entry.icon || ''}</div>
         <div class="agent-nft-history-info">
           <div class="agent-nft-history-name">${escapeHtml(entry.name)}</div>
-          <div class="agent-nft-history-meta">${escapeHtml(entry.typeName || entry.type)} &middot; ${dateStr}${entry.classId ? ' &middot; Class: ' + escapeHtml(entry.classId) : ''}</div>
+          <div class="agent-nft-history-meta">${escapeHtml(entry.typeName || entry.type)}${entry.hasScript ? ' &middot; <span style="color:var(--green)">Scripted</span>' : ''} &middot; ${dateStr}${entry.classId ? ' &middot; Class: ' + escapeHtml(entry.classId) : ''}</div>
         </div>
         <div class="agent-nft-history-status">
           <span class="agent-nft-status-badge ${entry.status}">${statusLabel}</span>
@@ -368,4 +505,385 @@ function agentNftSaveHistory() {
   try {
     localStorage.setItem(AGENT_NFT_STORAGE_KEY, JSON.stringify(agentNftHistory));
   } catch {}
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SCRIPT EDITOR — Advanced agent scripting
+   ═══════════════════════════════════════════════════════════ */
+
+const AGENT_SCRIPT_TEMPLATES = {
+  'blank': `// Your agent logic here
+// Runs on each trigger interval
+
+async function run(ctx) {
+  // ctx.chain  — chain query helpers
+  // ctx.agent  — agent actions (alert, log)
+  // ctx.params — your config params above
+
+  agent.log('Agent tick at ' + new Date().toISOString());
+}
+`,
+
+  'monitor-alert': `// Monitor + Alert — watches a value and alerts when threshold crossed
+async function run(ctx) {
+  const denom = ctx.params.denom || 'utestcore';
+  const threshold = ctx.params.threshold || 10000;
+
+  // Query top holders
+  const holders = await ctx.chain.getHolders(denom);
+
+  for (const h of holders) {
+    if (h.balance > threshold) {
+      ctx.agent.alert(
+        \`Whale detected: \${h.address} holds \${h.balance} \${denom}\`
+      );
+    }
+  }
+
+  ctx.agent.log(\`Scanned \${holders.length} holders\`);
+}
+`,
+
+  'monitor-tx': `// Monitor + Transact — watches events and auto-executes transactions
+// ⚠️ Requires "Sign transactions" permission enabled
+async function run(ctx) {
+  const denom = ctx.params.denom || 'utestcore';
+
+  // Check for large pending transfers
+  const events = await ctx.chain.query('/cosmos/tx/v1beta1/txs?events=transfer.amount>' + ctx.params.threshold);
+
+  for (const tx of events.txs || []) {
+    ctx.agent.log('Large transfer detected: ' + tx.txhash);
+
+    // Example: auto-buy when whale sells
+    if (ctx.permissions.canSign) {
+      await ctx.chain.send({
+        to: ctx.wallet,
+        amount: ctx.params.buyAmount || 1000,
+        denom: denom,
+        memo: 'Auto-buy by agent'
+      });
+      ctx.agent.alert('Auto-bought ' + ctx.params.buyAmount + ' ' + denom);
+    }
+  }
+}
+`,
+
+  'watchdog': `// Watchdog — Monitor any wallet for suspicious activity
+// Alerts you when something unusual happens. Does NOT take action.
+async function run(ctx) {
+  const watchAddr = ctx.params.watchAddress || ctx.params.denom;
+  if (!watchAddr) {
+    ctx.agent.log('Set an address or denom to watch');
+    return;
+  }
+
+  // Check current balance
+  const balance = await ctx.chain.getBalance(watchAddr, 'utestcore');
+  ctx.agent.log('Current balance: ' + balance + ' utestcore');
+
+  // Check for unbonding (unstaking) events
+  const unbonding = await ctx.chain.query(
+    '/cosmos/staking/v1beta1/delegators/' + watchAddr + '/unbonding_delegations'
+  );
+  const entries = unbonding.unbonding_responses || [];
+
+  if (entries.length > 0) {
+    ctx.agent.alert('⚠️ UNSTAKING DETECTED for ' + watchAddr + '! ' + entries.length + ' unbonding entries found.');
+  }
+
+  // Check recent large transfers
+  const holders = await ctx.chain.getHolders('utestcore');
+  const suspicious = holders.filter(h => h.balance > 100000);
+  if (suspicious.length > 0) {
+    ctx.agent.alert('Large holders detected: ' + suspicious.length + ' wallets > 100k');
+  }
+
+  ctx.agent.log('Watchdog scan complete — ' + new Date().toISOString());
+}
+`,
+
+  'fund-rescue': `// Fund Recovery — Cosmo Rescue style
+// Monitors unstaking events and races to recover funds
+// ⚠️ Requires "Sign transactions" permission enabled
+async function run(ctx) {
+  const watchAddress = ctx.params.watchAddress;
+  const safeAddress  = ctx.params.safeAddress;
+
+  if (!watchAddress || !safeAddress) {
+    ctx.agent.log('ERROR: Set watchAddress and safeAddress in params');
+    return;
+  }
+
+  // Check for unbonding delegations
+  const unbonding = await ctx.chain.query(
+    '/cosmos/staking/v1beta1/delegators/' + watchAddress + '/unbonding_delegations'
+  );
+
+  const entries = unbonding.unbonding_responses || [];
+  if (entries.length === 0) {
+    ctx.agent.log('No unbonding detected for ' + watchAddress);
+    return;
+  }
+
+  ctx.agent.alert('⚠️ UNBONDING DETECTED for ' + watchAddress + '!');
+
+  // Check if funds are available (completion time passed)
+  for (const entry of entries) {
+    for (const e of entry.entries || []) {
+      const completionTime = new Date(e.completion_time);
+      if (completionTime <= new Date()) {
+        // Funds are claimable — race to send to safe wallet
+        const balance = await ctx.chain.getBalance(watchAddress, 'utestcore');
+        if (balance > 0 && ctx.permissions.canSign) {
+          await ctx.chain.send({
+            to: safeAddress,
+            amount: balance,
+            denom: 'utestcore',
+            memo: 'Emergency fund rescue by TXAI Agent'
+          });
+          ctx.agent.alert('RESCUED ' + balance + ' utestcore → ' + safeAddress);
+        }
+      }
+    }
+  }
+}
+`
+};
+
+/* ── Show/hide script section based on template ── */
+function agentScriptUpdateVisibility() {
+  const section = document.getElementById('agentScriptSection');
+  const perms = document.getElementById('agentPermissions');
+  if (!section) return;
+
+  const tpl = agentNftSelectedTemplate;
+  const isScript = tpl && tpl.hasScript;
+
+  // Always show for custom-script, collapsible for others
+  if (isScript) {
+    section.style.display = '';
+    section.open = true;
+    if (perms) perms.style.display = '';
+  } else {
+    section.style.display = '';
+    section.open = false;
+    if (perms) perms.style.display = 'none';
+  }
+}
+
+/* ── Load script template ── */
+function agentScriptLoadTemplate(templateId) {
+  const editor = document.getElementById('agentScriptEditor');
+  if (!editor) return;
+
+  const code = AGENT_SCRIPT_TEMPLATES[templateId] || AGENT_SCRIPT_TEMPLATES['blank'];
+  editor.value = code;
+
+  // Update active button
+  document.querySelectorAll('.agent-script-tpl-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.textContent.toLowerCase().includes(templateId.replace('-', ' ').split(' ')[0]));
+  });
+
+  agentScriptUpdateCounts();
+  agentNftLog('info', `Loaded script template: ${templateId}`);
+}
+
+/* ── Update line/char counts ── */
+function agentScriptUpdateCounts() {
+  const editor = document.getElementById('agentScriptEditor');
+  const lineEl = document.getElementById('agentScriptLineCount');
+  const charEl = document.getElementById('agentScriptCharCount');
+  if (!editor) return;
+
+  const text = editor.value || '';
+  const lines = text.split('\n').length;
+  if (lineEl) lineEl.textContent = lines + ' line' + (lines !== 1 ? 's' : '');
+  if (charEl) charEl.textContent = text.length + ' char' + (text.length !== 1 ? 's' : '');
+}
+
+/* ── Dry Run — simulate script execution ── */
+async function agentScriptDryRun() {
+  const editor = document.getElementById('agentScriptEditor');
+  const output = document.getElementById('agentScriptDryRunOutput');
+  const status = document.getElementById('agentScriptStatus');
+  if (!editor || !output) return;
+
+  const code = editor.value.trim();
+  if (!code) {
+    output.style.display = 'block';
+    output.innerHTML = '<div class="dry-run-error">No script to run.</div>';
+    return;
+  }
+
+  // Update status
+  if (status) status.innerHTML = '<span class="agent-script-dot running"></span> Running dry run...';
+  output.style.display = 'block';
+  output.innerHTML = '<div class="dry-run-info">Simulating script execution on testnet...</div>';
+
+  const logs = [];
+  const alerts = [];
+
+  // Create sandbox context
+  const mockCtx = {
+    chain: {
+      query: async (path) => {
+        logs.push(`[chain.query] ${path}`);
+        return { txs: [], pagination: {} };
+      },
+      getBalance: async (addr, denom) => {
+        logs.push(`[chain.getBalance] ${addr} / ${denom}`);
+        return 1000000;
+      },
+      getHolders: async (denom) => {
+        logs.push(`[chain.getHolders] ${denom}`);
+        return [
+          { address: 'testcore1...abc', balance: 50000 },
+          { address: 'testcore1...def', balance: 12000 },
+          { address: 'testcore1...ghi', balance: 3000 },
+        ];
+      },
+      getStakers: async (validator) => {
+        logs.push(`[chain.getStakers] ${validator}`);
+        return [{ address: 'testcore1...abc', amount: 5000 }];
+      },
+      send: async (opts) => {
+        logs.push(`[chain.send] ${opts.amount} ${opts.denom} → ${opts.to}`);
+        return { txhash: 'DRY_RUN_' + Date.now().toString(16) };
+      }
+    },
+    agent: {
+      alert: (msg) => { alerts.push(msg); logs.push(`[ALERT] ${msg}`); },
+      log: (msg) => { logs.push(`[LOG] ${msg}`); },
+      getParam: (key) => {
+        const el = document.getElementById('agentNftParam_' + key);
+        return el ? el.value : '';
+      }
+    },
+    params: {},
+    permissions: {
+      canSign: !!document.getElementById('agentPermSign')?.checked,
+      canAlert: true,
+      canWebhook: !!document.getElementById('agentPermWebhook')?.checked
+    },
+    wallet: 'testcore1_dry_run_wallet'
+  };
+
+  // Collect params
+  if (agentNftSelectedTemplate) {
+    for (const p of agentNftSelectedTemplate.params) {
+      const el = document.getElementById('agentNftParam_' + p.key);
+      mockCtx.params[p.key] = el ? el.value : '';
+    }
+  }
+
+  try {
+    // Execute in pseudo-sandbox
+    const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
+    const fn = new AsyncFunction('ctx', 'chain', 'agent',
+      code.replace(/async function run\(ctx\)\s*\{/, '').replace(/\}$/, '')
+        || code
+    );
+
+    const startTime = performance.now();
+    await Promise.race([
+      fn(mockCtx, mockCtx.chain, mockCtx.agent),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Script timed out (5s limit)')), 5000))
+    ]);
+    const elapsed = (performance.now() - startTime).toFixed(1);
+
+    // Render output
+    let html = `<div class="dry-run-header">Dry Run Complete — ${elapsed}ms</div>`;
+    if (alerts.length) {
+      html += '<div class="dry-run-alerts">';
+      for (const a of alerts) html += `<div class="dry-run-alert-item">&#x1F514; ${escapeHtml(a)}</div>`;
+      html += '</div>';
+    }
+    html += '<div class="dry-run-log">';
+    for (const l of logs) html += `<div class="dry-run-log-line">${escapeHtml(l)}</div>`;
+    if (!logs.length) html += '<div class="dry-run-log-line dim">No output.</div>';
+    html += '</div>';
+
+    output.innerHTML = html;
+    if (status) status.innerHTML = '<span class="agent-script-dot success"></span> Dry run passed';
+
+    agentNftLog('success', `Dry run OK — ${elapsed}ms, ${logs.length} log entries`);
+
+  } catch (err) {
+    output.innerHTML = `<div class="dry-run-header error">Dry Run Failed</div>
+      <div class="dry-run-error">${escapeHtml(err.message)}</div>
+      <div class="dry-run-log">${logs.map(l => `<div class="dry-run-log-line">${escapeHtml(l)}</div>`).join('')}</div>`;
+    if (status) status.innerHTML = '<span class="agent-script-dot error"></span> Error';
+
+    agentNftLog('error', `Dry run failed: ${err.message}`);
+  }
+}
+
+/* ── Format script ── */
+function agentScriptFormat() {
+  const editor = document.getElementById('agentScriptEditor');
+  if (!editor) return;
+
+  let code = editor.value;
+  // Basic formatting: normalize indentation
+  code = code.replace(/\t/g, '  ');
+  // Remove trailing whitespace
+  code = code.split('\n').map(l => l.trimEnd()).join('\n');
+  // Remove excessive blank lines
+  code = code.replace(/\n{3,}/g, '\n\n');
+
+  editor.value = code;
+  agentScriptUpdateCounts();
+  agentNftLog('info', 'Script formatted.');
+}
+
+/* ── Get script content for mint ── */
+function agentScriptGetCode() {
+  const editor = document.getElementById('agentScriptEditor');
+  return editor ? editor.value.trim() : '';
+}
+
+/* ── Get permissions for mint ── */
+function agentScriptGetPermissions() {
+  return {
+    readChain: true, // always on
+    alert: !!document.getElementById('agentPermAlert')?.checked,
+    signTx: !!document.getElementById('agentPermSign')?.checked,
+    webhook: !!document.getElementById('agentPermWebhook')?.checked
+  };
+}
+
+/* ── Hash script for integrity verification ── */
+async function agentScriptHash(code) {
+  try {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(code);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  } catch {
+    return 'hash-unavailable';
+  }
+}
+
+/* ── Wire up editor events ── */
+function agentScriptInitEditor() {
+  const editor = document.getElementById('agentScriptEditor');
+  if (!editor) return;
+
+  editor.addEventListener('input', agentScriptUpdateCounts);
+
+  // Tab key support in textarea
+  editor.addEventListener('keydown', (e) => {
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      const start = editor.selectionStart;
+      const end = editor.selectionEnd;
+      editor.value = editor.value.substring(0, start) + '  ' + editor.value.substring(end);
+      editor.selectionStart = editor.selectionEnd = start + 2;
+      agentScriptUpdateCounts();
+    }
+  });
+
+  agentScriptUpdateCounts();
 }
