@@ -2528,6 +2528,54 @@ footer{
 }
 .hero-link:hover{border-color:var(--text-muted)}
 
+/* ───── NFT Airdrop Wizard ───── */
+.wiz-steps{display:flex;align-items:center;justify-content:center;gap:0;margin-bottom:22px}
+.wiz-step{display:flex;align-items:center;gap:6px;font-size:.72rem;font-family:var(--mono);color:var(--muted);font-weight:500;padding:0 8px}
+.wiz-step.active{color:var(--accent)}
+.wiz-step.done{color:var(--green)}
+.wiz-step-num{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:700;border:1.5px solid var(--border);color:var(--muted);transition:all .2s}
+.wiz-step.active .wiz-step-num{border-color:var(--accent);color:var(--accent);background:rgba(124,109,250,.1)}
+.wiz-step.done .wiz-step-num{border-color:var(--green);color:#000;background:var(--green)}
+.wiz-step-line{flex:1;max-width:40px;height:1px;background:var(--border)}
+.wiz-panel{animation:wizFade .25s ease}
+@keyframes wizFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.wiz-next-btn{width:100%;padding:12px 0;border:none;border-radius:10px;font-family:var(--font);font-size:.82rem;font-weight:600;cursor:pointer;background:var(--accent);color:#fff;transition:opacity .15s;margin-top:8px}
+.wiz-next-btn:hover{opacity:.85}
+.wiz-back-btn{padding:12px 20px;border:1px solid var(--border);border-radius:10px;font-family:var(--font);font-size:.78rem;font-weight:500;cursor:pointer;background:transparent;color:var(--muted);transition:border-color .15s}
+.wiz-back-btn:hover{border-color:var(--text-muted)}
+
+.nft-ad-upload{border:2px dashed var(--border);border-radius:12px;padding:28px 16px;text-align:center;cursor:pointer;transition:border-color .2s;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:140px;position:relative;overflow:hidden}
+.nft-ad-upload:hover{border-color:var(--accent)}
+.nft-ad-upload.has-image{border-style:solid;border-color:var(--accent);padding:0}
+.nft-ad-upload-placeholder{display:flex;flex-direction:column;align-items:center;gap:2px}
+.nft-ad-upload-preview{width:100%;height:180px;object-fit:cover;border-radius:10px}
+.nft-ad-upload-preview img{width:100%;height:100%;object-fit:cover;border-radius:10px}
+
+.nft-ad-royalty-presets{display:flex;gap:8px}
+.nft-ad-royalty-btn{flex:1;padding:8px 0;border:1px solid var(--border);border-radius:8px;font-family:var(--mono);font-size:.72rem;font-weight:600;cursor:pointer;background:transparent;color:var(--muted);transition:all .15s}
+.nft-ad-royalty-btn.active{border-color:var(--accent);color:var(--accent);background:rgba(124,109,250,.08)}
+.nft-ad-royalty-btn:hover{border-color:var(--text-muted)}
+
+.nft-ad-preview-card{display:flex;gap:14px;align-items:center;background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:14px;transition:all .2s}
+.nft-ad-preview-img{width:64px;height:64px;border-radius:8px;background:var(--bg2);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0}
+.nft-ad-preview-img img{width:100%;height:100%;object-fit:cover}
+.nft-ad-preview-info{flex:1}
+.nft-ad-preview-name{font-size:.82rem;font-weight:600;color:var(--text)}
+.nft-ad-preview-id{font-size:.68rem;color:var(--muted);font-family:var(--mono);margin-top:2px}
+.nft-ad-preview-royalty{font-size:.65rem;color:var(--accent);margin-top:4px}
+
+.nft-ad-source-tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:14px}
+.nft-ad-source-tab{padding:7px 14px;font-family:var(--mono);font-size:.68rem;font-weight:600;color:var(--muted);cursor:pointer;border:none;background:transparent;position:relative;transition:color .15s;white-space:nowrap}
+.nft-ad-source-tab.active{color:var(--accent)}
+.nft-ad-source-tab.active::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:2px;background:var(--accent);border-radius:1px}
+.nft-ad-small-btn{padding:7px 14px;border:1px solid var(--border);border-radius:6px;font-family:var(--font);font-size:.7rem;font-weight:500;cursor:pointer;background:transparent;color:var(--text-muted);transition:border-color .15s}
+.nft-ad-small-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+.nft-ad-review{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:14px}
+.nft-ad-review-row{display:flex;justify-content:space-between;gap:12px;padding:7px 0;font-size:.75rem;border-bottom:1px solid rgba(255,255,255,.04)}
+.nft-ad-review-row:last-child{border-bottom:none}
+.nft-ad-review-label{color:var(--muted);font-weight:500}
+
 /* ───── Logo Upload ───── */
 .logo-input-row{display:flex;gap:8px;align-items:center}
 .logo-url-input{flex:1}

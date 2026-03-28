@@ -56,7 +56,7 @@ function nftAirdropUpdateCount() {
   if (!recipientsEl || !countEl) return;
 
   const addresses = nftAirdropParseRecipients();
-  countEl.textContent = addresses.length;
+  countEl.textContent = addresses.length + ' addresses';
 }
 
 /* ── Parse Recipients from Textarea ── */
@@ -382,3 +382,183 @@ function nftAirdropSaveHistory() {
     localStorage.setItem(NFT_AIRDROP_STORAGE_KEY, JSON.stringify(nftAirdropHistory));
   } catch {}
 }
+
+/* ══════════════════════════════════════════
+   Wizard UI Functions
+   ══════════════════════════════════════════ */
+
+let nftAdCurrentStep = 1;
+
+/* ── Step Navigation ── */
+function nftAdGoStep(step) {
+  // Validate before advancing
+  if (step === 2 && nftAdCurrentStep === 1) {
+    const name = (document.getElementById('nftAdName').value || '').trim();
+    if (!name) { document.getElementById('nftAdName').focus(); return; }
+  }
+  if (step === 3 && nftAdCurrentStep === 2) {
+    const addrs = nftAirdropParseRecipients();
+    if (addrs.length === 0) { document.getElementById('nftAdRecipients').focus(); return; }
+    // Populate review
+    document.getElementById('nftAdRevName').textContent = document.getElementById('nftAdName').value;
+    document.getElementById('nftAdRevCount').textContent = addrs.length + ' wallets';
+    document.getElementById('nftAdRevRoyalty').textContent = (parseFloat(document.getElementById('nftAdRoyalty').value || 0) * 100) + '%';
+    document.getElementById('nftAdRevGas').textContent = '~' + (addrs.length * 0.05).toFixed(2) + ' CORE';
+  }
+
+  nftAdCurrentStep = step;
+  // Show/hide panels
+  for (let i = 1; i <= 3; i++) {
+    const panel = document.getElementById('nftAdStep' + i);
+    if (panel) panel.style.display = i === step ? '' : 'none';
+  }
+  // Update step indicators
+  document.querySelectorAll('#nftAdWizSteps .wiz-step').forEach(el => {
+    const s = parseInt(el.dataset.step);
+    el.classList.remove('active', 'done');
+    if (s === step) el.classList.add('active');
+    if (s < step) el.classList.add('done');
+  });
+  // Scroll to top of wizard
+  const wrap = document.getElementById('nftAirdropWrap');
+  if (wrap) wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/* ── Image Upload (drag & drop + file picker) ── */
+function nftAdHandleImage(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  nftAdUploadImage(file);
+}
+
+async function nftAdUploadImage(file) {
+  const zone = document.getElementById('nftAdUploadZone');
+  const placeholder = document.getElementById('nftAdUploadPlaceholder');
+  const preview = document.getElementById('nftAdPreviewImg');
+  const uriInput = document.getElementById('nftAdUri');
+
+  // Show local preview immediately
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    preview.innerHTML = '<img src="' + e.target.result + '">';
+    preview.style.display = '';
+    placeholder.style.display = 'none';
+    zone.classList.add('has-image');
+    nftAdUpdatePreviewCard(e.target.result);
+  };
+  reader.readAsDataURL(file);
+
+  // Upload to imgbb
+  try {
+    const formData = new FormData();
+    formData.append('image', file);
+    const res = await fetch('https://api.imgbb.com/1/upload?key=00000000000000000000000000000000', {
+      method: 'POST', body: formData
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.data && data.data.url) {
+        uriInput.value = data.data.url;
+        nftAirdropLog('info', 'Image uploaded: ' + data.data.url);
+      }
+    }
+  } catch {
+    // Fallback: use local data URL (won't persist on-chain but works for demo)
+    nftAirdropLog('info', 'Image set locally (paste a hosted URL for on-chain metadata)');
+  }
+}
+
+// Drag & drop support
+(function() {
+  setTimeout(function() {
+    const zone = document.getElementById('nftAdUploadZone');
+    if (!zone) return;
+    zone.addEventListener('dragover', function(e) { e.preventDefault(); zone.style.borderColor = 'var(--accent)'; });
+    zone.addEventListener('dragleave', function() { zone.style.borderColor = ''; });
+    zone.addEventListener('drop', function(e) {
+      e.preventDefault(); zone.style.borderColor = '';
+      const file = e.dataTransfer.files && e.dataTransfer.files[0];
+      if (file && file.type.startsWith('image/')) nftAdUploadImage(file);
+    });
+  }, 500);
+})();
+
+/* ── Auto-generate symbol from name ── */
+(function() {
+  setTimeout(function() {
+    const nameInput = document.getElementById('nftAdName');
+    const symInput = document.getElementById('nftAdSymbol');
+    const cardName = document.getElementById('nftAdCardName');
+    if (!nameInput || !symInput) return;
+    nameInput.addEventListener('input', function() {
+      const name = nameInput.value.trim();
+      // Generate symbol: first letters of each word, max 6 chars
+      const words = name.split(/\s+/).filter(Boolean);
+      let sym = words.length > 1
+        ? words.map(w => w[0]).join('').toUpperCase().slice(0, 6)
+        : name.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
+      symInput.value = sym || '';
+      if (cardName) cardName.textContent = name || 'Your Collection';
+    });
+  }, 500);
+})();
+
+/* ── Royalty preset buttons ── */
+function nftAdSetRoyalty(btn, val) {
+  document.getElementById('nftAdRoyalty').value = val;
+  document.querySelectorAll('.nft-ad-royalty-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const cardRoyalty = document.getElementById('nftAdCardRoyalty');
+  if (cardRoyalty) cardRoyalty.textContent = (val * 100) + '% royalty on resales';
+}
+
+/* ── Live preview card update ── */
+function nftAdUpdatePreviewCard(imgSrc) {
+  const cardImg = document.getElementById('nftAdCardImg');
+  if (cardImg && imgSrc) {
+    cardImg.innerHTML = '<img src="' + imgSrc + '" style="width:100%;height:100%;object-fit:cover;border-radius:8px">';
+  }
+}
+
+/* ── Source tab switching (Paste / Holders / Stakers) ── */
+function nftAdSourceTab(btn, tab) {
+  document.querySelectorAll('.nft-ad-source-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('nftAdSrcPaste').style.display = tab === 'paste' ? '' : 'none';
+  document.getElementById('nftAdSrcHolders').style.display = tab === 'holders' ? '' : 'none';
+  document.getElementById('nftAdSrcStakers').style.display = tab === 'stakers' ? '' : 'none';
+}
+
+/* ── CSV Import ── */
+function nftAdImportCsv(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const text = e.target.result;
+    // Parse: find anything that looks like a core/testcore address
+    const matches = text.match(/(test)?core[a-z0-9]{39,}/g) || [];
+    const unique = [...new Set(matches)];
+    const ta = document.getElementById('nftAdRecipients');
+    if (ta) {
+      ta.value = unique.join('\n');
+      nftAirdropUpdateCount();
+    }
+    nftAirdropLog('info', 'Imported ' + unique.length + ' addresses from ' + file.name);
+  };
+  reader.readAsText(file);
+}
+
+/* ── Update address count display ── */
+(function() {
+  setTimeout(function() {
+    const ta = document.getElementById('nftAdRecipients');
+    if (!ta) return;
+    ta.addEventListener('input', function() {
+      nftAirdropUpdateCount();
+      const count = nftAirdropParseRecipients().length;
+      const cardCount = document.getElementById('nftAdCardCount');
+      if (cardCount) cardCount.textContent = count || '?';
+    });
+  }, 500);
+})();
