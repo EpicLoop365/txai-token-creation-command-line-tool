@@ -633,40 +633,23 @@ async function tokenGateInit() {
 
 /* ── Auto-mint free Scout Pass (identity NFT) ── */
 async function tokenGateAutoMintScout(wallet) {
-  const tier = PASS_TIERS.scout;
-  const metadata = {
-    type: 'access-pass',
-    tier: 'scout',
-    level: 1,
-    name: tier.name,
-    transfer: 'soulbound',
-    duration: 0,           // lifetime
-    expiresAt: null,        // never expires
-    autoMinted: true,
-    features: Object.entries(FEATURE_TIERS)
-      .filter(([, lvl]) => lvl <= 1)
-      .map(([feat]) => feat),
-    issuedAt: new Date().toISOString(),
-    wallet: wallet,
-  };
-
-  const res = await fetch(`${API_URL}/api/nft-airdrop`, {
+  // Use dedicated scout-mint endpoint (bypasses rate limit + gate)
+  const res = await fetch(`${API_URL}/api/scout-mint`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      name: tier.name,
-      symbol: 'SCOUTPASS',
-      description: tier.desc,
-      uri: 'data:application/json;base64,' + btoa(JSON.stringify(metadata)),
-      recipients: [wallet],
-      features: ['disable_sending'],  // Soulbound
-    }),
+    body: JSON.stringify({ wallet }),
   });
 
   const data = await res.json();
-  if (res.ok && !data.error) {
-    console.log('%c\u{1F50D} Scout Pass auto-minted! Class: ' + data.classId, 'color:#6b7280;font-weight:bold');
+  if (res.ok && data.success) {
+    if (data.alreadyMinted) {
+      console.log('%c\u{1F50D} Scout Pass already exists for this wallet', 'color:#6b7280;font-weight:bold');
+    } else {
+      console.log('%c\u{1F50D} Scout Pass auto-minted! Class: ' + data.classId, 'color:#6b7280;font-weight:bold');
+    }
     gateCache = { tier: 'scout', level: 1, ts: Date.now(), wallet, expired: false, expiresAt: null, daysLeft: null };
     tokenGateRenderBadge();
+  } else {
+    console.warn('[TXAI] Scout mint response:', data);
   }
 }

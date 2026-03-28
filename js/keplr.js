@@ -113,6 +113,16 @@ async function keplrConnect(chainId) {
   window.addEventListener('keplr_keystorechange', _keplrOnAccountChange);
 
   console.log('[keplr] Connected:', address);
+
+  // Auto-mint Scout Pass + init token gate (non-blocking)
+  setTimeout(async () => {
+    try {
+      if (typeof tokenGateInit === 'function') await tokenGateInit();
+    } catch (e) {
+      console.warn('[keplr] Token gate init failed:', e.message);
+    }
+  }, 500);
+
   return { address, signer, chainId };
 }
 

@@ -1291,6 +1291,114 @@ app.post("/api/nft-airdrop", async (req, res) => {
   }
 });
 
+// ─── SCOUT PASS AUTO-MINT ──────────────────────────────────────────────────
+// Dedicated endpoint for auto-minting free soulbound Scout Pass on wallet connect.
+// Bypasses rate limiter and token gate — everyone gets one free identity NFT.
+// Prevents duplicate mints by checking if wallet already owns a pass.
+
+const scoutMintedWallets = new Set<string>(); // In-memory dedup (resets on redeploy)
+
+app.post("/api/scout-mint", async (req, res) => {
+  const { wallet } = req.body as { wallet?: string };
+
+  if (!wallet || typeof wallet !== "string" || !wallet.startsWith("testcore")) {
+    res.status(400).json({ error: "Invalid wallet address." });
+    return;
+  }
+
+  // Dedup: don't mint twice in same server session
+  if (scoutMintedWallets.has(wallet)) {
+    res.json({ success: true, alreadyMinted: true, message: "Scout Pass already minted this session." });
+    return;
+  }
+
+  if (!process.env.AGENT_MNEMONIC) {
+    res.status(500).json({ error: "Server not configured." });
+    return;
+  }
+
+  const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
+  let client: TxClient | null = null;
+
+  try {
+    // Check on-chain if wallet already has any pass NFT
+    const network = NETWORKS[networkName];
+    const nftRes = await fetch(`${network.restEndpoint}/coreum/nft/v1beta1/nfts?owner=${wallet}`);
+    const nftData: any = await nftRes.json();
+    const existingPasses = (nftData.nfts || []).filter((nft: any) => {
+      const classId = (nft.class_id || "").toLowerCase();
+      return classId.includes("scoutpass") || classId.includes("scout-pass") ||
+             classId.includes("creatorpass") || classId.includes("creator-pass") ||
+             classId.includes("propass") || classId.includes("pro-pass") ||
+             classId.includes("txaiscout") || classId.includes("txaicreator") || classId.includes("txaipro");
+    });
+
+    if (existingPasses.length > 0) {
+      scoutMintedWallets.add(wallet);
+      res.json({ success: true, alreadyMinted: true, message: "Wallet already owns a pass." });
+      return;
+    }
+
+    // Mint soulbound Scout Pass
+    const txWallet = await importWallet(process.env.AGENT_MNEMONIC, networkName);
+    client = await TxClient.connectWithWallet(txWallet);
+
+    const metadata = {
+      type: "access-pass",
+      tier: "scout",
+      level: 1,
+      name: "Scout Pass",
+      transfer: "soulbound",
+      duration: 0,
+      expiresAt: null,
+      autoMinted: true,
+      image: "https://solomentelabs.com/assets/scout-pass.png",
+      features: ["view-tokens", "view-nfts", "exchange", "browse-agents"],
+      issuedAt: new Date().toISOString(),
+      wallet,
+    };
+
+    const symbol = "scoutpass";
+    const classResult = await issueNFTClass(client, {
+      symbol,
+      name: "Scout Pass",
+      description: "Free soulbound identity pass — required for all TXAI tools. Auto-minted on first wallet connect.",
+      uri: "",
+      royaltyRate: "0",
+      features: { disableSending: true },
+    });
+
+    if (!classResult.success) {
+      throw new Error(`NFT class failed: ${classResult.error}`);
+    }
+
+    const nftId = "scout-" + Date.now().toString(36);
+    await mintNFT(client, {
+      classId: classResult.classId!,
+      id: nftId,
+      uri: "data:application/json;base64," + Buffer.from(JSON.stringify(metadata)).toString("base64"),
+      recipient: wallet,
+    });
+
+    scoutMintedWallets.add(wallet);
+    console.log(`[scout-mint] Minted Scout Pass → ${wallet} (class: ${classResult.classId})`);
+
+    res.json({
+      success: true,
+      alreadyMinted: false,
+      classId: classResult.classId,
+      nftId,
+      message: "Scout Pass minted! Welcome to TXAI.",
+    });
+
+  } catch (err) {
+    console.error("[scout-mint] Error:", err);
+    res.status(500).json({ error: (err as Error).message });
+  } finally {
+    try { if (client) client.disconnect(); } catch { /* ignore */ }
+  }
+});
+
 // ─── CREATE WALLET ────────────────────────────────────────────────────────
 
 app.post("/api/create-wallet", async (_req, res) => {
