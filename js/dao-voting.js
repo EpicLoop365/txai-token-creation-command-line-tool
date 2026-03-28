@@ -516,6 +516,12 @@ function _daoBuildCreateForm() {
     '<div id="daoNftFields" class="dao-form-group" style="display:none">' +
       '<label class="dao-form-label">NFT Class ID *</label>' +
       '<input type="text" id="daoNftClassId" class="dao-form-input" placeholder="e.g. txscout-...">' +
+      '<div class="dao-metadata-section">' +
+        '<label class="dao-form-label" style="margin-top:12px">Metadata Requirements <span style="color:var(--text2);font-weight:400">(optional)</span></label>' +
+        '<p style="color:var(--text2);font-size:.75rem;margin:0 0 8px">Only NFTs with matching metadata fields can vote</p>' +
+        '<div id="daoMetadataRows"></div>' +
+        '<button type="button" class="dao-add-metadata-btn" onclick="_daoAddMetadataRow()">+ Add Requirement</button>' +
+      '</div>' +
     '</div>' +
 
     // Token gating fields (hidden by default)
@@ -555,6 +561,50 @@ function _daoBuildCreateForm() {
 
 function _daoSetupCreateForm() {
   // Nothing extra needed — form is ready
+}
+
+var _daoMetadataRowCount = 0;
+
+function _daoAddMetadataRow() {
+  var container = document.getElementById('daoMetadataRows');
+  if (!container) return;
+  var idx = _daoMetadataRowCount++;
+  var row = document.createElement('div');
+  row.className = 'dao-metadata-row';
+  row.id = 'daoMetaRow' + idx;
+  row.innerHTML =
+    '<input type="text" class="dao-form-input dao-meta-field" placeholder="Field (e.g. role)" data-meta-idx="' + idx + '" data-meta-part="field">' +
+    '<select class="dao-form-input dao-meta-op" data-meta-idx="' + idx + '" data-meta-part="operator">' +
+      '<option value="eq">equals</option>' +
+      '<option value="neq">not equal</option>' +
+      '<option value="exists">exists</option>' +
+      '<option value="gt">greater than</option>' +
+      '<option value="lt">less than</option>' +
+    '</select>' +
+    '<input type="text" class="dao-form-input dao-meta-value" placeholder="Value (e.g. member)" data-meta-idx="' + idx + '" data-meta-part="value">' +
+    '<button type="button" class="dao-meta-remove" onclick="_daoRemoveMetadataRow(' + idx + ')">×</button>';
+  container.appendChild(row);
+}
+
+function _daoRemoveMetadataRow(idx) {
+  var row = document.getElementById('daoMetaRow' + idx);
+  if (row) row.remove();
+}
+
+function _daoGetMetadataRequirements() {
+  var container = document.getElementById('daoMetadataRows');
+  if (!container) return [];
+  var rows = container.querySelectorAll('.dao-metadata-row');
+  var reqs = [];
+  rows.forEach(function(row) {
+    var field = row.querySelector('[data-meta-part="field"]')?.value?.trim();
+    var op = row.querySelector('[data-meta-part="operator"]')?.value || 'eq';
+    var value = row.querySelector('[data-meta-part="value"]')?.value?.trim();
+    if (field) {
+      reqs.push({ field: field, operator: op, value: value || '' });
+    }
+  });
+  return reqs;
 }
 
 function _daoGateTypeChanged() {
@@ -624,6 +674,8 @@ function _daoCreateProposal() {
     var classId = document.getElementById('daoNftClassId').value.trim();
     if (!classId) { alert('NFT Class ID is required for NFT gating.'); return; }
     body.nftClassId = classId;
+    var metaReqs = _daoGetMetadataRequirements();
+    if (metaReqs.length > 0) body.nftMetadataRequirements = metaReqs;
   }
   if (gateType === 'token') {
     var denom = document.getElementById('daoTokenDenom').value.trim();

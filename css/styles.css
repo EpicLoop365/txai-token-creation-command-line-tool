@@ -4516,6 +4516,15 @@ textarea.agent-resume-input{resize:vertical}
   display:flex;align-items:center;gap:6px;margin-bottom:4px;
 }
 .dao-option-row .dao-form-input{flex:1}
+.dao-metadata-section{margin-top:8px;padding:10px;border:1px dashed rgba(168,85,247,0.3);border-radius:8px;background:rgba(168,85,247,0.03)}
+.dao-metadata-row{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.dao-metadata-row .dao-meta-field{flex:2;min-width:0}
+.dao-metadata-row .dao-meta-op{flex:1.5;min-width:0;font-size:.78rem}
+.dao-metadata-row .dao-meta-value{flex:2;min-width:0}
+.dao-meta-remove{background:none;border:none;color:var(--text-muted,#6b7280);font-size:1.1rem;cursor:pointer;padding:4px 6px;border-radius:4px;transition:all .15s;line-height:1}
+.dao-meta-remove:hover{color:#ef4444;background:rgba(239,68,68,0.1)}
+.dao-add-metadata-btn{background:none;border:1px dashed rgba(168,85,247,0.4);color:var(--purple,#a855f7);padding:6px 12px;border-radius:6px;font-size:.78rem;cursor:pointer;width:100%;margin-top:4px;transition:all .15s}
+.dao-add-metadata-btn:hover{background:rgba(168,85,247,0.1);border-color:var(--purple,#a855f7)}
 .dao-option-remove{
   background:none;border:none;
   color:var(--text-muted,#6b7280);
