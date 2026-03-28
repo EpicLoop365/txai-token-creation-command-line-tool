@@ -273,7 +273,7 @@ app.use(
   })
 );
 
-app.use(express.json({ limit: "10kb" }));
+app.use(express.json({ limit: "1mb" }));
 
 // Trust proxy for rate limiting behind Railway's load balancer
 app.set("trust proxy", 1);
