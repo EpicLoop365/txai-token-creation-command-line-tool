@@ -2528,6 +2528,17 @@ footer{
 }
 .hero-link:hover{border-color:var(--text-muted)}
 
+/* ───── Token Gate Prompt ───── */
+.token-gate-prompt{display:flex;align-items:center;gap:12px;padding:14px 16px;margin-bottom:12px;background:linear-gradient(135deg,rgba(124,109,250,.08),rgba(155,89,182,.08));border:1px solid var(--accent);border-radius:10px;position:relative;animation:wizFade .25s ease}
+.token-gate-icon{font-size:1.4rem;flex-shrink:0}
+.token-gate-text{flex:1;font-size:.75rem;line-height:1.4}
+.token-gate-text strong{display:block;color:var(--text);font-size:.82rem;margin-bottom:2px}
+.token-gate-text span{color:var(--muted)}
+.token-gate-btn{padding:8px 18px;border:none;border-radius:8px;font-family:var(--font);font-size:.72rem;font-weight:600;cursor:pointer;background:var(--accent);color:#fff;transition:opacity .15s;white-space:nowrap;flex-shrink:0}
+.token-gate-btn:hover{opacity:.85}
+.token-gate-dismiss{position:absolute;top:6px;right:8px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:.8rem;padding:2px;opacity:.5}
+.token-gate-dismiss:hover{opacity:1}
+
 /* ───── Agent NFT Grid ───── */
 .agent-nft-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px}
 .agent-nft-card{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px;cursor:pointer;transition:all .18s;display:flex;flex-direction:column;gap:6px}

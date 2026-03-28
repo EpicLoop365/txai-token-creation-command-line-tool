@@ -1206,6 +1206,17 @@
         </div>
       </div>
 
+      <!-- Your Agents Section -->
+      <div class="manage-action-card" style="margin-top:16px">
+        <div class="manage-action-hdr">
+          <span class="manage-action-icon">🤖</span> Your Agents
+        </div>
+        <div class="manage-action-body">
+          <p style="font-size:.72rem;color:var(--muted);margin:0 0 10px">Agent NFTs you own. Transfer the NFT to transfer the agent.</p>
+          <div id="manageAgentList" style="font-size:.72rem;color:var(--muted)">No agents yet. <a href="#" onclick="switchTab('create');setCreateMode('agent');return false" style="color:var(--accent)">Mint one</a></div>
+        </div>
+      </div>
+
     </div><!-- end manage-wrap -->
 
     <!-- Subscriptions Tab -->
@@ -1683,6 +1694,7 @@
 <script src="js/agent-workflows.js?v=1"></script>
 <script src="js/nft-airdrop.js?v=1"></script>
 <script src="js/agent-nft.js?v=1"></script>
+<script src="js/token-gate.js?v=1"></script>
 <script>
 // ── Inspiration ticker ──
 (function(){

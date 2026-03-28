@@ -112,6 +112,87 @@ function blockMainnetAgentWallet(req: express.Request, res: express.Response): b
   return false; // allowed
 }
 
+// ─── TOKEN-GATE CONFIGURATION ────────────────────────────────────────────────
+
+const TOKEN_GATE = {
+  enabled: process.env.TOKEN_GATE_ENABLED === 'true',
+  // The denom of the Creator Pass NFT that grants access
+  passDenom: process.env.CREATOR_PASS_DENOM || '',
+  // Endpoints that require the Creator Pass
+  gatedEndpoints: [
+    '/api/nft-airdrop',
+    '/api/airdrop',
+    '/api/subs/create-pass',
+    '/api/subs/buy-pass',
+  ],
+  // Endpoints that are always free
+  freeEndpoints: [
+    '/api/create-token',
+    '/api/create-token-sync',
+    '/api/nft/issue-class',
+    '/api/nft/mint',
+    '/api/network-info',
+    '/api/stakers',
+    '/api/holders',
+    '/api/subs/verify',
+    '/api/dex',
+  ],
+};
+
+// ─── TOKEN-GATE MIDDLEWARE ───────────────────────────────────────────────────
+
+async function tokenGateCheck(req: express.Request, res: express.Response): Promise<boolean> {
+  // If gate is disabled, allow everything
+  if (!TOKEN_GATE.enabled || !TOKEN_GATE.passDenom) return false;
+
+  // Check if this endpoint is gated
+  const path = req.path;
+  const isGated = TOKEN_GATE.gatedEndpoints.some(ep => path.startsWith(ep));
+  if (!isGated) return false;
+
+  // Get wallet address from request (header, query, or body)
+  const walletAddress = req.headers['x-wallet-address'] as string
+    || req.query.wallet as string
+    || req.body?.wallet;
+
+  if (!walletAddress) {
+    res.status(403).json({
+      error: 'Access requires a Creator Pass NFT',
+      gated: true,
+      passDenom: TOKEN_GATE.passDenom,
+      message: 'Connect your wallet and hold a Creator Pass to use this tool.'
+    });
+    return true; // blocked
+  }
+
+  // Check if wallet holds the pass token
+  try {
+    const { network } = getNetwork(req);
+    const balanceUrl = `${network.restEndpoint}/cosmos/bank/v1beta1/balances/${walletAddress}/by_denom?denom=${TOKEN_GATE.passDenom}`;
+    const balRes = await fetch(balanceUrl);
+    const balData: any = await balRes.json();
+    const amount = parseInt(balData?.balance?.amount || '0', 10);
+
+    if (amount <= 0) {
+      res.status(403).json({
+        error: 'Creator Pass required',
+        gated: true,
+        passDenom: TOKEN_GATE.passDenom,
+        wallet: walletAddress,
+        balance: 0,
+        message: 'You need to hold at least 1 Creator Pass NFT to use this tool.'
+      });
+      return true; // blocked
+    }
+
+    return false; // allowed
+  } catch (err) {
+    // On error checking, allow through (fail open for now)
+    console.error('[token-gate] Error checking balance:', err);
+    return false;
+  }
+}
+
 // ─── APP SETUP ───────────────────────────────────────────────────────────────
 
 const app = express();
@@ -962,6 +1043,7 @@ app.post("/api/airdrop", async (req, res) => {
     res.status(400).json({ error: "Max 50 recipients per request." }); return;
   }
   if (blockMainnetAgentWallet(req, res)) return;
+  if (await tokenGateCheck(req, res)) return;
   if (!process.env.AGENT_MNEMONIC) {
     res.status(500).json({ error: "Server not configured." }); return;
   }
@@ -1134,6 +1216,7 @@ app.post("/api/nft-airdrop", async (req, res) => {
     res.status(400).json({ error: "Max 100 recipients per call." }); return;
   }
   if (blockMainnetAgentWallet(req, res)) return;
+  if (await tokenGateCheck(req, res)) return;
   if (!process.env.AGENT_MNEMONIC) {
     res.status(500).json({ error: "Server not configured." }); return;
   }
@@ -2055,6 +2138,7 @@ const SUBS_PLATFORM_ADDR = process.env.AGENT_MNEMONIC ? "" : ""; // Set by walle
 // POST /api/subs/create-pass — create a subscription pass token
 app.post("/api/subs/create-pass", async (req, res) => {
   try {
+    if (await tokenGateCheck(req, res)) return;
     const { name, subunit, price, duration, merchantAddress, description } = req.body;
     if (!name || !subunit || !price || !merchantAddress) {
       return res.status(400).json({ error: "Missing required fields: name, subunit, price, merchantAddress" });
@@ -2117,6 +2201,7 @@ app.post("/api/subs/create-pass", async (req, res) => {
 // POST /api/subs/buy-pass — user purchases a pass (pay + mint)
 app.post("/api/subs/buy-pass", async (req, res) => {
   try {
+    if (await tokenGateCheck(req, res)) return;
     const { passDenom, buyerAddress, merchantAddress, price, duration } = req.body;
     if (!passDenom || !buyerAddress || !merchantAddress || !price) {
       return res.status(400).json({ error: "Missing required fields" });
@@ -2226,6 +2311,44 @@ app.get("/api/subs/verify", async (req, res) => {
   }
 });
 
+// ─── GATE STATUS ─────────────────────────────────────────────────────────────
+
+app.get("/api/gate-status", async (req, res) => {
+  const walletAddress = req.query.wallet as string;
+
+  if (!TOKEN_GATE.enabled) {
+    return res.json({ gated: false, message: 'All tools are currently free.' });
+  }
+
+  if (!walletAddress) {
+    return res.json({
+      gated: true,
+      hasPass: false,
+      passDenom: TOKEN_GATE.passDenom,
+      message: 'Connect wallet to check access.'
+    });
+  }
+
+  try {
+    const { network } = getNetwork(req);
+    const balanceUrl = `${network.restEndpoint}/cosmos/bank/v1beta1/balances/${walletAddress}/by_denom?denom=${TOKEN_GATE.passDenom}`;
+    const balRes = await fetch(balanceUrl);
+    const balData: any = await balRes.json();
+    const amount = parseInt(balData?.balance?.amount || '0', 10);
+
+    res.json({
+      gated: true,
+      hasPass: amount > 0,
+      balance: amount,
+      passDenom: TOKEN_GATE.passDenom,
+      gatedTools: TOKEN_GATE.gatedEndpoints,
+      freeTools: TOKEN_GATE.freeEndpoints,
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── IMAGE UPLOAD (imgbb proxy) ──────────────────────────────────────────────
 
 app.post("/api/upload-image", async (req, res) => {
@@ -2248,7 +2371,7 @@ app.post("/api/upload-image", async (req, res) => {
       method: "POST",
       body: formData,
     });
-    const result = await response.json();
+    const result: any = await response.json();
 
     if (result.success) {
       res.json({ url: result.data.url, thumb: result.data.thumb?.url, deleteUrl: result.data.delete_url });
