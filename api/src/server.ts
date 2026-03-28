@@ -1099,6 +1099,19 @@ app.post("/api/send", async (req, res) => {
   try {
     const txWallet = await importWallet(process.env.AGENT_MNEMONIC, networkName);
     client = await TxClient.connectWithWallet(txWallet);
+
+    // Run preflight checks before sending
+    const preflight = await runPreflight({
+      txType: "token_send",
+      sender: client.address,
+      params: { recipient: to, denom, amount },
+      network: networkName,
+    });
+    if (!preflight.canProceed && preflight.summary.errors > 0) {
+      res.status(400).json({ error: "Preflight checks failed.", preflight });
+      return;
+    }
+
     const msg = {
       typeUrl: "/cosmos.bank.v1beta1.MsgSend",
       value: {
@@ -1108,7 +1121,7 @@ app.post("/api/send", async (req, res) => {
       },
     };
     const result = await client.signAndBroadcastMsg(msg, 200000);
-    res.json(result);
+    res.json({ ...result, preflight });
   } catch (err) {
     console.error("[send] Error:", err);
     res.status(500).json({ error: (err as Error).message });
@@ -1153,6 +1166,19 @@ app.post("/api/airdrop", async (req, res) => {
     const txWallet = await importWallet(process.env.AGENT_MNEMONIC, networkName);
     client = await TxClient.connectWithWallet(txWallet);
 
+    // Run preflight checks before airdrop
+    const preflightRecipients = recipients.map((addr: string) => ({ address: addr, amount: amount! }));
+    const preflight = await runPreflight({
+      txType: "airdrop",
+      sender: client.address,
+      params: { denom, recipients: preflightRecipients },
+      network: networkName,
+    });
+    if (!preflight.canProceed && preflight.summary.errors > 0) {
+      res.status(400).json({ error: "Preflight checks failed.", preflight });
+      return;
+    }
+
     // Process recipients sequentially to avoid nonce issues
     for (const recipient of recipients) {
       try {
@@ -1172,7 +1198,7 @@ app.post("/api/airdrop", async (req, res) => {
       }
     }
 
-    res.json({ success: true, sent, failed, errors });
+    res.json({ success: true, sent, failed, errors, preflight });
   } catch (err) {
     console.error("[airdrop] Error:", err);
     res.status(500).json({ error: (err as Error).message });
@@ -3846,12 +3872,10 @@ app.post("/api/smart-airdrop/dry-run", requireFlag("smart_airdrop"), async (req,
     return;
   }
 
-  const { networkName, network } = getNetwork(req);
-  const restUrl = network.restEndpoint;
+  const { networkName } = getNetwork(req);
   const AVG_GAS_PER_MSG = 80_000;
   const BATCH_SIZE = 100;
   const totalBatches = Math.ceil(recipients.length / BATCH_SIZE);
-  const issues: string[] = [];
 
   // Build batch breakdown
   const batches: Array<{ batchNum: number; recipientCount: number; estimatedGas: number }> = [];
@@ -3867,6 +3891,7 @@ app.post("/api/smart-airdrop/dry-run", requireFlag("smart_airdrop"), async (req,
 
   // Calculate total tokens needed
   let totalTokensBigInt = BigInt(0);
+  const issues: string[] = [];
   for (const r of recipients) {
     try {
       totalTokensBigInt += BigInt(r.amount);
@@ -3876,62 +3901,20 @@ app.post("/api/smart-airdrop/dry-run", requireFlag("smart_airdrop"), async (req,
   }
   const totalTokens = totalTokensBigInt.toString();
 
-  // Estimate gas cost in CORE (gas price ~0.0625 ucore per gas unit)
-  const gasPriceUcore = 0.0625;
-  const totalGasCostUcore = Math.ceil(totalGasEstimate * gasPriceUcore);
-  const totalGasCost = `${totalGasCostUcore} ucore`;
+  // Run preflight engine for comprehensive checks
+  const preflight = await runPreflight({
+    txType: "airdrop",
+    sender,
+    params: { denom, recipients },
+    network: networkName,
+  });
 
-  // Check sender balance
-  let senderBalance = "unknown";
-  let senderBalanceRaw = BigInt(0);
-  let canExecute = true;
+  const canExecute = preflight.canProceed;
 
-  try {
-    const balResp = await fetch(
-      `${restUrl}/cosmos/bank/v1beta1/balances/${sender}/by_denom?denom=${denom}`
-    );
-    if (balResp.ok) {
-      const balData: any = await balResp.json();
-      senderBalance = balData?.balance?.amount || "0";
-      senderBalanceRaw = BigInt(senderBalance);
-    }
-  } catch {
-    issues.push("Could not query sender balance.");
-  }
-
-  // Check if sender has enough tokens
-  if (senderBalanceRaw < totalTokensBigInt) {
-    canExecute = false;
-    issues.push(`Insufficient token balance. Need ${totalTokens} ${denom}, have ${senderBalance}.`);
-  }
-
-  // Check gas balance (ucore)
-  try {
-    const coreBalResp = await fetch(
-      `${restUrl}/cosmos/bank/v1beta1/balances/${sender}/by_denom?denom=${network.denom || "ucore"}`
-    );
-    if (coreBalResp.ok) {
-      const coreBalData: any = await coreBalResp.json();
-      const coreBalance = BigInt(coreBalData?.balance?.amount || "0");
-      if (coreBalance < BigInt(totalGasCostUcore)) {
-        canExecute = false;
-        issues.push(
-          `Insufficient gas balance. Need ~${totalGasCostUcore} ${network.denom || "ucore"} for gas, have ${coreBalance.toString()}.`
-        );
-      }
-    }
-  } catch {
-    issues.push("Could not query sender gas balance.");
-  }
-
-  // If denom is the native gas token, combine check
-  if (denom === (network.denom || "ucore")) {
-    const totalNeeded = totalTokensBigInt + BigInt(totalGasCostUcore);
-    if (senderBalanceRaw < totalNeeded) {
-      canExecute = false;
-      issues.push(
-        `Combined check: need ${totalNeeded.toString()} ${denom} (tokens + gas), have ${senderBalance}.`
-      );
+  // Map preflight errors/warnings into issues for backward compatibility
+  for (const check of preflight.checks) {
+    if (!check.passed) {
+      issues.push(check.message);
     }
   }
 
@@ -3957,10 +3940,11 @@ app.post("/api/smart-airdrop/dry-run", requireFlag("smart_airdrop"), async (req,
     totalRecipients: recipients.length,
     totalTokens,
     totalGasEstimate,
-    totalGasCost,
-    senderBalance,
+    totalGasCost: preflight.estimatedFee || `${Math.ceil(totalGasEstimate * 0.0625)} ucore`,
+    senderBalance: preflight.checks.find(c => c.id === "BALANCE_SUFFICIENT" || c.id === "BALANCE_INSUFFICIENT")?.data?.balance || "unknown",
     canExecute,
     issues,
+    preflight,
   });
 });
 
@@ -4438,6 +4422,18 @@ app.post("/api/smart-airdrop/execute-vested", requireFlag("airdrop_vesting"), as
   const { networkName } = getNetwork(req);
 
   try {
+    // Run preflight checks before creating vesting plan
+    const preflight = await runPreflight({
+      txType: "airdrop",
+      sender: sender || "agent",
+      params: { denom, recipients },
+      network: networkName,
+    });
+    if (!preflight.canProceed && preflight.summary.errors > 0) {
+      res.status(400).json({ error: "Preflight checks failed.", preflight });
+      return;
+    }
+
     // Calculate vesting steps
     const steps = calculateVestingSteps(schedule, recipients);
 
