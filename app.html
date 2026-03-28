@@ -81,14 +81,20 @@
       <div class="wallet-choice-modal">
         <div class="wallet-choice-title">Connect Your Wallet</div>
         <div class="wallet-choice-subtitle">Choose a wallet to connect to TXAI</div>
-        <div class="wallet-choice-cards wallet-choice-cards--nav">
-          <div class="wallet-choice-card wallet-choice-card--primary recommended" id="navWcKeplr" onclick="navConnectKeplr()">
+        <div class="wallet-choice-cards wallet-choice-cards--nav" id="walletModalOptions">
+          <div class="wallet-choice-card wallet-choice-card--primary recommended" id="navWcLeap" onclick="walletConnectWith('leap')" style="display:none">
+            <div class="wc-icon" style="font-size:1.5rem">🐸</div>
+            <div class="wc-label">Leap Wallet</div>
+            <div class="wc-desc">Connect your Leap browser extension to sign transactions and own your tokens.</div>
+            <span class="wc-badge own">Recommended</span>
+          </div>
+          <div class="wallet-choice-card wallet-choice-card--primary" id="navWcKeplr" onclick="walletConnectWith('keplr')" style="display:none">
             <div class="wc-icon"><svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="40" height="40" rx="8" fill="#7B6FE8"/><path d="M11 29V11H15.5V18.2L22.1 11H28L20.5 19.1L28.5 29H22.3L16.8 21.5L15.5 22.9V29H11Z" fill="white"/></svg></div>
             <div class="wc-label">Keplr Wallet</div>
             <div class="wc-desc">Connect your Keplr browser extension to sign transactions and own your tokens.</div>
             <span class="wc-badge own">Full control</span>
           </div>
-          <div class="wallet-choice-card wallet-choice-card--secondary" id="navWcDemo" onclick="navConnectDemo()">
+          <div class="wallet-choice-card wallet-choice-card--secondary" id="navWcDemo" onclick="walletConnectDemo()">
             <div class="wc-icon" style="font-size:1.5rem">&#129302;</div>
             <div class="wc-label">Demo Wallet</div>
             <div class="wc-desc">Try TXAI without a wallet. AI agent creates tokens for you on testnet.</div>
@@ -96,8 +102,9 @@
           </div>
         </div>
         <div class="wallet-choice-install-hint" id="wcInstallHint" style="display:none">
-          <span>Keplr not detected.</span>
-          <a href="https://www.keplr.app/download" target="_blank" rel="noopener">Install Keplr Extension</a>
+          <span>No wallet detected.</span>
+          <a href="https://www.leapwallet.io/download" target="_blank" rel="noopener">Install Leap</a> or
+          <a href="https://www.keplr.app/download" target="_blank" rel="noopener">Install Keplr</a>
         </div>
         <button class="wallet-choice-dismiss" onclick="closeWalletChoice()">Cancel</button>
       </div>
