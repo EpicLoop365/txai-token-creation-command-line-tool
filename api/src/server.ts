@@ -2387,6 +2387,169 @@ app.post("/api/upload-image", async (req, res) => {
 // ─── START ───────────────────────────────────────────────────────────────────
 
 import { startFaucetBot } from "./faucet-bot";
+// ─── VISITOR ANALYTICS + NFT TRACKING ────────────────────────────────────────
+
+interface VisitorEntry {
+  ip: string;
+  wallet: string | null;
+  passTier: string | null;
+  page: string;
+  referrer: string;
+  userAgent: string;
+  country: string | null;
+  timestamp: string;
+  sessionId: string;
+}
+
+// In-memory store (persists until server restart — Railway resets on redeploy)
+// For production, swap with a DB or append to a file
+const visitorLog: VisitorEntry[] = [];
+const MAX_VISITOR_LOG = 5000;
+
+// Admin key for accessing analytics (set in env or use default for testnet)
+const ANALYTICS_KEY = process.env.ANALYTICS_KEY || "txai-analytics-2026";
+
+app.post("/api/track", (req, res) => {
+  try {
+    const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim()
+      || req.headers["x-real-ip"] as string
+      || req.socket.remoteAddress
+      || "unknown";
+
+    const { wallet, passTier, page, referrer, sessionId } = req.body as {
+      wallet?: string;
+      passTier?: string;
+      page?: string;
+      referrer?: string;
+      sessionId?: string;
+    };
+
+    const entry: VisitorEntry = {
+      ip: ip.replace("::ffff:", ""),  // Normalize IPv6-mapped IPv4
+      wallet: wallet || null,
+      passTier: passTier || null,
+      page: (page || "/").substring(0, 200),
+      referrer: (referrer || "").substring(0, 500),
+      userAgent: ((req.headers["user-agent"] as string) || "").substring(0, 300),
+      country: null, // Could add IP geolocation later
+      timestamp: new Date().toISOString(),
+      sessionId: (sessionId || "").substring(0, 64),
+    };
+
+    visitorLog.push(entry);
+
+    // Trim to max size
+    while (visitorLog.length > MAX_VISITOR_LOG) {
+      visitorLog.shift();
+    }
+
+    res.json({ ok: true });
+  } catch {
+    res.json({ ok: true }); // Never fail — tracking should be invisible
+  }
+});
+
+// Analytics dashboard data — protected by key
+app.get("/api/analytics", (req, res) => {
+  const key = req.query.key as string;
+  if (key !== ANALYTICS_KEY) {
+    res.status(403).json({ error: "Invalid analytics key." });
+    return;
+  }
+
+  const now = Date.now();
+  const hour = 60 * 60 * 1000;
+  const day = 24 * hour;
+
+  // Aggregate stats
+  const last24h = visitorLog.filter(v => now - new Date(v.timestamp).getTime() < day);
+  const last1h = visitorLog.filter(v => now - new Date(v.timestamp).getTime() < hour);
+
+  // Unique IPs
+  const uniqueIPs24h = new Set(last24h.map(v => v.ip)).size;
+  const uniqueIPs1h = new Set(last1h.map(v => v.ip)).size;
+
+  // Wallet connections
+  const withWallet24h = last24h.filter(v => v.wallet);
+  const uniqueWallets24h = new Set(withWallet24h.map(v => v.wallet)).size;
+
+  // Pass tier breakdown
+  const tierCounts: Record<string, number> = { none: 0, scout: 0, creator: 0, pro: 0 };
+  const seenWallets = new Set<string>();
+  for (const v of last24h) {
+    if (v.wallet && !seenWallets.has(v.wallet)) {
+      seenWallets.add(v.wallet);
+      const tier = v.passTier || "none";
+      tierCounts[tier] = (tierCounts[tier] || 0) + 1;
+    }
+  }
+
+  // Top pages
+  const pageCounts: Record<string, number> = {};
+  for (const v of last24h) {
+    pageCounts[v.page] = (pageCounts[v.page] || 0) + 1;
+  }
+  const topPages = Object.entries(pageCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10);
+
+  // Top referrers
+  const refCounts: Record<string, number> = {};
+  for (const v of last24h) {
+    if (v.referrer) {
+      refCounts[v.referrer] = (refCounts[v.referrer] || 0) + 1;
+    }
+  }
+  const topReferrers = Object.entries(refCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10);
+
+  // Recent visitors (last 50)
+  const recent = visitorLog.slice(-50).reverse().map(v => ({
+    ip: v.ip.substring(0, v.ip.lastIndexOf(".")) + ".*",  // Mask last octet
+    wallet: v.wallet ? v.wallet.substring(0, 12) + "..." : null,
+    tier: v.passTier || "none",
+    page: v.page,
+    time: v.timestamp,
+  }));
+
+  res.json({
+    summary: {
+      totalTracked: visitorLog.length,
+      last24h: {
+        visits: last24h.length,
+        uniqueVisitors: uniqueIPs24h,
+        walletsConnected: uniqueWallets24h,
+        conversionRate: uniqueIPs24h > 0
+          ? ((uniqueWallets24h / uniqueIPs24h) * 100).toFixed(1) + "%"
+          : "0%",
+      },
+      last1h: {
+        visits: last1h.length,
+        uniqueVisitors: uniqueIPs1h,
+      },
+    },
+    passTiers: tierCounts,
+    topPages,
+    topReferrers,
+    recent,
+    serverUptime: process.uptime(),
+  });
+});
+
+// Raw visitor log (admin only, last N entries)
+app.get("/api/analytics/raw", (req, res) => {
+  const key = req.query.key as string;
+  if (key !== ANALYTICS_KEY) {
+    res.status(403).json({ error: "Invalid analytics key." });
+    return;
+  }
+
+  const limit = Math.min(parseInt(req.query.limit as string) || 100, 500);
+  const entries = visitorLog.slice(-limit).reverse();
+  res.json({ count: entries.length, total: visitorLog.length, entries });
+});
+
 import { createServer } from "http";
 import { attachWebSocket } from "./ws-server";
 

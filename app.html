@@ -1292,6 +1292,77 @@
         </div>
       </div>
 
+      <!-- Analytics Dashboard -->
+      <div class="manage-action-card" style="margin-top:16px">
+        <div class="manage-action-hdr">
+          <span class="manage-action-icon">&#x1F4CA;</span> Analytics Dashboard
+        </div>
+        <div class="manage-action-body">
+          <p style="font-size:.72rem;color:var(--muted);margin:0 0 12px">Track who visits your site, wallet connections, pass conversions, and NFT holder activity — all on-chain.</p>
+
+          <div class="analytics-summary" id="analyticsSummary">
+            <div class="analytics-card">
+              <div class="analytics-card-value" id="analyticsVisitors">—</div>
+              <div class="analytics-card-label">Visitors (24h)</div>
+            </div>
+            <div class="analytics-card">
+              <div class="analytics-card-value" id="analyticsWallets">—</div>
+              <div class="analytics-card-label">Wallets Connected</div>
+            </div>
+            <div class="analytics-card">
+              <div class="analytics-card-value" id="analyticsConversion">—</div>
+              <div class="analytics-card-label">Conversion Rate</div>
+            </div>
+            <div class="analytics-card">
+              <div class="analytics-card-value" id="analyticsLiveNow">—</div>
+              <div class="analytics-card-label">Live (1h)</div>
+            </div>
+          </div>
+
+          <!-- Pass Tier Breakdown -->
+          <div class="analytics-section" style="margin-top:14px">
+            <div class="analytics-section-title">Pass Holders</div>
+            <div class="analytics-tier-bars" id="analyticsTierBars">
+              <div class="analytics-tier-row">
+                <span class="analytics-tier-name">&#x1F50D; Scout</span>
+                <div class="analytics-tier-bar-wrap"><div class="analytics-tier-bar scout" id="analyticsBarScout" style="width:0%"></div></div>
+                <span class="analytics-tier-count" id="analyticsCountScout">0</span>
+              </div>
+              <div class="analytics-tier-row">
+                <span class="analytics-tier-name">&#x1F3A8; Creator</span>
+                <div class="analytics-tier-bar-wrap"><div class="analytics-tier-bar creator" id="analyticsBarCreator" style="width:0%"></div></div>
+                <span class="analytics-tier-count" id="analyticsCountCreator">0</span>
+              </div>
+              <div class="analytics-tier-row">
+                <span class="analytics-tier-name">&#x26A1; Pro</span>
+                <div class="analytics-tier-bar-wrap"><div class="analytics-tier-bar pro" id="analyticsBarPro" style="width:0%"></div></div>
+                <span class="analytics-tier-count" id="analyticsCountPro">0</span>
+              </div>
+              <div class="analytics-tier-row">
+                <span class="analytics-tier-name">&#x1F6AB; No Pass</span>
+                <div class="analytics-tier-bar-wrap"><div class="analytics-tier-bar none" id="analyticsBarNone" style="width:0%"></div></div>
+                <span class="analytics-tier-count" id="analyticsCountNone">0</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recent Visitors -->
+          <div class="analytics-section" style="margin-top:14px">
+            <div class="analytics-section-title">Recent Visitors</div>
+            <div class="analytics-recent" id="analyticsRecent" style="max-height:200px;overflow-y:auto;font-size:.62rem;font-family:var(--mono);color:var(--muted)">
+              Connect wallet and load analytics to see data.
+            </div>
+          </div>
+
+          <button class="demo-create-btn" style="width:100%;margin-top:14px;font-size:.75rem;padding:10px 0;background:var(--bg4) !important;border:1px solid var(--border);border-radius:8px;color:var(--text)" onclick="analyticsRefresh()">
+            &#x1F504; Refresh Analytics
+          </button>
+          <div style="font-size:.55rem;color:var(--text-muted);text-align:center;margin-top:6px">
+            Add <code style="background:rgba(255,255,255,.06);padding:1px 4px;border-radius:3px">&lt;script src="js/tracker.js"&gt;&lt;/script&gt;</code> to any page to track visitors.
+          </div>
+        </div>
+      </div>
+
     </div><!-- end manage-wrap -->
 
     <!-- Subscriptions Tab -->
@@ -1769,7 +1840,9 @@
 <script src="js/agent-workflows.js?v=1"></script>
 <script src="js/nft-airdrop.js?v=1"></script>
 <script src="js/agent-nft.js?v=1"></script>
-<script src="js/token-gate.js?v=1"></script>
+<script src="js/token-gate.js?v=2"></script>
+<script src="js/tracker.js?v=1"></script>
+<script src="js/analytics.js?v=1"></script>
 <script>
 // ── Inspiration ticker ──
 (function(){

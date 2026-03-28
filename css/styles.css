@@ -2587,6 +2587,23 @@ footer{
 .gate-badge.creator{color:var(--purple);background:rgba(124,109,250,.08)}
 .gate-badge.pro{color:var(--green);background:rgba(6,214,160,.08)}
 
+/* ───── Analytics Dashboard ───── */
+.analytics-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+@media(max-width:480px){.analytics-summary{grid-template-columns:repeat(2,1fr)}}
+.analytics-card{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 10px;text-align:center}
+.analytics-card-value{font-size:1.3rem;font-weight:700;color:var(--text);font-family:var(--mono)}
+.analytics-card-label{font-size:.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
+.analytics-section-title{font-size:.7rem;font-weight:600;color:var(--text-dim);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px}
+.analytics-tier-row{display:flex;align-items:center;gap:8px;padding:4px 0}
+.analytics-tier-name{font-size:.65rem;width:80px;flex-shrink:0;color:var(--text-dim)}
+.analytics-tier-bar-wrap{flex:1;height:14px;background:rgba(255,255,255,.04);border-radius:4px;overflow:hidden}
+.analytics-tier-bar{height:100%;border-radius:4px;transition:width .4s ease;min-width:2px}
+.analytics-tier-bar.scout{background:#6b7280}
+.analytics-tier-bar.creator{background:var(--purple)}
+.analytics-tier-bar.pro{background:var(--green)}
+.analytics-tier-bar.none{background:rgba(255,255,255,.08)}
+.analytics-tier-count{font-size:.65rem;font-family:var(--mono);color:var(--text-dim);width:30px;text-align:right}
+
 /* ───── Agent NFT Grid ───── */
 .agent-nft-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px}
 .agent-nft-card{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px;cursor:pointer;transition:all .18s;display:flex;flex-direction:column;gap:6px}
