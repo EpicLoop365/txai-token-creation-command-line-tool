@@ -9,6 +9,9 @@ let _saState = {
   recipients: [],
   csvFile: null,
   executing: false,
+  showHistory: false,
+  dryRunResult: null,
+  showScheduleForm: false,
 };
 
 /* ── Open / Close ── */
@@ -39,7 +42,7 @@ function smartAirdropClose() {
 }
 
 function _saResetState() {
-  _saState = { step: 1, parsed: null, resolved: null, recipients: [], csvFile: null, executing: false };
+  _saState = { step: 1, parsed: null, resolved: null, recipients: [], csvFile: null, executing: false, showHistory: false, dryRunResult: null, showScheduleForm: false };
 }
 
 /* ── Main HTML ── */
@@ -48,7 +51,11 @@ function _saBuildHTML() {
   return '<div class="smart-airdrop-modal">' +
     '<div class="sa-header">' +
       '<div class="sa-header-title">Smart Airdrop Agent</div>' +
-      '<button class="sa-close-btn" onclick="smartAirdropClose()">&times;</button>' +
+      '<div class="sa-header-actions">' +
+        '<button class="sa-btn sa-btn-sm sa-btn-secondary" onclick="_saShowHistory()" title="Airdrop History">History</button>' +
+        '<button class="sa-btn sa-btn-sm sa-btn-secondary" onclick="_saShowSchedules()" title="Scheduled Airdrops">Scheduled</button>' +
+        '<button class="sa-close-btn" onclick="smartAirdropClose()">&times;</button>' +
+      '</div>' +
     '</div>' +
     '<div class="sa-steps-indicator">' +
       '<div class="sa-step-dot active" id="saStepDot1">1</div>' +
@@ -317,9 +324,48 @@ function _saBuildStep2() {
     '</div>';
   }
 
+  // Dry Run results (if available)
+  if (_saState.dryRunResult) {
+    var dr = _saState.dryRunResult;
+    html += '<div class="sa-dryrun-card">' +
+      '<div class="sa-section-label">Dry Run Results</div>' +
+      '<table class="sa-dryrun-batch-table">' +
+        '<thead><tr><th>Batch #</th><th>Recipients</th><th>Est. Gas</th></tr></thead><tbody>';
+    (dr.batches || []).forEach(function(b) {
+      html += '<tr><td>' + b.batchNum + '</td><td>' + b.recipientCount + '</td><td>' + b.estimatedGas.toLocaleString() + '</td></tr>';
+    });
+    html += '</tbody></table>' +
+      '<div class="sa-dryrun-summary">' +
+        '<div class="sa-dryrun-row"><span>Total Gas Estimate:</span><b>' + _saEsc(String(dr.totalGasEstimate || 0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')) + '</b></div>' +
+        '<div class="sa-dryrun-row"><span>Total Gas Cost:</span><b>' + _saEsc(dr.totalGasCost || 'N/A') + '</b></div>' +
+        '<div class="sa-dryrun-row"><span>Sender Balance:</span><b>' + _saEsc(String(dr.senderBalance || 'N/A')) + '</b></div>' +
+        '<div class="sa-dryrun-row"><span>Can Execute:</span><b class="' + (dr.canExecute ? 'sa-pass' : 'sa-fail') + '">' + (dr.canExecute ? 'YES' : 'NO') + '</b></div>' +
+      '</div>';
+    if (dr.issues && dr.issues.length > 0) {
+      html += '<div class="sa-dryrun-issues">';
+      dr.issues.forEach(function(issue) {
+        html += '<div class="sa-dryrun-issue">' + _saEsc(issue) + '</div>';
+      });
+      html += '</div>';
+    }
+    if (dr.canExecute) {
+      html += '<button class="sa-btn sa-btn-primary" onclick="_saGoToStep(3)" style="margin-top:10px">Looks good — Execute for real</button>';
+    }
+    html += '</div>';
+  }
+
+  // Dry Run loading
+  html += '<div class="sa-loading" id="saLoadingDryRun" style="display:none">' +
+    '<div class="sa-spinner"></div>' +
+    '<span>Running dry run simulation...</span>' +
+  '</div>';
+
   // Actions
   html += '<div class="smart-airdrop-actions" style="margin-top:16px">' +
     '<button class="sa-btn sa-btn-secondary" onclick="_saGoToStep(1)">Back</button>';
+  if (r) {
+    html += '<button class="sa-btn sa-btn-secondary" id="saDryRunBtn" onclick="_saDryRun()">Dry Run</button>';
+  }
   if (r && r.preflight && r.preflight.canProceed !== false) {
     html += '<button class="sa-btn sa-btn-primary" onclick="_saGoToStep(3)">Continue to Execute</button>';
   } else if (r) {
@@ -480,8 +526,42 @@ function _saBuildStep3() {
       '<div class="sa-progress-counts" id="saProgressCounts"></div>' +
     '</div>' +
     '<div class="sa-final-summary" id="saFinalSummary" style="display:none"></div>' +
-    '<div class="smart-airdrop-actions">' +
+
+    // Schedule form (hidden by default)
+    '<div class="sa-schedule-form" id="saScheduleForm" style="display:none">' +
+      '<div class="sa-section-label">Schedule Airdrop</div>' +
+      '<div class="sa-schedule-options">' +
+        '<label class="sa-schedule-option">' +
+          '<input type="radio" name="saSchedType" value="time" checked onchange="_saSchedTypeChanged()"> At specific time' +
+        '</label>' +
+        '<label class="sa-schedule-option">' +
+          '<input type="radio" name="saSchedType" value="price" onchange="_saSchedTypeChanged()"> When price reaches...' +
+        '</label>' +
+      '</div>' +
+      '<div id="saSchedTimeFields">' +
+        '<label class="sa-form-label">Execute at:</label>' +
+        '<input type="datetime-local" class="sa-delivery-input" id="saSchedDateTime">' +
+      '</div>' +
+      '<div id="saSchedPriceFields" style="display:none">' +
+        '<label class="sa-form-label">Denom to watch:</label>' +
+        '<input type="text" class="sa-delivery-input" id="saSchedPriceDenom" placeholder="e.g. ucore">' +
+        '<label class="sa-form-label">Target price (USD):</label>' +
+        '<input type="number" class="sa-delivery-input" id="saSchedPrice" step="any" placeholder="e.g. 0.50">' +
+        '<label class="sa-form-label">Direction:</label>' +
+        '<select class="sa-delivery-input" id="saSchedDirection">' +
+          '<option value="above">Above</option>' +
+          '<option value="below">Below</option>' +
+        '</select>' +
+      '</div>' +
+      '<div class="smart-airdrop-actions" style="margin-top:12px">' +
+        '<button class="sa-btn sa-btn-secondary" onclick="_saToggleSchedule()">Cancel</button>' +
+        '<button class="sa-btn sa-btn-primary" onclick="_saSubmitSchedule()">Schedule Airdrop</button>' +
+      '</div>' +
+    '</div>' +
+
+    '<div class="smart-airdrop-actions" id="saStep3Actions">' +
       '<button class="sa-btn sa-btn-secondary" id="saBackBtn3" onclick="_saGoToStep(2)">Back</button>' +
+      '<button class="sa-btn sa-btn-secondary" id="saScheduleBtn" onclick="_saToggleSchedule()">Schedule Instead</button>' +
       '<button class="sa-btn sa-btn-execute" id="saExecuteBtn" onclick="_saExecute()">Execute Airdrop</button>' +
     '</div>' +
   '</div>';
@@ -613,6 +693,317 @@ function _saEsc(str) {
   var d = document.createElement('div');
   d.textContent = str;
   return d.innerHTML;
+}
+
+/* ── Feature 1: Dry Run ── */
+
+async function _saDryRun() {
+  var btn = document.getElementById('saDryRunBtn');
+  var loading = document.getElementById('saLoadingDryRun');
+  if (btn) btn.disabled = true;
+  if (loading) loading.style.display = 'flex';
+
+  try {
+    var denom = _saState.parsed?.token || _saState.parsed?.denom || _saState.parsed?.tokenDenom || '';
+    var sender = typeof walletAddress !== 'undefined' ? walletAddress : '';
+    var network = typeof currentNetwork !== 'undefined' ? currentNetwork : 'testnet';
+
+    var res = await fetch(API_URL + '/api/smart-airdrop/dry-run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        denom: denom,
+        recipients: _saState.recipients,
+        sender: sender,
+        network: network,
+      }),
+    });
+    var data = await res.json();
+    if (data.error) throw new Error(data.error);
+
+    _saState.dryRunResult = data;
+    _saGoToStep(2); // re-render step 2 with dry run results
+  } catch (err) {
+    alert('Dry run failed: ' + err.message);
+  } finally {
+    if (btn) btn.disabled = false;
+    if (loading) loading.style.display = 'none';
+  }
+}
+
+/* ── Feature 2: Scheduled Airdrops ── */
+
+function _saToggleSchedule() {
+  var form = document.getElementById('saScheduleForm');
+  var actions = document.getElementById('saStep3Actions');
+  if (!form) return;
+  var visible = form.style.display !== 'none';
+  form.style.display = visible ? 'none' : 'block';
+  if (actions) actions.style.display = visible ? 'flex' : 'none';
+}
+
+function _saSchedTypeChanged() {
+  var radios = document.querySelectorAll('input[name="saSchedType"]');
+  var val = 'time';
+  radios.forEach(function(r) { if (r.checked) val = r.value; });
+  var timeFields = document.getElementById('saSchedTimeFields');
+  var priceFields = document.getElementById('saSchedPriceFields');
+  if (timeFields) timeFields.style.display = val === 'time' ? 'block' : 'none';
+  if (priceFields) priceFields.style.display = val === 'price' ? 'block' : 'none';
+}
+
+async function _saSubmitSchedule() {
+  var radios = document.querySelectorAll('input[name="saSchedType"]');
+  var scheduleType = 'time';
+  radios.forEach(function(r) { if (r.checked) scheduleType = r.value; });
+
+  var denom = _saState.parsed?.token || _saState.parsed?.denom || _saState.parsed?.tokenDenom || '';
+  var sender = typeof walletAddress !== 'undefined' ? walletAddress : '';
+  var network = typeof currentNetwork !== 'undefined' ? currentNetwork : 'testnet';
+
+  var body = {
+    denom: denom,
+    recipients: _saState.recipients,
+    sender: sender,
+    network: network,
+    scheduleType: scheduleType,
+  };
+
+  if (scheduleType === 'time') {
+    var dt = document.getElementById('saSchedDateTime');
+    if (!dt || !dt.value) { alert('Select a date/time.'); return; }
+    body.executeAt = new Date(dt.value).toISOString();
+  } else {
+    var trigDenom = (document.getElementById('saSchedPriceDenom')?.value || '').trim();
+    var trigPrice = parseFloat(document.getElementById('saSchedPrice')?.value || '');
+    var trigDir = document.getElementById('saSchedDirection')?.value || 'above';
+    if (!trigDenom || isNaN(trigPrice)) { alert('Fill in all price trigger fields.'); return; }
+    body.triggerDenom = trigDenom;
+    body.triggerPrice = trigPrice;
+    body.triggerDirection = trigDir;
+  }
+
+  try {
+    var res = await fetch(API_URL + '/api/smart-airdrop/schedule', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    var data = await res.json();
+    if (data.error) throw new Error(data.error);
+    alert('Airdrop scheduled! ID: ' + data.scheduled.id);
+    _saToggleSchedule();
+  } catch (err) {
+    alert('Schedule failed: ' + err.message);
+  }
+}
+
+async function _saShowSchedules() {
+  var container = document.getElementById('saStepContainer');
+  if (!container) return;
+
+  container.innerHTML = '<div class="smart-airdrop-step"><div class="sa-loading" style="display:flex"><div class="sa-spinner"></div><span>Loading schedules...</span></div></div>';
+
+  try {
+    var res = await fetch(API_URL + '/api/smart-airdrop/schedules');
+    var data = await res.json();
+    var schedules = data.schedules || [];
+
+    var html = '<div class="smart-airdrop-step">' +
+      '<div class="sa-section-label">Scheduled Airdrops</div>';
+
+    if (schedules.length === 0) {
+      html += '<div class="sa-empty-msg">No scheduled airdrops yet.</div>';
+    } else {
+      html += '<div class="sa-schedules-list">';
+      schedules.forEach(function(s) {
+        var statusClass = 'sa-status-' + s.status;
+        var schedInfo = s.scheduleType === 'time' ? ('At: ' + new Date(s.executeAt).toLocaleString()) :
+          (s.triggerDirection + ' $' + s.triggerPrice + ' (' + s.triggerDenom + ')');
+        html += '<div class="sa-schedule-item ' + statusClass + '">' +
+          '<div class="sa-schedule-item-header">' +
+            '<span class="sa-schedule-denom">' + _saEsc(s.denom) + '</span>' +
+            '<span class="sa-schedule-status">' + _saEsc(s.status) + '</span>' +
+          '</div>' +
+          '<div class="sa-schedule-item-detail">' + _saEsc(schedInfo) + '</div>' +
+          '<div class="sa-schedule-item-detail">' + s.recipients.length + ' recipients</div>' +
+          '<div class="sa-schedule-item-detail">Created: ' + new Date(s.createdAt).toLocaleString() + '</div>';
+        if (s.status === 'pending') {
+          html += '<button class="sa-btn sa-btn-sm sa-btn-danger" onclick="_saCancelSchedule(\'' + s.id + '\')">Cancel</button>';
+        }
+        if (s.result) {
+          html += '<div class="sa-schedule-item-detail">Result: ' + s.result.sent + ' sent, ' + s.result.failed + ' failed</div>';
+        }
+        html += '</div>';
+      });
+      html += '</div>';
+    }
+
+    html += '<div class="smart-airdrop-actions" style="margin-top:16px">' +
+      '<button class="sa-btn sa-btn-secondary" onclick="_saGoToStep(_saState.step)">Back</button>' +
+    '</div></div>';
+
+    container.innerHTML = html;
+  } catch (err) {
+    container.innerHTML = '<div class="smart-airdrop-step"><div class="sa-empty-msg">Failed to load schedules: ' + _saEsc(err.message) + '</div>' +
+      '<div class="smart-airdrop-actions"><button class="sa-btn sa-btn-secondary" onclick="_saGoToStep(_saState.step)">Back</button></div></div>';
+  }
+}
+
+async function _saCancelSchedule(id) {
+  if (!confirm('Cancel this scheduled airdrop?')) return;
+  try {
+    var res = await fetch(API_URL + '/api/smart-airdrop/schedule/cancel', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: id }),
+    });
+    var data = await res.json();
+    if (data.error) throw new Error(data.error);
+    _saShowSchedules(); // refresh
+  } catch (err) {
+    alert('Cancel failed: ' + err.message);
+  }
+}
+
+/* ── Feature 3: Airdrop History ── */
+
+async function _saShowHistory() {
+  var container = document.getElementById('saStepContainer');
+  if (!container) return;
+
+  container.innerHTML = '<div class="smart-airdrop-step"><div class="sa-loading" style="display:flex"><div class="sa-spinner"></div><span>Loading history...</span></div></div>';
+
+  try {
+    var res = await fetch(API_URL + '/api/smart-airdrop/history');
+    var data = await res.json();
+    var history = data.history || [];
+
+    var html = '<div class="smart-airdrop-step">' +
+      '<div class="sa-section-label">Airdrop History</div>';
+
+    if (history.length === 0) {
+      html += '<div class="sa-empty-msg">No airdrop history yet.</div>';
+    } else {
+      html += '<table class="sa-history-table">' +
+        '<thead><tr><th>Date</th><th>Token</th><th>Recipients</th><th>Sent/Failed</th><th>Type</th><th></th></tr></thead><tbody>';
+      history.forEach(function(rec) {
+        var typeLabel = rec.dryRun ? 'Dry Run' : (rec.scheduled ? 'Scheduled' : 'Manual');
+        var statusClass = rec.failed > 0 ? 'sa-history-row-warn' : 'sa-history-row-ok';
+        html += '<tr class="sa-history-row ' + statusClass + '" onclick="_saShowHistoryDetail(\'' + rec.id + '\')">' +
+          '<td>' + new Date(rec.timestamp).toLocaleString() + '</td>' +
+          '<td>' + _saEsc(rec.denom) + '</td>' +
+          '<td>' + rec.totalRecipients + '</td>' +
+          '<td>' + rec.sent + ' / ' + rec.failed + '</td>' +
+          '<td>' + typeLabel + '</td>' +
+          '<td><button class="sa-btn sa-btn-sm sa-btn-secondary" onclick="event.stopPropagation();_saExportCsv(\'' + rec.id + '\')">CSV</button></td>' +
+        '</tr>';
+      });
+      html += '</tbody></table>';
+    }
+
+    html += '<div class="smart-airdrop-actions" style="margin-top:16px">' +
+      '<button class="sa-btn sa-btn-secondary" onclick="_saGoToStep(_saState.step)">Back</button>' +
+    '</div></div>';
+
+    container.innerHTML = html;
+  } catch (err) {
+    container.innerHTML = '<div class="smart-airdrop-step"><div class="sa-empty-msg">Failed to load history: ' + _saEsc(err.message) + '</div>' +
+      '<div class="smart-airdrop-actions"><button class="sa-btn sa-btn-secondary" onclick="_saGoToStep(_saState.step)">Back</button></div></div>';
+  }
+}
+
+async function _saShowHistoryDetail(id) {
+  var container = document.getElementById('saStepContainer');
+  if (!container) return;
+
+  container.innerHTML = '<div class="smart-airdrop-step"><div class="sa-loading" style="display:flex"><div class="sa-spinner"></div><span>Loading details...</span></div></div>';
+
+  try {
+    var res = await fetch(API_URL + '/api/smart-airdrop/history/' + encodeURIComponent(id));
+    var data = await res.json();
+    if (data.error) throw new Error(data.error);
+    var rec = data.record;
+
+    var explorerBase = (typeof currentNetwork !== 'undefined' && currentNetwork === 'mainnet')
+      ? 'https://explorer.coreum.com/coreum/transactions/'
+      : 'https://explorer.testnet-1.coreum.dev/coreum/transactions/';
+
+    var html = '<div class="smart-airdrop-step">' +
+      '<div class="sa-section-label">Airdrop Detail</div>' +
+      '<div class="sa-history-detail">' +
+        '<div class="sa-confirm-row"><span>ID</span><b>' + _saEsc(rec.id) + '</b></div>' +
+        '<div class="sa-confirm-row"><span>Date</span><b>' + new Date(rec.timestamp).toLocaleString() + '</b></div>' +
+        '<div class="sa-confirm-row"><span>Token</span><b>' + _saEsc(rec.denom) + '</b></div>' +
+        '<div class="sa-confirm-row"><span>Network</span><b>' + _saEsc(rec.network) + '</b></div>' +
+        '<div class="sa-confirm-row"><span>Recipients</span><b>' + rec.totalRecipients + '</b></div>' +
+        '<div class="sa-confirm-row"><span>Total Amount</span><b>' + _saEsc(rec.totalAmount) + '</b></div>' +
+        '<div class="sa-confirm-row"><span>Sent / Failed</span><b>' + rec.sent + ' / ' + rec.failed + '</b></div>' +
+        '<div class="sa-confirm-row"><span>Duration</span><b>' + (rec.durationMs / 1000).toFixed(1) + 's</b></div>' +
+        '<div class="sa-confirm-row"><span>Type</span><b>' + (rec.dryRun ? 'Dry Run' : (rec.scheduled ? 'Scheduled' : 'Manual')) + '</b></div>' +
+      '</div>';
+
+    // TX Hashes
+    if (rec.txHashes && rec.txHashes.length > 0) {
+      html += '<div class="sa-section-label" style="margin-top:12px">Transaction Hashes</div><div class="sa-history-txlist">';
+      rec.txHashes.forEach(function(tx) {
+        html += '<div class="sa-history-tx"><a href="' + explorerBase + tx + '" target="_blank" rel="noopener">' + tx.slice(0, 16) + '...' + tx.slice(-8) + '</a></div>';
+      });
+      html += '</div>';
+    }
+
+    // Failed addresses
+    if (rec.failedAddresses && rec.failedAddresses.length > 0) {
+      html += '<div class="sa-section-label" style="margin-top:12px">Failed Addresses</div><div class="sa-history-failed">';
+      rec.failedAddresses.forEach(function(fa) {
+        html += '<div class="sa-history-failed-row"><span class="sa-row-addr">' + _saEsc(fa.address) + '</span><span class="sa-fail">' + _saEsc(fa.error) + '</span></div>';
+      });
+      html += '</div>';
+    }
+
+    html += '<div class="smart-airdrop-actions" style="margin-top:16px">' +
+      '<button class="sa-btn sa-btn-secondary" onclick="_saShowHistory()">Back to History</button>' +
+      '<button class="sa-btn sa-btn-secondary" onclick="_saExportCsv(\'' + rec.id + '\')">Export CSV</button>' +
+      '<button class="sa-btn sa-btn-primary" onclick="_saShareProof(\'' + rec.id + '\')">Share Proof</button>' +
+    '</div></div>';
+
+    container.innerHTML = html;
+  } catch (err) {
+    container.innerHTML = '<div class="smart-airdrop-step"><div class="sa-empty-msg">Failed to load details: ' + _saEsc(err.message) + '</div>' +
+      '<div class="smart-airdrop-actions"><button class="sa-btn sa-btn-secondary" onclick="_saShowHistory()">Back</button></div></div>';
+  }
+}
+
+function _saExportCsv(id) {
+  window.open(API_URL + '/api/smart-airdrop/history/' + encodeURIComponent(id) + '/export', '_blank');
+}
+
+async function _saShareProof(id) {
+  try {
+    var res = await fetch(API_URL + '/api/smart-airdrop/history/' + encodeURIComponent(id));
+    var data = await res.json();
+    if (data.error) throw new Error(data.error);
+    var rec = data.record;
+
+    var text = 'Airdrop Proof\n' +
+      'Token: ' + rec.denom + '\n' +
+      'Network: ' + rec.network + '\n' +
+      'Recipients: ' + rec.totalRecipients + '\n' +
+      'Sent: ' + rec.sent + ' | Failed: ' + rec.failed + '\n' +
+      'Total Amount: ' + rec.totalAmount + '\n' +
+      'Date: ' + new Date(rec.timestamp).toLocaleString() + '\n';
+    if (rec.txHashes && rec.txHashes.length > 0) {
+      text += 'TX Hashes:\n';
+      rec.txHashes.slice(0, 5).forEach(function(tx) { text += '  ' + tx + '\n'; });
+      if (rec.txHashes.length > 5) text += '  ... and ' + (rec.txHashes.length - 5) + ' more\n';
+    }
+    text += '\nPowered by TXAI Studio';
+
+    await navigator.clipboard.writeText(text);
+    alert('Proof copied to clipboard!');
+  } catch (err) {
+    alert('Failed to copy proof: ' + err.message);
+  }
 }
 
 // Expose globally

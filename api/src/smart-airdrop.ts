@@ -671,3 +671,109 @@ function formatTelegramMessage(
     moreText,
   ].join("\n");
 }
+
+// ─── SCHEDULED AIRDROP TYPES & STORE ─────────────────────────────────────
+
+export interface ScheduledAirdrop {
+  id: string;
+  denom: string;
+  recipients: Array<{ address: string; amount: string }>;
+  sender: string;
+  network: string;
+  scheduleType: "time" | "price";
+  // For time-based:
+  executeAt?: string; // ISO date string
+  // For price-based:
+  triggerDenom?: string; // denom to watch
+  triggerPrice?: number; // USD price threshold
+  triggerDirection?: "above" | "below";
+  status: "pending" | "executing" | "completed" | "failed" | "cancelled";
+  createdAt: string;
+  executedAt?: string;
+  result?: { sent: number; failed: number; txHashes: string[] };
+}
+
+const scheduledAirdrops = new Map<string, ScheduledAirdrop>();
+
+let _scheduleCounter = 0;
+
+export function createScheduledAirdrop(
+  data: Omit<ScheduledAirdrop, "id" | "status" | "createdAt">
+): ScheduledAirdrop {
+  _scheduleCounter++;
+  const id = `sa-sched-${Date.now()}-${_scheduleCounter}`;
+  const scheduled: ScheduledAirdrop = {
+    ...data,
+    id,
+    status: "pending",
+    createdAt: new Date().toISOString(),
+  };
+  scheduledAirdrops.set(id, scheduled);
+  return scheduled;
+}
+
+export function getScheduledAirdrops(): ScheduledAirdrop[] {
+  return Array.from(scheduledAirdrops.values());
+}
+
+export function getScheduledAirdropById(id: string): ScheduledAirdrop | undefined {
+  return scheduledAirdrops.get(id);
+}
+
+export function cancelScheduledAirdrop(id: string): boolean {
+  const sa = scheduledAirdrops.get(id);
+  if (!sa || sa.status !== "pending") return false;
+  sa.status = "cancelled";
+  return true;
+}
+
+export function updateScheduledAirdrop(id: string, updates: Partial<ScheduledAirdrop>): void {
+  const sa = scheduledAirdrops.get(id);
+  if (sa) {
+    Object.assign(sa, updates);
+  }
+}
+
+export function getPendingScheduledAirdrops(): ScheduledAirdrop[] {
+  return Array.from(scheduledAirdrops.values()).filter((s) => s.status === "pending");
+}
+
+// ─── AIRDROP HISTORY / AUDIT LOG ─────────────────────────────────────────
+
+export interface AirdropRecord {
+  id: string;
+  timestamp: string;
+  denom: string;
+  sender: string;
+  network: string;
+  totalRecipients: number;
+  totalAmount: string;
+  sent: number;
+  failed: number;
+  txHashes: string[];
+  failedAddresses: Array<{ address: string; error: string }>;
+  dryRun: boolean;
+  scheduled: boolean;
+  durationMs: number;
+}
+
+const airdropHistory: AirdropRecord[] = [];
+let _historyCounter = 0;
+
+export function recordAirdrop(record: Omit<AirdropRecord, "id">): AirdropRecord {
+  _historyCounter++;
+  const full: AirdropRecord = {
+    ...record,
+    id: `sa-hist-${Date.now()}-${_historyCounter}`,
+  };
+  airdropHistory.unshift(full); // newest first
+  return full;
+}
+
+export function getAirdropHistory(): AirdropRecord[] {
+  return airdropHistory;
+}
+
+export function getAirdropById(id: string): AirdropRecord | undefined {
+  return airdropHistory.find((r) => r.id === id);
+}

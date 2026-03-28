@@ -3930,6 +3930,112 @@ textarea.agent-resume-input{resize:vertical}
   transform:translateY(-1px);
 }
 
+/* ── Smart Airdrop: Header Actions ── */
+.sa-header-actions{display:flex;align-items:center;gap:6px}
+.sa-header-actions .sa-close-btn{margin-left:4px}
+
+/* ── Smart Airdrop: Dry Run ── */
+.sa-dryrun-card{
+  background:var(--bg-2,#1a1a2e);border:1px solid var(--border,#2a2a4a);
+  border-radius:var(--radius-sm,8px);padding:16px;margin-top:16px;
+}
+.sa-dryrun-batch-table{
+  width:100%;border-collapse:collapse;margin:10px 0;font-size:.85rem;
+}
+.sa-dryrun-batch-table th{
+  text-align:left;padding:6px 10px;border-bottom:1px solid var(--border,#2a2a4a);
+  color:var(--text-2,#aaa);font-weight:500;font-size:.78rem;text-transform:uppercase;
+}
+.sa-dryrun-batch-table td{
+  padding:6px 10px;border-bottom:1px solid rgba(255,255,255,0.05);
+}
+.sa-dryrun-summary{margin-top:12px}
+.sa-dryrun-row{
+  display:flex;justify-content:space-between;padding:4px 0;
+  font-size:.88rem;color:var(--text-2,#ccc);
+}
+.sa-dryrun-row b{color:var(--text-1,#fff)}
+.sa-pass{color:#22c55e}
+.sa-fail{color:#ef4444}
+.sa-dryrun-issues{margin-top:10px}
+.sa-dryrun-issue{
+  padding:6px 10px;margin:4px 0;border-radius:6px;
+  background:rgba(239,68,68,0.1);border-left:3px solid #ef4444;
+  font-size:.84rem;color:#fca5a5;
+}
+
+/* ── Smart Airdrop: Schedule Form ── */
+.sa-schedule-form{
+  background:var(--bg-2,#1a1a2e);border:1px solid var(--border,#2a2a4a);
+  border-radius:var(--radius-sm,8px);padding:16px;margin-top:12px;
+}
+.sa-schedule-options{display:flex;gap:16px;margin:10px 0}
+.sa-schedule-option{
+  display:flex;align-items:center;gap:6px;font-size:.88rem;
+  color:var(--text-2,#ccc);cursor:pointer;
+}
+.sa-schedule-option input[type="radio"]{accent-color:var(--purple,#7c6dfa)}
+.sa-form-label{
+  display:block;margin:8px 0 4px;font-size:.82rem;
+  color:var(--text-2,#aaa);font-weight:500;
+}
+
+/* ── Smart Airdrop: Schedules List ── */
+.sa-schedules-list{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+.sa-schedule-item{
+  background:var(--bg-2,#1a1a2e);border:1px solid var(--border,#2a2a4a);
+  border-radius:var(--radius-sm,8px);padding:12px;
+}
+.sa-schedule-item-header{
+  display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;
+}
+.sa-schedule-denom{font-weight:600;color:var(--text-1,#fff);font-size:.92rem}
+.sa-schedule-status{
+  font-size:.75rem;padding:2px 8px;border-radius:10px;font-weight:600;text-transform:uppercase;
+}
+.sa-status-pending .sa-schedule-status{background:rgba(250,204,21,0.15);color:#facc15}
+.sa-status-executing .sa-schedule-status{background:rgba(59,130,246,0.15);color:#3b82f6}
+.sa-status-completed .sa-schedule-status{background:rgba(34,197,94,0.15);color:#22c55e}
+.sa-status-failed .sa-schedule-status{background:rgba(239,68,68,0.15);color:#ef4444}
+.sa-status-cancelled .sa-schedule-status{background:rgba(150,150,150,0.15);color:#999}
+.sa-schedule-item-detail{font-size:.82rem;color:var(--text-2,#aaa);margin-top:3px}
+.sa-btn-danger{
+  background:rgba(239,68,68,0.15);color:#ef4444;border:1px solid rgba(239,68,68,0.3);
+}
+.sa-btn-danger:hover{background:rgba(239,68,68,0.25)}
+
+/* ── Smart Airdrop: History ── */
+.sa-history-table{
+  width:100%;border-collapse:collapse;margin-top:12px;font-size:.85rem;
+}
+.sa-history-table th{
+  text-align:left;padding:8px 10px;border-bottom:1px solid var(--border,#2a2a4a);
+  color:var(--text-2,#aaa);font-weight:500;font-size:.78rem;text-transform:uppercase;
+}
+.sa-history-table td{
+  padding:8px 10px;border-bottom:1px solid rgba(255,255,255,0.05);
+}
+.sa-history-row{cursor:pointer;transition:background .15s}
+.sa-history-row:hover{background:rgba(124,109,250,0.08)}
+.sa-history-row-ok{}
+.sa-history-row-warn td:nth-child(4){color:#ef4444}
+.sa-history-detail{
+  background:var(--bg-2,#1a1a2e);border:1px solid var(--border,#2a2a4a);
+  border-radius:var(--radius-sm,8px);padding:14px;
+}
+.sa-history-txlist{margin-top:6px}
+.sa-history-tx{font-size:.82rem;margin:3px 0}
+.sa-history-tx a{color:var(--purple,#7c6dfa);text-decoration:none}
+.sa-history-tx a:hover{text-decoration:underline}
+.sa-history-failed{margin-top:6px}
+.sa-history-failed-row{
+  display:flex;justify-content:space-between;gap:8px;
+  padding:4px 0;font-size:.82rem;border-bottom:1px solid rgba(255,255,255,0.04);
+}
+.sa-empty-msg{
+  text-align:center;padding:32px 16px;color:var(--text-2,#888);font-size:.9rem;
+}
+
 /* Responsive */
 @media(max-width:600px){
   .smart-airdrop-modal{max-width:100vw;border-radius:12px 12px 0 0;max-height:95vh}
@@ -3938,4 +4044,7 @@ textarea.agent-resume-input{resize:vertical}
   .sa-delivery-row{flex-direction:column}
   .smart-airdrop-actions{flex-direction:column}
   .sa-btn{width:100%;text-align:center}
+  .sa-schedule-options{flex-direction:column}
+  .sa-dryrun-batch-table{font-size:.78rem}
+  .sa-history-table{font-size:.78rem}
 }

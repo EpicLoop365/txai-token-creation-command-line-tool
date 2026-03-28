@@ -67,6 +67,17 @@ import {
   sendAirdropReview,
   AirdropIntent,
   ResolvedAirdrop,
+  ScheduledAirdrop,
+  AirdropRecord,
+  createScheduledAirdrop,
+  getScheduledAirdrops,
+  getScheduledAirdropById,
+  cancelScheduledAirdrop,
+  updateScheduledAirdrop,
+  getPendingScheduledAirdrops,
+  recordAirdrop,
+  getAirdropHistory,
+  getAirdropById,
 } from "./smart-airdrop";
 
 // ─── RATE LIMITER ────────────────────────────────────────────────────────────
@@ -3567,11 +3578,14 @@ app.post("/api/smart-airdrop/execute", async (req, res) => {
     const txWallet = await importWallet(process.env.AGENT_MNEMONIC, networkName);
     client = await TxClient.connectWithWallet(txWallet);
 
+    const executeStartTime = Date.now();
     const BATCH_SIZE = 100;
     const totalBatches = Math.ceil(recipients.length / BATCH_SIZE);
     let totalSent = 0;
     let totalFailed = 0;
     const errors: string[] = [];
+    const txHashes: string[] = [];
+    const failedAddresses: Array<{ address: string; error: string }> = [];
 
     for (let batchIdx = 0; batchIdx < totalBatches; batchIdx++) {
       if (clientDisconnected) break;
@@ -3607,15 +3621,20 @@ app.post("/api/smart-airdrop/execute", async (req, res) => {
           if (result.success) {
             batchSent++;
             totalSent++;
+            if (result.txHash) txHashes.push(result.txHash);
           } else {
             batchFailed++;
             totalFailed++;
-            errors.push(`${recipient.address}: ${result.error || "tx failed"}`);
+            const errMsg = result.error || "tx failed";
+            errors.push(`${recipient.address}: ${errMsg}`);
+            failedAddresses.push({ address: recipient.address, error: errMsg });
           }
         } catch (err) {
           batchFailed++;
           totalFailed++;
-          errors.push(`${recipient.address}: ${(err as Error).message}`);
+          const errMsg = (err as Error).message;
+          errors.push(`${recipient.address}: ${errMsg}`);
+          failedAddresses.push({ address: recipient.address, error: errMsg });
         }
       }
 
@@ -3629,10 +3648,32 @@ app.post("/api/smart-airdrop/execute", async (req, res) => {
       });
     }
 
+    // Record in airdrop history
+    const totalAmount = recipients.reduce((sum, r) => {
+      try { return sum + BigInt(r.amount); } catch { return sum; }
+    }, BigInt(0)).toString();
+
+    recordAirdrop({
+      timestamp: new Date().toISOString(),
+      denom: denom || "",
+      sender: sender || client.address,
+      network: networkName,
+      totalRecipients: recipients.length,
+      totalAmount,
+      sent: totalSent,
+      failed: totalFailed,
+      txHashes,
+      failedAddresses,
+      dryRun: false,
+      scheduled: false,
+      durationMs: Date.now() - executeStartTime,
+    });
+
     sendEvent("complete", {
       totalSent,
       totalFailed,
       totalRecipients: recipients.length,
+      txHashes,
       errors: errors.slice(0, 50),
     });
   } catch (err) {
@@ -3693,6 +3734,395 @@ app.post("/api/smart-airdrop/send-review", async (req, res) => {
     console.error("[smart-airdrop/send-review] Error:", (err as Error).message);
     res.status(500).json({ ok: false, error: (err as Error).message });
   }
+});
+
+// ─── SMART AIRDROP: DRY RUN ──────────────────────────────────────────────
+
+app.post("/api/smart-airdrop/dry-run", async (req, res) => {
+  const { denom, recipients, sender, network: reqNetwork } = req.body as {
+    denom?: string;
+    recipients?: Array<{ address: string; amount: string }>;
+    sender?: string;
+    network?: string;
+  };
+
+  if (!denom) {
+    res.status(400).json({ error: "Missing 'denom'." });
+    return;
+  }
+  if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
+    res.status(400).json({ error: "'recipients' must be a non-empty array." });
+    return;
+  }
+  if (!sender || typeof sender !== "string") {
+    res.status(400).json({ error: "Missing 'sender' address." });
+    return;
+  }
+
+  const { networkName, network } = getNetwork(req);
+  const restUrl = network.restEndpoint;
+  const AVG_GAS_PER_MSG = 80_000;
+  const BATCH_SIZE = 100;
+  const totalBatches = Math.ceil(recipients.length / BATCH_SIZE);
+  const issues: string[] = [];
+
+  // Build batch breakdown
+  const batches: Array<{ batchNum: number; recipientCount: number; estimatedGas: number }> = [];
+  let totalGasEstimate = 0;
+
+  for (let i = 0; i < totalBatches; i++) {
+    const batchStart = i * BATCH_SIZE;
+    const batch = recipients.slice(batchStart, batchStart + BATCH_SIZE);
+    const estimatedGas = batch.length * AVG_GAS_PER_MSG;
+    totalGasEstimate += estimatedGas;
+    batches.push({ batchNum: i + 1, recipientCount: batch.length, estimatedGas });
+  }
+
+  // Calculate total tokens needed
+  let totalTokensBigInt = BigInt(0);
+  for (const r of recipients) {
+    try {
+      totalTokensBigInt += BigInt(r.amount);
+    } catch {
+      issues.push(`Invalid amount for ${r.address}: ${r.amount}`);
+    }
+  }
+  const totalTokens = totalTokensBigInt.toString();
+
+  // Estimate gas cost in CORE (gas price ~0.0625 ucore per gas unit)
+  const gasPriceUcore = 0.0625;
+  const totalGasCostUcore = Math.ceil(totalGasEstimate * gasPriceUcore);
+  const totalGasCost = `${totalGasCostUcore} ucore`;
+
+  // Check sender balance
+  let senderBalance = "unknown";
+  let senderBalanceRaw = BigInt(0);
+  let canExecute = true;
+
+  try {
+    const balResp = await fetch(
+      `${restUrl}/cosmos/bank/v1beta1/balances/${sender}/by_denom?denom=${denom}`
+    );
+    if (balResp.ok) {
+      const balData: any = await balResp.json();
+      senderBalance = balData?.balance?.amount || "0";
+      senderBalanceRaw = BigInt(senderBalance);
+    }
+  } catch {
+    issues.push("Could not query sender balance.");
+  }
+
+  // Check if sender has enough tokens
+  if (senderBalanceRaw < totalTokensBigInt) {
+    canExecute = false;
+    issues.push(`Insufficient token balance. Need ${totalTokens} ${denom}, have ${senderBalance}.`);
+  }
+
+  // Check gas balance (ucore)
+  try {
+    const coreBalResp = await fetch(
+      `${restUrl}/cosmos/bank/v1beta1/balances/${sender}/by_denom?denom=${network.denom || "ucore"}`
+    );
+    if (coreBalResp.ok) {
+      const coreBalData: any = await coreBalResp.json();
+      const coreBalance = BigInt(coreBalData?.balance?.amount || "0");
+      if (coreBalance < BigInt(totalGasCostUcore)) {
+        canExecute = false;
+        issues.push(
+          `Insufficient gas balance. Need ~${totalGasCostUcore} ${network.denom || "ucore"} for gas, have ${coreBalance.toString()}.`
+        );
+      }
+    }
+  } catch {
+    issues.push("Could not query sender gas balance.");
+  }
+
+  // If denom is the native gas token, combine check
+  if (denom === (network.denom || "ucore")) {
+    const totalNeeded = totalTokensBigInt + BigInt(totalGasCostUcore);
+    if (senderBalanceRaw < totalNeeded) {
+      canExecute = false;
+      issues.push(
+        `Combined check: need ${totalNeeded.toString()} ${denom} (tokens + gas), have ${senderBalance}.`
+      );
+    }
+  }
+
+  // Record as a dry-run in history
+  recordAirdrop({
+    timestamp: new Date().toISOString(),
+    denom: denom || "",
+    sender: sender || "",
+    network: networkName,
+    totalRecipients: recipients.length,
+    totalAmount: totalTokens,
+    sent: 0,
+    failed: 0,
+    txHashes: [],
+    failedAddresses: [],
+    dryRun: true,
+    scheduled: false,
+    durationMs: 0,
+  });
+
+  res.json({
+    batches,
+    totalRecipients: recipients.length,
+    totalTokens,
+    totalGasEstimate,
+    totalGasCost,
+    senderBalance,
+    canExecute,
+    issues,
+  });
+});
+
+// ─── SMART AIRDROP: SCHEDULE ─────────────────────────────────────────────
+
+app.post("/api/smart-airdrop/schedule", async (req, res) => {
+  const {
+    denom,
+    recipients,
+    sender,
+    network: reqNetwork,
+    scheduleType,
+    executeAt,
+    triggerDenom,
+    triggerPrice,
+    triggerDirection,
+  } = req.body as {
+    denom?: string;
+    recipients?: Array<{ address: string; amount: string }>;
+    sender?: string;
+    network?: string;
+    scheduleType?: "time" | "price";
+    executeAt?: string;
+    triggerDenom?: string;
+    triggerPrice?: number;
+    triggerDirection?: "above" | "below";
+  };
+
+  if (!denom) {
+    res.status(400).json({ error: "Missing 'denom'." });
+    return;
+  }
+  if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
+    res.status(400).json({ error: "'recipients' must be a non-empty array." });
+    return;
+  }
+  if (!sender) {
+    res.status(400).json({ error: "Missing 'sender'." });
+    return;
+  }
+  if (!scheduleType || (scheduleType !== "time" && scheduleType !== "price")) {
+    res.status(400).json({ error: "scheduleType must be 'time' or 'price'." });
+    return;
+  }
+  if (scheduleType === "time" && !executeAt) {
+    res.status(400).json({ error: "Missing 'executeAt' for time-based schedule." });
+    return;
+  }
+  if (scheduleType === "price" && (!triggerDenom || triggerPrice == null || !triggerDirection)) {
+    res.status(400).json({ error: "Missing price trigger fields (triggerDenom, triggerPrice, triggerDirection)." });
+    return;
+  }
+
+  const { networkName } = getNetwork(req);
+
+  const scheduled = createScheduledAirdrop({
+    denom,
+    recipients,
+    sender,
+    network: networkName,
+    scheduleType,
+    executeAt,
+    triggerDenom,
+    triggerPrice,
+    triggerDirection,
+  });
+
+  res.json({ ok: true, scheduled });
+});
+
+app.get("/api/smart-airdrop/schedules", (_req, res) => {
+  res.json({ schedules: getScheduledAirdrops() });
+});
+
+app.post("/api/smart-airdrop/schedule/cancel", (req, res) => {
+  const { id } = req.body as { id?: string };
+  if (!id) {
+    res.status(400).json({ error: "Missing 'id'." });
+    return;
+  }
+  const ok = cancelScheduledAirdrop(id);
+  if (!ok) {
+    res.status(400).json({ error: "Could not cancel. Schedule not found or not pending." });
+    return;
+  }
+  res.json({ ok: true });
+});
+
+// ─── SMART AIRDROP: SCHEDULE CHECKER (30s interval) ──────────────────────
+
+async function _executeScheduledAirdrop(sa: ScheduledAirdrop): Promise<void> {
+  updateScheduledAirdrop(sa.id, { status: "executing" });
+  const startTime = Date.now();
+  const networkName = sa.network as NetworkName;
+  const network = NETWORKS[networkName];
+
+  if (!process.env.AGENT_MNEMONIC) {
+    updateScheduledAirdrop(sa.id, {
+      status: "failed",
+      executedAt: new Date().toISOString(),
+      result: { sent: 0, failed: sa.recipients.length, txHashes: [] },
+    });
+    return;
+  }
+
+  let client: TxClient | null = null;
+  let totalSent = 0;
+  let totalFailed = 0;
+  const txHashes: string[] = [];
+  const failedAddresses: Array<{ address: string; error: string }> = [];
+
+  try {
+    const txWallet = await importWallet(process.env.AGENT_MNEMONIC, networkName);
+    client = await TxClient.connectWithWallet(txWallet);
+
+    const BATCH_SIZE = 100;
+    for (let i = 0; i < sa.recipients.length; i += BATCH_SIZE) {
+      const batch = sa.recipients.slice(i, i + BATCH_SIZE);
+      for (const recipient of batch) {
+        try {
+          const msg = {
+            typeUrl: "/cosmos.bank.v1beta1.MsgSend",
+            value: {
+              fromAddress: client.address,
+              toAddress: recipient.address,
+              amount: [{ denom: sa.denom, amount: recipient.amount }],
+            },
+          };
+          const result = await client.signAndBroadcastMsg(msg, 200000);
+          if (result.success) {
+            totalSent++;
+            if (result.txHash) txHashes.push(result.txHash);
+          } else {
+            totalFailed++;
+            failedAddresses.push({ address: recipient.address, error: result.error || "tx failed" });
+          }
+        } catch (err) {
+          totalFailed++;
+          failedAddresses.push({ address: recipient.address, error: (err as Error).message });
+        }
+      }
+    }
+
+    updateScheduledAirdrop(sa.id, {
+      status: "completed",
+      executedAt: new Date().toISOString(),
+      result: { sent: totalSent, failed: totalFailed, txHashes },
+    });
+  } catch (err) {
+    updateScheduledAirdrop(sa.id, {
+      status: "failed",
+      executedAt: new Date().toISOString(),
+      result: { sent: totalSent, failed: totalFailed || sa.recipients.length, txHashes },
+    });
+  } finally {
+    try { if (client) client.disconnect(); } catch { /* ignore */ }
+  }
+
+  // Record in history
+  const totalAmount = sa.recipients.reduce((sum, r) => {
+    try { return sum + BigInt(r.amount); } catch { return sum; }
+  }, BigInt(0)).toString();
+
+  recordAirdrop({
+    timestamp: new Date().toISOString(),
+    denom: sa.denom,
+    sender: sa.sender,
+    network: sa.network,
+    totalRecipients: sa.recipients.length,
+    totalAmount,
+    sent: totalSent,
+    failed: totalFailed,
+    txHashes,
+    failedAddresses,
+    dryRun: false,
+    scheduled: true,
+    durationMs: Date.now() - startTime,
+  });
+}
+
+setInterval(() => {
+  const pending = getPendingScheduledAirdrops();
+  for (const sa of pending) {
+    if (sa.scheduleType === "time" && sa.executeAt) {
+      if (Date.now() >= new Date(sa.executeAt).getTime()) {
+        console.log(`[smart-airdrop] Executing scheduled airdrop ${sa.id} (time trigger)`);
+        _executeScheduledAirdrop(sa).catch((err) =>
+          console.error(`[smart-airdrop] Scheduled execution error ${sa.id}:`, (err as Error).message)
+        );
+      }
+    } else if (sa.scheduleType === "price") {
+      // Price-based triggers are not yet wired to a real price feed.
+      // Placeholder: log and skip.
+      console.log(
+        `[smart-airdrop] Price-based schedule ${sa.id}: watching ${sa.triggerDenom} ` +
+        `${sa.triggerDirection} $${sa.triggerPrice} — price feed not yet wired, skipping.`
+      );
+    }
+  }
+}, 30_000);
+
+// ─── SMART AIRDROP: HISTORY ──────────────────────────────────────────────
+
+app.get("/api/smart-airdrop/history", (_req, res) => {
+  res.json({ history: getAirdropHistory() });
+});
+
+app.get("/api/smart-airdrop/history/:id", (req, res) => {
+  const record = getAirdropById(req.params.id);
+  if (!record) {
+    res.status(404).json({ error: "Record not found." });
+    return;
+  }
+  res.json({ record });
+});
+
+app.get("/api/smart-airdrop/history/:id/export", (req, res) => {
+  const record = getAirdropById(req.params.id);
+  if (!record) {
+    res.status(404).json({ error: "Record not found." });
+    return;
+  }
+
+  // Build CSV
+  const csvLines = ["address,amount,status,txHash,timestamp"];
+  // We don't have per-recipient tx hash mapping in the record,
+  // so we use the record-level data as best-effort.
+  const failedMap = new Map(record.failedAddresses.map((f) => [f.address, f.error]));
+
+  // We need recipient list — but we only stored totals.
+  // For now, export the failed addresses and a note about successful ones.
+  if (record.failedAddresses.length > 0) {
+    for (const fa of record.failedAddresses) {
+      csvLines.push(`${fa.address},,failed,"${fa.error}",${record.timestamp}`);
+    }
+  }
+
+  // Add tx hashes as summary rows
+  for (const txHash of record.txHashes) {
+    csvLines.push(`,,success,${txHash},${record.timestamp}`);
+  }
+
+  // Summary row
+  csvLines.push(`# Summary: ${record.sent} sent / ${record.failed} failed / ${record.totalRecipients} total`);
+
+  const csv = csvLines.join("\n");
+  res.setHeader("Content-Type", "text/csv");
+  res.setHeader("Content-Disposition", `attachment; filename="airdrop-${record.id}.csv"`);
+  res.send(csv);
 });
 
 // ─── HTTP + WS SERVER ───────────────────────────────────────────────────────
