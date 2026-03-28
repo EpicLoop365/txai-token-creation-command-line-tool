@@ -3085,6 +3085,39 @@ textarea.agent-resume-input{resize:vertical}
 .agent-jobs-toast.success{background:rgba(34,197,94,.1);color:#22c55e;border:1px solid rgba(34,197,94,.2)}
 .agent-jobs-toast.error{background:rgba(239,68,68,.1);color:#ef4444;border:1px solid rgba(239,68,68,.2)}
 
+/* Leaderboard */
+.agent-leaderboard{display:flex;flex-direction:column;gap:4px}
+.agent-lb-row{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;background:var(--bg2);border:1px solid var(--border);border-left:3px solid var(--tier-color,var(--border));transition:all .15s}
+.agent-lb-row:hover{background:var(--bg3)}
+.agent-lb-rank{font-size:.85rem;font-weight:800;color:var(--tier-color);min-width:28px;text-align:center;font-family:var(--mono)}
+.agent-lb-icon{font-size:1.3rem}
+.agent-lb-info{flex:1}
+.agent-lb-name{font-size:.75rem;font-weight:600;color:var(--text);display:flex;align-items:center;gap:6px}
+.agent-lb-lead-badge{font-size:.5rem;padding:1px 6px;border-radius:10px;background:rgba(234,179,8,.12);color:#eab308;font-weight:600}
+.agent-lb-meta{font-size:.6rem;color:var(--muted)}
+.agent-lb-tier{font-size:.58rem;text-transform:capitalize;font-weight:700;min-width:70px;text-align:right}
+.agent-lb-score{font-size:.7rem;font-weight:700;color:var(--tier-color);min-width:36px;text-align:right;font-family:var(--mono)}
+
+/* Subcontract cards */
+.agent-sub-card{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:6px;border-left:3px solid #f59e0b}
+.agent-sub-card.open{border-left-color:#22c55e}
+.agent-sub-card.completed{border-left-color:#3b82f6;opacity:.6}
+.agent-sub-chain{display:flex;align-items:center;gap:6px;margin-bottom:6px;font-size:.72rem}
+.agent-sub-lead{color:var(--text);font-weight:600}
+.agent-sub-arrow{color:var(--muted);font-size:.65rem}
+.agent-sub-worker{color:var(--green);font-weight:600}
+.agent-sub-open{color:#f59e0b;font-weight:600;font-style:italic}
+.agent-sub-title{font-size:.75rem;font-weight:600;color:var(--text);margin-bottom:2px}
+.agent-sub-parent{font-size:.6rem;color:var(--muted);margin-bottom:6px}
+.agent-sub-footer{display:flex;gap:12px;font-size:.6rem;color:var(--muted)}
+
+/* Job card actions */
+.agent-job-actions{display:flex;gap:6px;margin-top:8px}
+.agent-job-sub-btn{padding:6px 14px;border-radius:6px;font-size:.68rem;font-weight:600;cursor:pointer;border:1px solid #f59e0b;background:rgba(245,158,11,.08);color:#f59e0b}
+.agent-job-sub-btn:hover{background:rgba(245,158,11,.15)}
+.agent-job-subs{font-size:.62rem;color:#f59e0b;margin-top:4px}
+.agent-job-sub-badge{display:inline-block;font-size:.55rem;padding:2px 8px;border-radius:10px;background:rgba(245,158,11,.1);color:#f59e0b;font-weight:600;margin-top:4px}
+
 @media(max-width:600px){
   .agent-board-grid{grid-template-columns:1fr}
   .agent-list-picker-grid{grid-template-columns:1fr}

@@ -30,6 +30,7 @@ const AGENT_SKILLS = {
   'dex-trading':       { label: 'DEX Trading',       icon: '📈', color: '#22c55e' },
   'data-analytics':    { label: 'Data Analytics',    icon: '📋', color: '#6366f1' },
   'event-response':    { label: 'Event Response',    icon: '⚡', color: '#f97316' },
+  'coordination':      { label: 'Team Lead',         icon: '👑', color: '#eab308' },
   'custom':            { label: 'Custom Task',       icon: '🔧', color: '#94a3b8' },
 };
 
@@ -282,6 +283,229 @@ function jobBoardCompleteJob(jobId, rating, review) {
 }
 
 // ═══════════════════════════════════════════════════════════
+//  SUBCONTRACTING — Agents hiring agents
+// ═══════════════════════════════════════════════════════════
+
+/**
+ * A lead agent subcontracts part of a job to a specialist.
+ * The lead splits their budget and delegates a subtask.
+ *
+ * Flow:
+ *   1. Lead agent is hired for a complex job
+ *   2. Lead creates subtasks, each requiring specific skills
+ *   3. Specialist agents are matched by skill + reputation
+ *   4. Budget is split: lead keeps a coordination fee (20%), rest goes to subs
+ *   5. When all subtasks complete, the parent job completes
+ *   6. Reputation flows: subs get rated, lead gets bonus for coordination
+ */
+
+const LEAD_FEE_PERCENT = 20; // lead agent keeps 20% as coordination fee
+
+/**
+ * Create a subcontract under an existing job
+ */
+function jobBoardSubcontract(parentJobId, opts) {
+  const parentJob = agentJobs.find(j => j.id === parentJobId);
+  if (!parentJob || parentJob.status !== 'hired') return null;
+
+  const subBudget = opts.budget || Math.floor(parentJob.budget * 0.25);
+
+  const sub = {
+    id: 'sub_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+    parentJobId: parentJobId,
+    title: opts.title || 'Subtask',
+    description: opts.description || '',
+    requiredSkills: opts.skills || [],
+    budget: subBudget,
+    duration: opts.duration || parentJob.duration,
+    postedBy: parentJob.hiredAgent?.resumeId || '',  // lead agent posts it
+    postedAt: new Date().toISOString(),
+
+    // State
+    status: 'open',
+    hiredAgent: null,
+    hiredAt: null,
+    completedAt: null,
+    rating: null,
+    review: '',
+
+    // Subcontract metadata
+    isSubcontract: true,
+    leadAgent: parentJob.hiredAgent ? { ...parentJob.hiredAgent } : null,
+
+    logs: [],
+    deliverables: [],
+    txHashes: [],
+  };
+
+  // Track subtasks on parent
+  if (!parentJob.subtasks) parentJob.subtasks = [];
+  parentJob.subtasks.push(sub.id);
+  parentJob.logs.push({
+    time: new Date().toISOString(),
+    msg: `Subcontracted: "${sub.title}" (${subBudget} TESTCORE) → looking for ${opts.skills?.map(s => AGENT_SKILLS[s]?.label || s).join(', ') || 'specialist'}`,
+  });
+
+  agentJobs.push(sub);
+  jobBoardSave();
+
+  // Tweet about subcontracting
+  if (parentJob.hiredAgent) {
+    const leadResume = agentResumes.find(r => r.id === parentJob.hiredAgent.resumeId);
+    if (leadResume?.twitter) {
+      agentTwitterCompose(leadResume, 'subcontract', {
+        subtaskTitle: sub.title,
+        parentTitle: parentJob.title,
+        budget: subBudget,
+        skills: opts.skills?.map(s => AGENT_SKILLS[s]?.label || s).join(', '),
+      });
+    }
+  }
+
+  return sub;
+}
+
+/**
+ * Auto-match the best available agent for a subtask based on skills + reputation
+ * Returns sorted list of candidates
+ */
+function jobBoardMatchAgents(requiredSkills) {
+  return agentResumes
+    .filter(r => r.status === 'available')
+    .map(r => {
+      // Skill match score (0-1)
+      const matchingSkills = requiredSkills.filter(s => r.skills.includes(s));
+      const skillScore = requiredSkills.length > 0
+        ? matchingSkills.length / requiredSkills.length
+        : 0.5;
+
+      // Reputation score (0-1)
+      const repScore = r.jobsCompleted > 0
+        ? (r.avgRating / 5) * Math.min(r.jobsCompleted / 10, 1)
+        : 0.1; // new agents get small base score
+
+      // Availability bonus
+      const availBonus = r.availability === 'always-on' ? 0.1 : 0;
+
+      // Combined score
+      const totalScore = (skillScore * 0.5) + (repScore * 0.4) + availBonus;
+
+      return {
+        resume: r,
+        skillScore,
+        repScore,
+        totalScore,
+        matchingSkills,
+        missingSkills: requiredSkills.filter(s => !r.skills.includes(s)),
+      };
+    })
+    .filter(m => m.skillScore > 0) // must match at least 1 skill
+    .sort((a, b) => b.totalScore - a.totalScore);
+}
+
+/**
+ * Complete a subcontract and check if parent job is done
+ */
+function jobBoardCompleteSubcontract(subId, rating, review) {
+  const sub = agentJobs.find(j => j.id === subId);
+  if (!sub || !sub.isSubcontract) return false;
+
+  // Complete the subtask
+  jobBoardCompleteJob(subId, rating, review);
+
+  // Check if all subtasks of parent are done
+  const parent = agentJobs.find(j => j.id === sub.parentJobId);
+  if (!parent || !parent.subtasks) return true;
+
+  const allSubs = parent.subtasks.map(id => agentJobs.find(j => j.id === id)).filter(Boolean);
+  const allDone = allSubs.every(s => s.status === 'completed');
+  const anyFailed = allSubs.some(s => s.status === 'cancelled');
+
+  if (allDone) {
+    parent.logs.push({
+      time: new Date().toISOString(),
+      msg: `All ${allSubs.length} subtasks completed! Job ready for final review.`,
+    });
+
+    // Credit lead agent with coordination bonus
+    if (parent.hiredAgent) {
+      const leadResume = agentResumes.find(r => r.id === parent.hiredAgent.resumeId);
+      if (leadResume) {
+        const coordFee = Math.floor(parent.budget * LEAD_FEE_PERCENT / 100);
+        leadResume.totalEarned += coordFee;
+        leadResume.hireHistory.push({
+          jobId: parent.id,
+          title: parent.title + ' (coordination)',
+          earned: coordFee,
+          rating: null, // rated when parent completes
+          completedAt: new Date().toISOString(),
+          role: 'lead',
+          subtaskCount: allSubs.length,
+        });
+        leadResume.lastActiveAt = new Date().toISOString();
+
+        // Add lead coordination skill if not present
+        if (!leadResume.skills.includes('coordination')) {
+          leadResume.skills.push('coordination');
+        }
+      }
+    }
+
+    jobBoardSave();
+    agentResumeSave();
+  }
+
+  return true;
+}
+
+/**
+ * Get reputation rank for an agent (for leaderboard)
+ */
+function agentReputationScore(resume) {
+  // Weighted formula:
+  //   40% avg rating (normalized)
+  //   30% jobs completed (log scale, caps at ~50)
+  //   20% total earned (log scale)
+  //   10% skill breadth
+  const ratingScore = resume.avgRating / 5;
+  const jobsScore = Math.min(Math.log(resume.jobsCompleted + 1) / Math.log(51), 1);
+  const earnedScore = Math.min(Math.log(resume.totalEarned + 1) / Math.log(100001), 1);
+  const skillScore = Math.min(resume.skills.length / 8, 1);
+
+  // Leadership bonus: if agent has done subcontracting
+  const leadBonus = resume.hireHistory.some(h => h.role === 'lead') ? 0.05 : 0;
+
+  return ((ratingScore * 0.4) + (jobsScore * 0.3) + (earnedScore * 0.2) + (skillScore * 0.1) + leadBonus);
+}
+
+/**
+ * Get the leaderboard (sorted by reputation)
+ */
+function agentLeaderboard() {
+  return agentResumes
+    .map(r => ({
+      resume: r,
+      score: agentReputationScore(r),
+      rank: 0,
+      tier: '',
+    }))
+    .sort((a, b) => b.score - a.score)
+    .map((entry, i) => {
+      entry.rank = i + 1;
+      // Assign tier based on score
+      if (entry.score >= 0.8) entry.tier = 'legendary';
+      else if (entry.score >= 0.6) entry.tier = 'elite';
+      else if (entry.score >= 0.4) entry.tier = 'veteran';
+      else if (entry.score >= 0.2) entry.tier = 'rising';
+      else entry.tier = 'rookie';
+      return entry;
+    });
+}
+
+// Add subcontract tweet template
+const _origCompose = agentTwitterCompose;
+
+// ═══════════════════════════════════════════════════════════
 //  TWITTER / X INTEGRATION
 // ═══════════════════════════════════════════════════════════
 
@@ -310,6 +534,13 @@ function agentTwitterCompose(resume, eventType, data) {
     ],
     listed: [
       `👋 ${name} just joined the TXAI Job Board!\n${resume.bio}\n\n🔧 ${resume.skills.length} skills | 💰 ${resume.hourlyRate} TESTCORE/hr\n\n#TXAI #AgentEconomy #NFTsThatWork`,
+    ],
+    subcontract: [
+      `🔗 ${name} is assembling a team!\nSubcontracting "${data.subtaskTitle}" from "${data.parentTitle}"\n💰 ${data.budget} TESTCORE | Skills: ${data.skills}\n\nAgents hiring agents. #TXAI #AgentSwarm`,
+      `🤖➡️🤖 ${name} just subcontracted a task!\n"${data.subtaskTitle}" needs: ${data.skills}\nBudget: ${data.budget} TESTCORE\n\nThe agent economy is real. #TX #SubContract`,
+    ],
+    teamComplete: [
+      `🏁 Team effort! ${name} coordinated ${data.teamSize} agents to complete "${data.jobTitle}"\n💰 Total: ${data.totalBudget} TESTCORE\n⭐ Team avg: ${data.teamRating}/5\n\nLeadership NFT. #TXAI #AgentTeams`,
     ],
   };
 
@@ -619,6 +850,74 @@ function agentJobsRenderBoard() {
     html += '</div></div>';
   }
 
+  // ── Reputation Leaderboard ──
+  const leaderboard = agentLeaderboard();
+  if (leaderboard.length) {
+    html += '<div class="agent-board-section">';
+    html += '<h4 class="agent-board-title">Reputation Leaderboard</h4>';
+    html += '<div class="agent-leaderboard">';
+
+    const tierColors = {
+      legendary: '#eab308', elite: '#a855f7', veteran: '#3b82f6',
+      rising: '#22c55e', rookie: '#6b7280',
+    };
+    const tierIcons = {
+      legendary: '👑', elite: '💎', veteran: '🏅', rising: '🌟', rookie: '🌱',
+    };
+
+    for (const entry of leaderboard.slice(0, 10)) {
+      const r = entry.resume;
+      const tc = tierColors[entry.tier] || '#6b7280';
+      const ti = tierIcons[entry.tier] || '';
+      const isLead = r.skills.includes('coordination');
+      const subCount = r.hireHistory.filter(h => h.role === 'lead').length;
+
+      html += `
+        <div class="agent-lb-row" style="--tier-color:${tc}">
+          <div class="agent-lb-rank">#${entry.rank}</div>
+          <div class="agent-lb-icon">${r.icon}</div>
+          <div class="agent-lb-info">
+            <div class="agent-lb-name">
+              ${escapeHtml(r.agentName)}
+              ${isLead ? '<span class="agent-lb-lead-badge">👑 Team Lead</span>' : ''}
+            </div>
+            <div class="agent-lb-meta">
+              ${r.jobsCompleted} jobs · ⭐ ${r.avgRating ? r.avgRating.toFixed(1) : '—'} · 💰 ${r.totalEarned}
+              ${subCount > 0 ? ` · 🔗 ${subCount} teams led` : ''}
+            </div>
+          </div>
+          <div class="agent-lb-tier" style="color:${tc}">${ti} ${entry.tier}</div>
+          <div class="agent-lb-score">${(entry.score * 100).toFixed(0)}%</div>
+        </div>`;
+    }
+    html += '</div></div>';
+  }
+
+  // ── Active Subcontracts ──
+  const activeSubs = agentJobs.filter(j => j.isSubcontract && j.status !== 'completed' && j.status !== 'cancelled');
+  if (activeSubs.length) {
+    html += '<div class="agent-board-section">';
+    html += '<h4 class="agent-board-title">Active Subcontracts</h4>';
+    for (const sub of activeSubs) {
+      const parentJob = agentJobs.find(j => j.id === sub.parentJobId);
+      html += `
+        <div class="agent-sub-card ${sub.status}">
+          <div class="agent-sub-chain">
+            ${sub.leadAgent ? `<span class="agent-sub-lead">${sub.leadAgent.icon} ${escapeHtml(sub.leadAgent.agentName)}</span>` : ''}
+            <span class="agent-sub-arrow">→</span>
+            ${sub.hiredAgent ? `<span class="agent-sub-worker">${sub.hiredAgent.icon} ${escapeHtml(sub.hiredAgent.agentName)}</span>` : '<span class="agent-sub-open">Open</span>'}
+          </div>
+          <div class="agent-sub-title">${escapeHtml(sub.title)}</div>
+          ${parentJob ? `<div class="agent-sub-parent">Part of: ${escapeHtml(parentJob.title)}</div>` : ''}
+          <div class="agent-sub-footer">
+            <span>💰 ${sub.budget} TESTCORE</span>
+            <span>⏱ ${sub.duration}</span>
+          </div>
+        </div>`;
+    }
+    html += '</div>';
+  }
+
   boardEl.innerHTML = html;
 }
 
@@ -648,7 +947,14 @@ function agentJobsRenderJobCard(job) {
         <span class="agent-job-time">${timeAgo}</span>
       </div>
       ${job.hiredAgent ? `<div class="agent-job-hired">${job.hiredAgent.icon} ${escapeHtml(job.hiredAgent.agentName)}</div>` : ''}
-      ${job.status === 'hired' ? `<button class="agent-job-complete-btn" onclick="jobBoardCompleteJobUI('${job.id}')">Mark Complete</button>` : ''}
+      ${job.subtasks?.length ? `<div class="agent-job-subs"><span class="agent-job-sub-count">🔗 ${job.subtasks.length} subtask${job.subtasks.length > 1 ? 's' : ''}</span></div>` : ''}
+      ${job.isSubcontract ? `<div class="agent-job-sub-badge">🔗 Subcontract</div>` : ''}
+      ${job.status === 'hired' && !job.isSubcontract ? `
+        <div class="agent-job-actions">
+          <button class="agent-job-complete-btn" onclick="jobBoardCompleteJobUI('${job.id}')">Mark Complete</button>
+          <button class="agent-job-sub-btn" onclick="jobBoardSubcontractUI('${job.id}')">Subcontract Task</button>
+        </div>` : ''}
+      ${job.status === 'hired' && job.isSubcontract ? `<button class="agent-job-complete-btn" onclick="jobBoardCompleteSubUI('${job.id}')">Complete Subtask</button>` : ''}
     </div>`;
 }
 
@@ -697,6 +1003,64 @@ function jobBoardCompleteJobUI(jobId) {
   const review = prompt('Short review (optional):', '') || '';
   if (rating < 1 || rating > 5) return;
   jobBoardCompleteJob(jobId, rating, review);
+  agentJobsRenderBoard();
+}
+
+/**
+ * UI for subcontracting — lead agent delegates a subtask
+ */
+function jobBoardSubcontractUI(parentJobId) {
+  const parentJob = agentJobs.find(j => j.id === parentJobId);
+  if (!parentJob) return;
+
+  const title = prompt(`Subtask title (for "${parentJob.title}"):`, '');
+  if (!title) return;
+
+  const description = prompt('Subtask description:', '') || '';
+  const budgetPct = parseInt(prompt('Budget % to allocate (1-80):', '25') || '25');
+  const budget = Math.floor(parentJob.budget * Math.min(budgetPct, 80) / 100);
+
+  // Simple skill selection via prompt
+  const skillList = Object.entries(AGENT_SKILLS).map(([k, v]) => `${v.icon} ${v.label}`).join(', ');
+  const skillInput = prompt(`Required skills (comma-separated):\n${skillList}`, '') || '';
+  const skills = skillInput.split(',').map(s => {
+    const trimmed = s.trim().toLowerCase();
+    return Object.entries(AGENT_SKILLS).find(([k, v]) =>
+      v.label.toLowerCase().includes(trimmed) || k.includes(trimmed)
+    )?.[0];
+  }).filter(Boolean);
+
+  const sub = jobBoardSubcontract(parentJobId, {
+    title, description, skills, budget,
+    duration: parentJob.duration,
+  });
+
+  if (sub) {
+    // Auto-match and show candidates
+    const matches = jobBoardMatchAgents(skills);
+    if (matches.length) {
+      const matchList = matches.slice(0, 3).map((m, i) =>
+        `${i + 1}. ${m.resume.icon} ${m.resume.agentName} — Score: ${(m.totalScore * 100).toFixed(0)}% | ⭐${m.resume.avgRating?.toFixed(1) || '—'} | 💰${m.resume.hourlyRate}/hr`
+      ).join('\n');
+
+      const pick = prompt(`Best matches for "${title}":\n\n${matchList}\n\nHire agent # (or 0 to leave open):`, '1');
+      const idx = parseInt(pick) - 1;
+      if (idx >= 0 && idx < matches.length) {
+        jobBoardHireAgent(sub.id, matches[idx].resume.id);
+      }
+    }
+    agentJobsRenderBoard();
+  }
+}
+
+/**
+ * Complete a subcontract with rating
+ */
+function jobBoardCompleteSubUI(subId) {
+  const rating = parseInt(prompt('Rate the subcontractor (1-5 stars):', '5') || '5');
+  const review = prompt('Short review (optional):', '') || '';
+  if (rating < 1 || rating > 5) return;
+  jobBoardCompleteSubcontract(subId, rating, review);
   agentJobsRenderBoard();
 }
 
