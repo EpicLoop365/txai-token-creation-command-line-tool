@@ -315,26 +315,24 @@ function resetDeployBtns(){
   if(cb) cb.disabled = false;
 }
 
-/* Create Mode Toggle: Token / NFT / AI Prompt */
+/* Create Mode Toggle: Utility Assets */
 let createMode = 'custom';
 function setCreateMode(mode){
   createMode = mode;
-  document.getElementById('createModeQuick').classList.toggle('active', mode === 'quick');
-  document.getElementById('createModeCustom').classList.toggle('active', mode === 'custom');
-  const nftBtn = document.getElementById('createModeNft');
-  if(nftBtn) nftBtn.classList.toggle('active', mode === 'nft');
-  const adBtn = document.getElementById('createModeAirdrop');
-  if(adBtn) adBtn.classList.toggle('active', mode === 'airdrop');
-  document.getElementById('quickCreateWrap').style.display = mode === 'quick' ? '' : 'none';
-  document.getElementById('customCreateWrap').style.display = mode === 'custom' ? '' : 'none';
-  const nftWrap = document.getElementById('nftCreateWrap');
-  if(nftWrap) nftWrap.style.display = mode === 'nft' ? '' : 'none';
-  const adWrap = document.getElementById('nftAirdropWrap');
-  if(adWrap) adWrap.style.display = mode === 'airdrop' ? '' : 'none';
+  const modes = ['custom','nft','agent','airdrop','quick'];
+  const ids = {custom:'createModeCustom',nft:'createModeNft',agent:'createModeAgent',airdrop:'createModeAirdrop',quick:'createModeQuick'};
+  const wraps = {custom:'customCreateWrap',nft:'nftCreateWrap',agent:'agentNftWrap',airdrop:'nftAirdropWrap',quick:'quickCreateWrap'};
+  modes.forEach(m => {
+    const btn = document.getElementById(ids[m]);
+    if(btn) btn.classList.toggle('active', m === mode);
+    const wrap = document.getElementById(wraps[m]);
+    if(wrap) wrap.style.display = m === mode ? '' : 'none';
+  });
   if(mode === 'quick') document.getElementById('demoInput').focus();
   if(mode === 'custom') document.getElementById('cpName').focus();
   if(mode === 'nft') { const el = document.getElementById('nftSymbol'); if(el) el.focus(); }
   if(mode === 'airdrop' && typeof nftAirdropInit === 'function') nftAirdropInit();
+  if(mode === 'agent' && typeof agentNftInit === 'function') agentNftInit();
 }
 
 /* Customize Panel (legacy toggle — kept for compatibility) */

@@ -2528,6 +2528,16 @@ footer{
 }
 .hero-link:hover{border-color:var(--text-muted)}
 
+/* ───── Agent NFT Grid ───── */
+.agent-nft-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px}
+.agent-nft-card{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px;cursor:pointer;transition:all .18s;display:flex;flex-direction:column;gap:6px}
+.agent-nft-card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.agent-nft-card-icon{font-size:1.6rem;line-height:1}
+.agent-nft-card-name{font-size:.78rem;font-weight:700;color:var(--text)}
+.agent-nft-card-desc{font-size:.65rem;color:var(--muted);line-height:1.35}
+.agent-nft-card-btn{margin-top:auto;padding:6px 0;border:1px solid var(--border);border-radius:6px;font-family:var(--font);font-size:.65rem;font-weight:600;cursor:pointer;background:transparent;color:var(--accent);transition:all .15s;text-align:center}
+.agent-nft-card:hover .agent-nft-card-btn{border-color:var(--accent);background:rgba(124,109,250,.08)}
+
 /* ───── NFT Airdrop Wizard ───── */
 .wiz-steps{display:flex;align-items:center;justify-content:center;gap:0;margin-bottom:22px}
 .wiz-step{display:flex;align-items:center;gap:6px;font-size:.72rem;font-family:var(--mono);color:var(--muted);font-weight:500;padding:0 8px}

@@ -144,11 +144,15 @@
 
     <div class="demo-input-wrap reveal" id="demoInputWrap">
 
-      <!-- Create type toggle -->
+      <!-- Utility Assets toggle -->
+      <div style="margin-bottom:4px">
+        <span style="font-size:.65rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-family:var(--mono);font-weight:600">Utility Assets</span>
+      </div>
       <div class="create-mode-toggle" id="createModePicker">
         <button class="create-mode-btn active" id="createModeCustom" onclick="setCreateMode('custom')">Token</button>
         <button class="create-mode-btn" id="createModeNft" onclick="setCreateMode('nft')">NFT</button>
-        <button class="create-mode-btn" id="createModeAirdrop" onclick="setCreateMode('airdrop')">NFT Airdrop</button>
+        <button class="create-mode-btn" id="createModeAgent" onclick="setCreateMode('agent')">Agent NFT</button>
+        <button class="create-mode-btn" id="createModeAirdrop" onclick="setCreateMode('airdrop')">Airdrop</button>
         <button class="create-mode-btn" id="createModeQuick" onclick="setCreateMode('quick')">AI Prompt</button>
       </div>
 
@@ -387,6 +391,67 @@
         </div>
 
       </div><!-- end nftCreateWrap -->
+
+      <!-- Agent NFT -->
+      <div id="agentNftWrap" style="display:none">
+        <div class="customize-panel show">
+
+          <div style="text-align:center;padding:8px 0 14px">
+            <div style="font-size:1.1rem;font-weight:700;color:var(--text);font-family:var(--font)">Mint an AI Agent</div>
+            <p style="color:var(--muted);font-size:.78rem;margin:6px 0 0">Choose a template, configure it, and mint as an NFT. Whoever holds the NFT owns the agent.</p>
+          </div>
+
+          <!-- Template Grid -->
+          <div class="agent-nft-grid" id="agentNftGrid"></div>
+
+          <!-- Config Panel (hidden until template selected) -->
+          <div id="agentNftConfig" style="display:none">
+            <button class="nft-ad-small-btn" onclick="agentNftBackToGrid()" style="margin-bottom:14px">&larr; Back to templates</button>
+            <div id="agentNftConfigTitle" style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+              <span id="agentNftConfigIcon" style="font-size:2rem"></span>
+              <div>
+                <div id="agentNftConfigName" style="font-size:.95rem;font-weight:700;color:var(--text)"></div>
+                <div id="agentNftConfigDesc" style="font-size:.72rem;color:var(--muted)"></div>
+              </div>
+            </div>
+
+            <div class="cp-section">
+              <div class="cp-section-title" style="font-size:.85rem">Agent Configuration</div>
+              <div id="agentNftConfigFields"></div>
+            </div>
+
+            <div class="cp-section">
+              <div class="cp-field">
+                <label class="cp-label">Name your agent</label>
+                <input class="cp-input" id="agentNftAgentName" placeholder="e.g. My Whale Watcher">
+              </div>
+            </div>
+
+            <button class="demo-create-btn custom-deploy-btn" style="width:100%;font-size:.85rem;padding:12px 0;background:linear-gradient(135deg,var(--accent),#9b59b6) !important;border-radius:10px" id="agentNftMintBtn" onclick="agentNftMint()">
+              <span id="agentNftMintBtnText">Mint Agent NFT</span>
+              <span id="agentNftMintSpinner" class="nft-spinner" style="display:none"></span>
+            </button>
+
+            <div class="nft-result" id="agentNftResult" style="display:none;margin-top:12px">
+              <div class="nft-result-icon" id="agentNftResultIcon">✓</div>
+              <div class="nft-result-msg" id="agentNftResultMsg"></div>
+            </div>
+          </div>
+
+          <!-- History -->
+          <div class="cp-section" style="margin-top:20px;border-top:1px solid var(--border);padding-top:16px">
+            <div class="cp-section-title" style="font-size:.75rem;color:var(--muted)">Your Agents</div>
+            <div id="agentNftHistory" style="font-size:.72rem;color:var(--muted)">No agents minted yet.</div>
+          </div>
+
+          <!-- Log -->
+          <details style="margin-top:10px">
+            <summary style="font-size:.68rem;color:var(--muted);cursor:pointer;font-family:var(--mono)">Log</summary>
+            <div id="agentNftLog" style="max-height:120px;overflow-y:auto;font-size:.62rem;font-family:'Space Mono',monospace;color:var(--muted);background:rgba(0,0,0,.15);border-radius:6px;padding:6px 8px;margin-top:4px"></div>
+          </details>
+
+        </div>
+      </div><!-- end agentNftWrap -->
 
       <!-- NFT Airdrop Tool — 3-Step Wizard -->
       <div id="nftAirdropWrap" style="display:none">
@@ -1617,6 +1682,7 @@
 <script src="js/airdrop.js?v=1"></script>
 <script src="js/agent-workflows.js?v=1"></script>
 <script src="js/nft-airdrop.js?v=1"></script>
+<script src="js/agent-nft.js?v=1"></script>
 <script>
 // ── Inspiration ticker ──
 (function(){
