@@ -74,6 +74,7 @@
         <button class="chat-tab" id="tabManage" onclick="switchTab('manage')">Manage</button>
         <button class="chat-tab" id="tabDex" onclick="switchTab('dex')">Exchange</button>
         <button class="chat-tab" id="tabJobs" onclick="switchTab('jobs')">Jobs</button>
+        <button class="chat-tab" id="tabRuntime" onclick="switchTab('runtime')">Runtime</button>
         <button class="chat-tab" id="tabSubs" onclick="switchTab('subs')">Subscriptions</button>
         <button class="chat-tab" id="tabAi" onclick="switchTab('ai')">AI</button>
       </div>
@@ -1381,6 +1382,46 @@
 
     </div><!-- end jobs-wrap -->
 
+    <!-- ===== RUNTIME TAB ===== -->
+    <div class="runtime-wrap" id="runtimeWrap" style="display:none">
+
+      <!-- Runtime Hero -->
+      <div class="runtime-hero">
+        <div class="runtime-hero-icon">⚡</div>
+        <h2 class="runtime-hero-title">Agent Runtime</h2>
+        <p class="runtime-hero-sub">NFTs are careers. Your agents execute scripts, earn TX, hire subcontractors, and build reputations — all autonomous.</p>
+      </div>
+
+      <!-- Start Agent -->
+      <div class="runtime-actions">
+        <button class="runtime-action-btn primary" onclick="runtimeShowStartForm()">▶️ Start Agent</button>
+        <button class="runtime-action-btn" onclick="runtimeRefreshDashboard()">🔄 Refresh</button>
+      </div>
+
+      <!-- Start Form (hidden) -->
+      <div class="runtime-form-card" id="runtimeStartForm" style="display:none">
+        <div class="runtime-form-title">Start an Agent</div>
+        <p class="runtime-form-hint">Enter the NFT Class ID and NFT ID of a minted Agent NFT with a script.</p>
+        <label class="runtime-label">NFT Class ID</label>
+        <input class="runtime-input" id="runtimeClassId" placeholder="e.g. agentwhale-testcore1abc...">
+        <label class="runtime-label">NFT ID</label>
+        <input class="runtime-input" id="runtimeNftId" placeholder="e.g. whale-001">
+        <label class="runtime-label">Interval (seconds)</label>
+        <input class="runtime-input" id="runtimeInterval" type="number" value="60" min="10" max="3600">
+        <button class="runtime-btn primary" onclick="runtimeStartAgent()">Start Agent</button>
+      </div>
+
+      <!-- Dashboard -->
+      <div id="runtimeDashboard">
+        <div class="runtime-empty">
+          <div class="runtime-empty-icon">🤖</div>
+          <div class="runtime-empty-text">No agents running yet</div>
+          <div class="runtime-empty-hint">Mint an Agent NFT with a script, then start it here</div>
+        </div>
+      </div>
+
+    </div><!-- end runtime-wrap -->
+
     <!-- Subscriptions Tab -->
     <div class="subs-wrap" id="subsWrap">
 
@@ -1860,6 +1901,7 @@
 <script src="js/tracker.js?v=1"></script>
 <script src="js/analytics.js?v=1"></script>
 <script src="js/agent-jobs.js?v=1"></script>
+<script src="js/agent-runtime.js?v=1"></script>
 <script>
 // ── Inspiration ticker ──
 (function(){

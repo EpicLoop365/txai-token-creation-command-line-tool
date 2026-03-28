@@ -2552,6 +2552,317 @@ app.get("/api/analytics/raw", (req, res) => {
   res.json({ count: entries.length, total: visitorLog.length, entries });
 });
 
+// ─── AGENT RUNTIME ENGINE ──────────────────────────────────────────────────
+
+interface RuntimeLog {
+  timestamp: number;
+  status: "ok" | "alert" | "error";
+  message: string;
+  duration?: number;
+}
+
+interface Subcontract {
+  subAgentId: string;
+  name: string;
+  task: string;
+  budget: number;
+  status: "active" | "complete" | "failed";
+  assignedAt: number;
+}
+
+interface RuntimeAgent {
+  agentId: string;
+  classId: string;
+  nftId: string;
+  name: string;
+  template: string;
+  script: string;
+  interval: number;       // seconds between runs
+  status: "running" | "paused" | "error";
+  registeredAt: number;
+  lastRun: number | null;
+  nextRun: number | null;
+  execCount: number;
+  alertCount: number;
+  earnings: number;
+  reputation: number;
+  lastError: string | null;
+  logs: RuntimeLog[];
+  subcontracts: Subcontract[];
+  social?: { twitter?: string; telegram?: string };
+  network: NetworkName;
+}
+
+const runtimeAgents = new Map<string, RuntimeAgent>();
+const MAX_LOGS_PER_AGENT = 200;
+
+// ── Agent script sandbox (server-side) ────────────────────────────────────
+
+async function executeAgentScript(agent: RuntimeAgent): Promise<RuntimeLog> {
+  const start = Date.now();
+  const alerts: string[] = [];
+  const logs: string[] = [];
+
+  // Build mock chain context (same shape as client dry-run)
+  const mockChain = {
+    query: async (path: string) => ({ height: "999999", result: {} }),
+    getBalance: async (addr: string) => ({ amount: "1000000", denom: "utestcore" }),
+    getHolders: async (denom: string) => [
+      { address: "testcore1abc...", amount: "500000" },
+      { address: "testcore1def...", amount: "300000" },
+    ],
+    getStakers: async (validator: string) => [
+      { delegator: "testcore1abc...", amount: "100000" },
+    ],
+    send: async (to: string, amount: string, denom: string) => {
+      logs.push(`[send] ${amount} ${denom} → ${to}`);
+      return { txHash: "sim_" + Date.now().toString(16) };
+    },
+  };
+
+  const mockAgent = {
+    alert: (msg: string) => { alerts.push(msg); },
+    log: (msg: string) => { logs.push(msg); },
+    id: agent.agentId,
+    name: agent.name,
+    owner: "runtime",
+  };
+
+  try {
+    // 5-second timeout
+    const fn = new Function("chain", "agent", `
+      return (async () => {
+        ${agent.script}
+      })();
+    `);
+
+    await Promise.race([
+      fn(mockChain, mockAgent),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("Script timeout (5s)")), 5000)),
+    ]);
+
+    const duration = Date.now() - start;
+    const hasAlerts = alerts.length > 0;
+
+    return {
+      timestamp: Date.now(),
+      status: hasAlerts ? "alert" : "ok",
+      message: hasAlerts
+        ? `🚨 ${alerts.join("; ")}`
+        : logs.length > 0
+          ? logs.join("; ")
+          : "Executed successfully",
+      duration,
+    };
+  } catch (err: any) {
+    return {
+      timestamp: Date.now(),
+      status: "error",
+      message: err.message || "Unknown error",
+      duration: Date.now() - start,
+    };
+  }
+}
+
+// ── Cron scheduler — runs every second, checks which agents are due ──────
+
+setInterval(async () => {
+  const now = Date.now();
+  for (const [id, agent] of runtimeAgents.entries()) {
+    if (agent.status !== "running") continue;
+    if (agent.nextRun && now < agent.nextRun) continue;
+
+    // Execute
+    const log = await executeAgentScript(agent);
+    agent.logs.push(log);
+    if (agent.logs.length > MAX_LOGS_PER_AGENT) agent.logs.shift();
+
+    agent.lastRun = now;
+    agent.nextRun = now + agent.interval * 1000;
+    agent.execCount++;
+
+    if (log.status === "alert") agent.alertCount++;
+    if (log.status === "error") agent.lastError = log.message;
+    else agent.lastError = null;
+
+    // Simulate small earnings per execution
+    agent.earnings += 0.01;
+    agent.reputation = Math.min(100, agent.reputation + (log.status === "error" ? -1 : 0.1));
+  }
+}, 1000);
+
+// ── POST /api/runtime/register ───────────────────────────────────────────
+
+app.post("/api/runtime/register", async (req, res) => {
+  try {
+    const { classId, nftId, interval, network } = req.body;
+    if (!classId || !nftId) {
+      res.status(400).json({ error: "classId and nftId required" });
+      return;
+    }
+
+    const agentId = `${classId}/${nftId}`;
+
+    // Already running?
+    if (runtimeAgents.has(agentId)) {
+      res.json({ success: true, agentId, message: "Agent already running" });
+      return;
+    }
+
+    // Query NFT metadata to get script
+    const networkName: NetworkName = network === "mainnet" ? "mainnet" : "testnet";
+    let name = nftId;
+    let template = "custom";
+    let script = 'agent.log("Hello from " + agent.name);';
+
+    try {
+      const classInfo = await queryNFTClass(classId, networkName);
+      if (classInfo?.uri) {
+        // URI may be base64 JSON with script
+        try {
+          const decoded = JSON.parse(Buffer.from(classInfo.uri, "base64").toString());
+          if (decoded.script) script = decoded.script;
+          if (decoded.template) template = decoded.template;
+          if (decoded.name) name = decoded.name;
+        } catch {
+          // URI isn't base64 JSON, use as-is
+        }
+      }
+      if (classInfo?.name) name = classInfo.name;
+    } catch (e: any) {
+      console.warn("[runtime] Could not fetch NFT metadata:", e.message);
+    }
+
+    const agent: RuntimeAgent = {
+      agentId,
+      classId,
+      nftId,
+      name,
+      template,
+      script,
+      interval: Math.max(10, Math.min(3600, parseInt(String(interval)) || 60)),
+      status: "running",
+      registeredAt: Date.now(),
+      lastRun: null,
+      nextRun: Date.now() + 2000, // first run in 2s
+      execCount: 0,
+      alertCount: 0,
+      earnings: 0,
+      reputation: 50,
+      lastError: null,
+      logs: [],
+      subcontracts: [],
+      network: networkName,
+    };
+
+    runtimeAgents.set(agentId, agent);
+
+    console.log(`[runtime] Agent registered: ${agentId} (every ${agent.interval}s)`);
+    res.json({ success: true, agentId, name, interval: agent.interval });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── POST /api/runtime/stop ───────────────────────────────────────────────
+
+app.post("/api/runtime/stop", (req, res) => {
+  const { agentId } = req.body;
+  if (!agentId || !runtimeAgents.has(agentId)) {
+    res.status(404).json({ error: "Agent not found" });
+    return;
+  }
+  runtimeAgents.delete(agentId);
+  res.json({ success: true, message: `Agent ${agentId} stopped` });
+});
+
+// ── GET /api/runtime/status ──────────────────────────────────────────────
+
+app.get("/api/runtime/status", (_req, res) => {
+  const agents = Array.from(runtimeAgents.values()).map(a => ({
+    agentId: a.agentId,
+    name: a.name,
+    template: a.template,
+    interval: a.interval,
+    status: a.status,
+    lastRun: a.lastRun,
+    nextRun: a.nextRun,
+    execCount: a.execCount,
+    alertCount: a.alertCount,
+    earnings: a.earnings,
+    reputation: a.reputation,
+    lastError: a.lastError,
+    subcontracts: a.subcontracts,
+    social: a.social,
+  }));
+
+  // Global stats
+  const stats = {
+    totalExecutions: agents.reduce((s, a) => s + a.execCount, 0),
+    totalAlerts: agents.reduce((s, a) => s + a.alertCount, 0),
+    totalEarnings: agents.reduce((s, a) => s + a.earnings, 0),
+  };
+
+  // Leaderboard — top 10 by reputation
+  const leaderboard = [...agents]
+    .sort((a, b) => b.reputation - a.reputation)
+    .slice(0, 10)
+    .map(a => ({
+      name: a.name,
+      reputation: Math.round(a.reputation),
+      jobsCompleted: a.execCount,
+      earnings: a.earnings,
+    }));
+
+  res.json({ agents, stats, leaderboard });
+});
+
+// ── GET /api/runtime/logs/:agentId ───────────────────────────────────────
+
+app.get("/api/runtime/logs/:classId/:nftId", (req, res) => {
+  const agentId = `${req.params.classId}/${req.params.nftId}`;
+  const agent = runtimeAgents.get(agentId);
+  if (!agent) {
+    res.status(404).json({ error: "Agent not found", logs: [] });
+    return;
+  }
+
+  const limit = Math.min(parseInt(req.query.limit as string) || 50, MAX_LOGS_PER_AGENT);
+  const logs = agent.logs.slice(-limit).reverse();
+  res.json({ agentId, name: agent.name, logs });
+});
+
+// ── POST /api/runtime/subcontract ────────────────────────────────────────
+
+app.post("/api/runtime/subcontract", (req, res) => {
+  const { leadAgentId, subAgentId, task, budget } = req.body;
+
+  const lead = runtimeAgents.get(leadAgentId);
+  const sub = runtimeAgents.get(subAgentId);
+
+  if (!lead) { res.status(404).json({ error: "Lead agent not found" }); return; }
+  if (!sub) { res.status(404).json({ error: "Sub-agent not found" }); return; }
+  if (leadAgentId === subAgentId) { res.status(400).json({ error: "Agent cannot subcontract itself" }); return; }
+
+  const contract: Subcontract = {
+    subAgentId,
+    name: sub.name,
+    task,
+    budget: parseFloat(budget) || 0,
+    status: "active",
+    assignedAt: Date.now(),
+  };
+
+  lead.subcontracts.push(contract);
+
+  // Sub-agent earns reputation for being hired
+  sub.reputation = Math.min(100, sub.reputation + 2);
+  lead.reputation = Math.min(100, lead.reputation + 1); // lead gets credit for delegating
+
+  console.log(`[runtime] Subcontract: ${lead.name} → ${sub.name} for "${task}" (${budget} TX)`);
+  res.json({ success: true, contract });
+});
+
 import { createServer } from "http";
 import { attachWebSocket } from "./ws-server";
 
