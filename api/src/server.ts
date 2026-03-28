@@ -2696,31 +2696,117 @@ function queueTweet(agent: RuntimeAgent, trigger: AgentTweet["trigger"], detail:
   console.log(`[twitter] ${agent.name}: ${tweet.text.slice(0, 60)}...`);
 }
 
-// ── Agent script sandbox (server-side) ────────────────────────────────────
+// ── Agent script sandbox (server-side) — REAL chain queries ───────────────
 
 async function executeAgentScript(agent: RuntimeAgent): Promise<RuntimeLog> {
   const start = Date.now();
   const alerts: string[] = [];
   const logs: string[] = [];
 
-  // Build mock chain context (same shape as client dry-run)
-  const mockChain = {
-    query: async (path: string) => ({ height: "999999", result: {} }),
-    getBalance: async (addr: string) => ({ amount: "1000000", denom: "utestcore" }),
-    getHolders: async (denom: string) => [
-      { address: "testcore1abc...", amount: "500000" },
-      { address: "testcore1def...", amount: "300000" },
-    ],
-    getStakers: async (validator: string) => [
-      { delegator: "testcore1abc...", amount: "100000" },
-    ],
-    send: async (to: string, amount: string, denom: string) => {
-      logs.push(`[send] ${amount} ${denom} → ${to}`);
-      return { txHash: "sim_" + Date.now().toString(16) };
+  const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
+  const network = NETWORKS[networkName];
+  const restBase = network.restEndpoint;
+
+  // Build REAL chain context — queries hit the actual blockchain
+  const liveChain = {
+    query: async (path: string) => {
+      try {
+        const resp = await fetch(`${restBase}${path}`);
+        return await resp.json();
+      } catch (e: any) {
+        logs.push(`[query error] ${e.message}`);
+        return { error: e.message };
+      }
     },
+
+    getBalance: async (addr: string, denom?: string) => {
+      try {
+        const resp = await fetch(`${restBase}/cosmos/bank/v1beta1/balances/${addr}`);
+        const data = await resp.json() as { balances?: Array<{ denom: string; amount: string }> };
+        if (denom) {
+          const bal = data.balances?.find((b: any) => b.denom === denom);
+          return { amount: bal?.amount || "0", denom: denom };
+        }
+        return data.balances || [];
+      } catch (e: any) {
+        logs.push(`[getBalance error] ${e.message}`);
+        return { amount: "0", denom: denom || "utestcore" };
+      }
+    },
+
+    getHolders: async (denom: string, addresses: string[]) => {
+      // Check balances of provided addresses for a denom
+      const holders: Array<{ address: string; amount: string }> = [];
+      for (const addr of (addresses || []).slice(0, 50)) {
+        try {
+          const resp = await fetch(`${restBase}/cosmos/bank/v1beta1/balances/${addr}`);
+          const data = await resp.json() as { balances?: Array<{ denom: string; amount: string }> };
+          const bal = data.balances?.find((b: any) => b.denom === denom);
+          if (bal && parseInt(bal.amount) > 0) {
+            holders.push({ address: addr, amount: bal.amount });
+          }
+        } catch {}
+      }
+      return holders;
+    },
+
+    getStakers: async (validator: string) => {
+      try {
+        const resp = await fetch(`${restBase}/cosmos/staking/v1beta1/validators/${validator}/delegations?pagination.limit=100`);
+        const data = await resp.json() as {
+          delegation_responses?: Array<{
+            delegation?: { delegator_address?: string; shares?: string };
+            balance?: { amount?: string };
+          }>;
+        };
+        return (data.delegation_responses || []).map((d: any) => ({
+          delegator: d.delegation?.delegator_address || "",
+          amount: d.balance?.amount || "0",
+        }));
+      } catch (e: any) {
+        logs.push(`[getStakers error] ${e.message}`);
+        return [];
+      }
+    },
+
+    // Send still simulated — real sends require explicit approval
+    send: async (to: string, amount: string, denom: string) => {
+      logs.push(`[send-queued] ${amount} ${denom} → ${to} (requires approval)`);
+      return { txHash: "pending_approval", status: "queued" };
+    },
+
+    // New: get latest block height
+    getHeight: async () => {
+      try {
+        const resp = await fetch(`${restBase}/cosmos/base/tendermint/v1beta1/blocks/latest`);
+        const data = await resp.json() as { block?: { header?: { height?: string } } };
+        return data.block?.header?.height || "0";
+      } catch { return "0"; }
+    },
+
+    // New: get all delegations for an address
+    getDelegations: async (addr: string) => {
+      try {
+        const resp = await fetch(`${restBase}/cosmos/staking/v1beta1/delegations/${addr}`);
+        const data = await resp.json() as {
+          delegation_responses?: Array<{
+            delegation?: { validator_address?: string };
+            balance?: { denom?: string; amount?: string };
+          }>;
+        };
+        return (data.delegation_responses || []).map((d: any) => ({
+          validator: d.delegation?.validator_address || "",
+          amount: d.balance?.amount || "0",
+          denom: d.balance?.denom || "utestcore",
+        }));
+      } catch { return []; }
+    },
+
+    network: networkName,
+    restBase,
   };
 
-  const mockAgent = {
+  const agentCtx = {
     alert: (msg: string) => { alerts.push(msg); },
     log: (msg: string) => { logs.push(msg); },
     id: agent.agentId,
@@ -2729,7 +2815,7 @@ async function executeAgentScript(agent: RuntimeAgent): Promise<RuntimeLog> {
   };
 
   try {
-    // 5-second timeout
+    // 10-second timeout (longer than before since we're hitting real chain)
     const fn = new Function("chain", "agent", `
       return (async () => {
         ${agent.script}
@@ -2737,8 +2823,8 @@ async function executeAgentScript(agent: RuntimeAgent): Promise<RuntimeLog> {
     `);
 
     await Promise.race([
-      fn(mockChain, mockAgent),
-      new Promise((_, reject) => setTimeout(() => reject(new Error("Script timeout (5s)")), 5000)),
+      fn(liveChain, agentCtx),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("Script timeout (10s)")), 10000)),
     ]);
 
     const duration = Date.now() - start;
@@ -3070,6 +3156,109 @@ app.post("/api/runtime/tweet/mark-posted", (req, res) => {
 
   tweet.posted = true;
   res.json({ success: true, tweetId });
+});
+
+// POST /api/runtime/tweet/post — actually post to Twitter/X via API
+app.post("/api/runtime/tweet/post", async (req, res) => {
+  const { agentId, tweetId, text } = req.body;
+
+  // Check for Twitter API credentials
+  const apiKey = process.env.TWITTER_API_KEY;
+  const apiSecret = process.env.TWITTER_API_SECRET;
+  const accessToken = process.env.TWITTER_ACCESS_TOKEN;
+  const accessSecret = process.env.TWITTER_ACCESS_SECRET;
+
+  if (!apiKey || !apiSecret || !accessToken || !accessSecret) {
+    res.status(503).json({
+      error: "Twitter API not configured",
+      hint: "Set TWITTER_API_KEY, TWITTER_API_SECRET, TWITTER_ACCESS_TOKEN, TWITTER_ACCESS_SECRET in env",
+      fallback: "intent",
+      intentUrl: `https://twitter.com/intent/tweet?text=${encodeURIComponent(text || "")}`,
+    });
+    return;
+  }
+
+  if (!text || text.length > 280) {
+    res.status(400).json({ error: "Tweet text required (max 280 chars)" });
+    return;
+  }
+
+  try {
+    // OAuth 1.0a — build signature for Twitter API v2
+    const crypto = await import("crypto");
+    const timestamp = Math.floor(Date.now() / 1000).toString();
+    const nonce = crypto.randomBytes(16).toString("hex");
+
+    const params: Record<string, string> = {
+      oauth_consumer_key: apiKey,
+      oauth_nonce: nonce,
+      oauth_signature_method: "HMAC-SHA1",
+      oauth_timestamp: timestamp,
+      oauth_token: accessToken,
+      oauth_version: "1.0",
+    };
+
+    // Create signature base string
+    const method = "POST";
+    const url = "https://api.twitter.com/2/tweets";
+    const paramString = Object.keys(params).sort()
+      .map(k => `${encodeURIComponent(k)}=${encodeURIComponent(params[k])}`)
+      .join("&");
+    const signatureBase = `${method}&${encodeURIComponent(url)}&${encodeURIComponent(paramString)}`;
+    const signingKey = `${encodeURIComponent(apiSecret)}&${encodeURIComponent(accessSecret)}`;
+    const signature = crypto.createHmac("sha1", signingKey).update(signatureBase).digest("base64");
+
+    params.oauth_signature = signature;
+
+    const authHeader = "OAuth " + Object.keys(params).sort()
+      .map(k => `${encodeURIComponent(k)}="${encodeURIComponent(params[k])}"`)
+      .join(", ");
+
+    const twitterResp = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Authorization": authHeader,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ text }),
+    });
+
+    const result = await twitterResp.json() as any;
+
+    if (!twitterResp.ok) {
+      console.error("[twitter-api] Error:", result);
+      res.status(twitterResp.status).json({
+        error: "Twitter API error",
+        detail: result,
+        fallback: "intent",
+        intentUrl: `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`,
+      });
+      return;
+    }
+
+    // Mark tweet as posted in agent's queue
+    if (agentId && tweetId) {
+      const agent = runtimeAgents.get(agentId);
+      if (agent) {
+        const tweet = agent.social.tweetQueue.find(t => t.id === tweetId);
+        if (tweet) tweet.posted = true;
+      }
+    }
+
+    console.log(`[twitter-api] Posted: ${result.data?.id} — "${text.slice(0, 50)}..."`);
+    res.json({
+      success: true,
+      tweetUrl: `https://twitter.com/i/status/${result.data?.id}`,
+      tweetId: result.data?.id,
+    });
+  } catch (err: any) {
+    console.error("[twitter-api] Error:", err.message);
+    res.status(500).json({
+      error: err.message,
+      fallback: "intent",
+      intentUrl: `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`,
+    });
+  }
 });
 
 // GET /api/runtime/feed — global feed: all recent tweets from all agents

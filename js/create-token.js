@@ -13,14 +13,17 @@ function switchTab(tab){
     ai: document.getElementById('aiModeWrap'),
   };
 
-  // Reset all
+  // Cleanup runtime polling when leaving runtime tab
+  if(typeof runtimeCleanup === 'function') runtimeCleanup();
+
+  // Reset all — use consistent display:none for everything
   tabs.forEach(t => {
     const btn = document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1));
     if(btn) btn.classList.remove('active');
     const w = wraps[t];
     if(!w) return;
-    if(t === 'create' || t === 'ai' || t === 'jobs' || t === 'runtime') { w.style.display = 'none'; }
-    else w.classList.remove('show');
+    w.style.display = 'none';
+    w.classList.remove('show');
   });
 
   // Reset container width when leaving DEX
