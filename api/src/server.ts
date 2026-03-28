@@ -61,6 +61,13 @@ import { defaultRegistryTypes } from "@cosmjs/stargate";
 import { Registry, GeneratedType } from "@cosmjs/proto-signing";
 import { coreumRegistry } from "coreum-js-nightly";
 import { runPreflight } from "./preflight/index";
+import {
+  parseAirdropPrompt,
+  resolveAddresses,
+  sendAirdropReview,
+  AirdropIntent,
+  ResolvedAirdrop,
+} from "./smart-airdrop";
 
 // ─── RATE LIMITER ────────────────────────────────────────────────────────────
 
@@ -3427,6 +3434,268 @@ app.get("/api/runtime/feed", (_req, res) => {
   allTweets.sort((a, b) => b.timestamp - a.timestamp);
   res.json({ tweets: allTweets.slice(0, 50) });
 });
+
+// ─── SMART AIRDROP: PARSE ──────────────────────────────────────────────────
+
+app.post("/api/smart-airdrop/parse", async (req, res) => {
+  const { prompt } = req.body as { prompt?: string };
+
+  if (!prompt || typeof prompt !== "string") {
+    res.status(400).json({ error: "Missing 'prompt' field." });
+    return;
+  }
+
+  if (prompt.length > 2000) {
+    res.status(400).json({ error: "Prompt too long. Maximum 2000 characters." });
+    return;
+  }
+
+  if (!process.env.ANTHROPIC_API_KEY) {
+    res.status(500).json({ error: "Server misconfigured: ANTHROPIC_API_KEY not set." });
+    return;
+  }
+
+  try {
+    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const intent = await parseAirdropPrompt(prompt, anthropic);
+    res.json({ intent });
+  } catch (err) {
+    console.error("[smart-airdrop/parse] Error:", (err as Error).message);
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+// ─── SMART AIRDROP: RESOLVE ───────────────────────────────────────────────
+
+app.post("/api/smart-airdrop/resolve", async (req, res) => {
+  const { intent, sender, network: reqNetwork } = req.body as {
+    intent?: AirdropIntent;
+    sender?: string;
+    network?: string;
+  };
+
+  if (!intent || !intent.sources) {
+    res.status(400).json({ error: "Missing 'intent' with sources." });
+    return;
+  }
+
+  if (!sender || typeof sender !== "string") {
+    res.status(400).json({ error: "Missing 'sender' address." });
+    return;
+  }
+
+  const { networkName, network } = getNetwork(req);
+  const restUrl = network.restEndpoint;
+
+  try {
+    const resolved = await resolveAddresses(intent, networkName, restUrl);
+
+    // Run preflight checks for the airdrop
+    const preflight = await runPreflight({
+      txType: "airdrop",
+      sender,
+      params: {
+        denom: intent.tokenDenom,
+        recipients: resolved.recipients,
+      },
+      network: networkName,
+    });
+
+    res.json({ resolved, preflight });
+  } catch (err) {
+    console.error("[smart-airdrop/resolve] Error:", (err as Error).message);
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+// ─── SMART AIRDROP: EXECUTE (SSE) ────────────────────────────────────────
+
+app.post("/api/smart-airdrop/execute", async (req, res) => {
+  const { denom, recipients, sender, network: reqNetwork } = req.body as {
+    denom?: string;
+    recipients?: Array<{ address: string; amount: string }>;
+    sender?: string;
+    network?: string;
+  };
+
+  if (!denom) {
+    res.status(400).json({ error: "Missing 'denom'." });
+    return;
+  }
+  if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
+    res.status(400).json({ error: "'recipients' must be a non-empty array." });
+    return;
+  }
+  if (blockMainnetAgentWallet(req, res)) return;
+  if (await tokenGateCheck(req, res)) return;
+  if (!process.env.AGENT_MNEMONIC) {
+    res.status(500).json({ error: "Server not configured: AGENT_MNEMONIC not set." });
+    return;
+  }
+
+  const { networkName, network } = getNetwork(req);
+
+  // Setup SSE — disable ALL proxy buffering
+  res.writeHead(200, {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache, no-transform",
+    Connection: "keep-alive",
+    "X-Accel-Buffering": "no",
+    "Content-Encoding": "identity",
+  });
+
+  req.socket.setNoDelay(true);
+  res.flushHeaders();
+
+  let clientDisconnected = false;
+  req.on("close", () => {
+    clientDisconnected = true;
+  });
+
+  const sendEvent = (event: string, data: unknown) => {
+    if (clientDisconnected) return;
+    const eventStr = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+    res.write(eventStr);
+    if (typeof (res as any).flush === "function") {
+      (res as any).flush();
+    }
+  };
+
+  let client: TxClient | null = null;
+
+  try {
+    const txWallet = await importWallet(process.env.AGENT_MNEMONIC, networkName);
+    client = await TxClient.connectWithWallet(txWallet);
+
+    const BATCH_SIZE = 100;
+    const totalBatches = Math.ceil(recipients.length / BATCH_SIZE);
+    let totalSent = 0;
+    let totalFailed = 0;
+    const errors: string[] = [];
+
+    for (let batchIdx = 0; batchIdx < totalBatches; batchIdx++) {
+      if (clientDisconnected) break;
+
+      const batchStart = batchIdx * BATCH_SIZE;
+      const batch = recipients.slice(batchStart, batchStart + BATCH_SIZE);
+
+      sendEvent("batch_start", {
+        batch: batchIdx + 1,
+        totalBatches,
+        recipientCount: batch.length,
+        startIndex: batchStart,
+      });
+
+      let batchSent = 0;
+      let batchFailed = 0;
+
+      // Process recipients sequentially to avoid nonce issues
+      for (const recipient of batch) {
+        if (clientDisconnected) break;
+
+        try {
+          const msg = {
+            typeUrl: "/cosmos.bank.v1beta1.MsgSend",
+            value: {
+              fromAddress: client.address,
+              toAddress: recipient.address,
+              amount: [{ denom, amount: recipient.amount }],
+            },
+          };
+          const result = await client.signAndBroadcastMsg(msg, 200000);
+
+          if (result.success) {
+            batchSent++;
+            totalSent++;
+          } else {
+            batchFailed++;
+            totalFailed++;
+            errors.push(`${recipient.address}: ${result.error || "tx failed"}`);
+          }
+        } catch (err) {
+          batchFailed++;
+          totalFailed++;
+          errors.push(`${recipient.address}: ${(err as Error).message}`);
+        }
+      }
+
+      sendEvent("batch_success", {
+        batch: batchIdx + 1,
+        totalBatches,
+        sent: batchSent,
+        failed: batchFailed,
+        totalSent,
+        totalFailed,
+      });
+    }
+
+    sendEvent("complete", {
+      totalSent,
+      totalFailed,
+      totalRecipients: recipients.length,
+      errors: errors.slice(0, 50),
+    });
+  } catch (err) {
+    sendEvent("batch_error", {
+      error: (err as Error).message,
+    });
+    sendEvent("complete", {
+      totalSent: 0,
+      totalFailed: recipients.length,
+      totalRecipients: recipients.length,
+      errors: [(err as Error).message],
+    });
+  } finally {
+    try {
+      if (client) client.disconnect();
+    } catch {
+      /* ignore */
+    }
+    if (!clientDisconnected) {
+      res.end();
+    }
+  }
+});
+
+// ─── SMART AIRDROP: SEND REVIEW ──────────────────────────────────────────
+
+app.post("/api/smart-airdrop/send-review", async (req, res) => {
+  const { resolved, delivery, tokenDenom } = req.body as {
+    resolved?: ResolvedAirdrop;
+    delivery?: { type: "email" | "telegram"; target: string };
+    tokenDenom?: string;
+  };
+
+  if (!resolved || !resolved.recipients) {
+    res.status(400).json({ error: "Missing 'resolved' airdrop data." });
+    return;
+  }
+
+  if (!delivery || !delivery.type || !delivery.target) {
+    res.status(400).json({ error: "Missing 'delivery' with type and target." });
+    return;
+  }
+
+  if (delivery.type !== "email" && delivery.type !== "telegram") {
+    res.status(400).json({ error: "delivery.type must be 'email' or 'telegram'." });
+    return;
+  }
+
+  if (!tokenDenom) {
+    res.status(400).json({ error: "Missing 'tokenDenom'." });
+    return;
+  }
+
+  try {
+    const result = await sendAirdropReview(resolved, delivery, tokenDenom);
+    res.json(result);
+  } catch (err) {
+    console.error("[smart-airdrop/send-review] Error:", (err as Error).message);
+    res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+// ─── HTTP + WS SERVER ───────────────────────────────────────────────────────
 
 import { createServer } from "http";
 import { attachWebSocket } from "./ws-server";
