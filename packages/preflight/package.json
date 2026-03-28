@@ -1,0 +1,21 @@
+{
+  "name": "@solomente/txai-preflight",
+  "version": "0.1.0",
+  "description": "Pre-transaction validation and compliance engine for TX blockchain",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist"
+  },
+  "license": "MIT"
+}

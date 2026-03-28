@@ -1,0 +1,28 @@
+{
+  "name": "@solomente/txai-core",
+  "version": "0.1.0",
+  "description": "Core TX blockchain SDK — wallet, client, smart tokens, NFTs, DEX, and faucet",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist"
+  },
+  "peerDependencies": {
+    "@cosmjs/proto-signing": ">=0.32.0",
+    "@cosmjs/stargate": ">=0.32.0",
+    "@cosmjs/tendermint-rpc": ">=0.32.0",
+    "@cosmjs/crypto": ">=0.32.0",
+    "coreum-js-nightly": "*"
+  },
+  "license": "MIT"
+}

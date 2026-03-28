@@ -1,0 +1,35 @@
+{
+  "name": "@solomente/txai-sdk",
+  "version": "0.1.0",
+  "description": "Solomente TXAI Agent SDK — umbrella package re-exporting core, preflight, airdrop, voting, and agent/swarm modules",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@solomente/txai-core": "0.1.0",
+    "@solomente/txai-preflight": "0.1.0",
+    "@solomente/txai-airdrop": "0.1.0",
+    "@solomente/txai-voting": "0.1.0"
+  },
+  "peerDependencies": {
+    "@cosmjs/proto-signing": ">=0.32.0",
+    "@cosmjs/stargate": ">=0.32.0",
+    "@cosmjs/tendermint-rpc": ">=0.32.0",
+    "@cosmjs/crypto": ">=0.32.0",
+    "coreum-js-nightly": "*",
+    "@anthropic-ai/sdk": ">=0.20.0"
+  },
+  "license": "MIT"
+}

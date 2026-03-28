@@ -1,0 +1,24 @@
+{
+  "name": "@solomente/txai-airdrop",
+  "version": "0.1.0",
+  "description": "Smart airdrop agent — NLP parsing, address resolution, vesting, scheduling, delivery",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist"
+  },
+  "peerDependencies": {
+    "@anthropic-ai/sdk": ">=0.20.0"
+  },
+  "license": "MIT"
+}
