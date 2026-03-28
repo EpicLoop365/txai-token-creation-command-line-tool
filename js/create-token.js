@@ -2,11 +2,12 @@
 
 /* Tab Switching */
 function switchTab(tab){
-  const tabs = ['create','manage','dex','subs','ai'];
+  const tabs = ['create','manage','dex','jobs','subs','ai'];
   const wraps = {
     create: document.getElementById('createModeWrap'),
     manage: document.getElementById('manageWrap'),
     dex: document.getElementById('dexWrap'),
+    jobs: document.getElementById('jobsWrap'),
     subs: document.getElementById('subsWrap'),
     ai: document.getElementById('aiModeWrap'),
   };
@@ -17,7 +18,7 @@ function switchTab(tab){
     if(btn) btn.classList.remove('active');
     const w = wraps[t];
     if(!w) return;
-    if(t === 'create' || t === 'ai') { w.style.display = 'none'; }
+    if(t === 'create' || t === 'ai' || t === 'jobs') { w.style.display = 'none'; }
     else w.classList.remove('show');
   });
 
@@ -47,6 +48,10 @@ function switchTab(tab){
     }
     if(manageInput) manageInput.focus();
     if(typeof authLoadGrants === 'function') authLoadGrants();
+  } else if(tab === 'jobs'){
+    wraps.jobs.style.display = '';
+    if(typeof agentJobsInit === 'function') agentJobsInit();
+    if(typeof agentJobsPopulateSkillPicker === 'function') agentJobsPopulateSkillPicker();
   } else if(tab === 'subs'){
     wraps.subs.classList.add('show');
     if(typeof subsInit === 'function') subsInit();
