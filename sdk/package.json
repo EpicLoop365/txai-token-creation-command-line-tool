@@ -1,7 +1,7 @@
 {
   "name": "@txai/agent-sdk",
   "version": "0.1.0",
-  "description": "Deploy AI agent swarms on Coreum blockchain — autonomous wallets, DEX trading, token management, and NFTs",
+  "description": "Build autonomous AI agents on TX (Coreum) — NFTs are careers. Runtime agents, DEX trading, soulbound passes, and swarm orchestration.",
   "main": "dist/sdk/src/index.js",
   "types": "dist/sdk/src/index.d.ts",
   "files": [

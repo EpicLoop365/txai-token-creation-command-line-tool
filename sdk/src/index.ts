@@ -1,39 +1,53 @@
 /**
  * @txai/agent-sdk
  *
- * Deploy AI agent swarms on Coreum blockchain.
- * Autonomous wallets, DEX trading, token management, and NFTs.
+ * Build autonomous AI agents on TX (Coreum) blockchain.
+ * NFTs are careers — agents that work, earn, and build reputations.
+ *
+ * @example
+ * ```typescript
+ * import { RuntimeAgent } from '@txai/agent-sdk';
+ *
+ * // Create an agent that monitors whale activity
+ * const watcher = new RuntimeAgent({
+ *   name: 'Whale Watcher',
+ *   interval: 60,
+ *   script: `
+ *     const bal = await chain.getBalance('testcore1abc...', 'utestcore');
+ *     if (parseInt(bal.amount) > 10000000) {
+ *       agent.alert('Whale: ' + bal.amount);
+ *     }
+ *   `,
+ * });
+ *
+ * watcher.onAlert((msg) => console.log('ALERT:', msg));
+ * await watcher.start();
+ * ```
  *
  * @example
  * ```typescript
  * import { Swarm, Agent, MarketMakerStrategy } from '@txai/agent-sdk';
  *
- * // Create a swarm with 3 agents
+ * // Create a DEX trading swarm
  * const swarm = new Swarm({ network: 'testnet' });
- * swarm.createAgent('MM-Buyer', 'buyer');
- * swarm.createAgent('MM-Seller', 'seller');
- * swarm.createAgent('Taker', 'taker');
- *
- * // Set up event streaming
- * swarm.onEvent((event, data) => {
- *   console.log(`[${event}]`, data);
- * });
- *
- * // Initialize, fund, and execute
+ * swarm.createAgent('Buyer', 'buyer');
+ * swarm.createAgent('Seller', 'seller');
  * await swarm.initAll();
- * await swarm.fundAll();
- * const result = await swarm.execute(
- *   new MarketMakerStrategy({ baseDenom: 'mytoken-testcore1abc...' })
- * );
- *
- * console.log(`Done! ${result.ordersPlaced} orders, ${result.fills} fills`);
- * swarm.disconnectAll();
+ * await swarm.execute(new MarketMakerStrategy({ baseDenom: 'mytoken-...' }));
  * ```
  *
  * @packageDocumentation
  */
 
-// Core classes
+// Runtime agents (script-based, scheduled)
+export { RuntimeAgent } from "./runtime-agent";
+export type { RuntimeAgentConfig, ExecutionLog, RuntimeAgentStats } from "./runtime-agent";
+
+// NFT access passes (soulbound / whitelisted)
+export { Pass, PASS_TIERS, PASS_DURATIONS } from "./pass";
+export type { PassTier, PassStatus, PassDuration } from "./pass";
+
+// Core agent classes (wallet-based)
 export { Agent } from "./agent";
 export { Swarm } from "./swarm";
 
