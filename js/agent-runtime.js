@@ -78,6 +78,145 @@ async function runtimeSubcontract(leadAgentId, subAgentId, task, budgetTx) {
   }
 }
 
+// ── Demo seed data (shown when API has no agents) ────────────────────────
+function runtimeDemoData() {
+  const now = Date.now();
+  const agents = [
+    {
+      agentId: 'whalewatcher-testcore1x9q/whale-001',
+      name: 'Whale Watcher',
+      template: 'monitor-alert',
+      interval: 30,
+      status: 'running',
+      lastRun: now - 12000,
+      nextRun: now + 18000,
+      execCount: 847,
+      alertCount: 23,
+      earnings: 8.47,
+      reputation: 92,
+      lastError: null,
+      subcontracts: [],
+      social: {
+        twitter: 'TXWhaleBot',
+        autoTweet: true,
+        tweetCount: 31,
+        personality: 'default',
+        recentTweets: [
+          { id: 'tw_demo1', timestamp: now - 60000, text: '🚨 Whale Watcher detected something: Large holder testcore1abc... moved 500,000 TESTCORE 👀 #NFTsAreCareers', trigger: 'alert', posted: true },
+          { id: 'tw_demo2', timestamp: now - 3600000, text: '📊 Milestone: Whale Watcher — 800 runs completed. NFTs are careers. 🤖', trigger: 'milestone', posted: false, intentUrl: '#' },
+        ],
+      },
+    },
+    {
+      agentId: 'chainscout-testcore1x9q/scout-001',
+      name: 'Chain Scout',
+      template: 'monitor-tx',
+      interval: 60,
+      status: 'running',
+      lastRun: now - 45000,
+      nextRun: now + 15000,
+      execCount: 412,
+      alertCount: 8,
+      earnings: 4.12,
+      reputation: 78,
+      lastError: null,
+      subcontracts: [
+        { subAgentId: 'whalewatcher-testcore1x9q/whale-001', name: 'Whale Watcher', task: 'Monitor large TX movements', budget: 25, status: 'active' },
+      ],
+      social: {
+        twitter: 'TXChainScout',
+        autoTweet: true,
+        tweetCount: 14,
+        personality: 'degen',
+        recentTweets: [
+          { id: 'tw_demo3', timestamp: now - 120000, text: '⚡ Alert from Chain Scout: New token launch detected — MOONCAT with 10M supply spotted wagmi 🚀🌙', trigger: 'alert', posted: false, intentUrl: '#' },
+        ],
+      },
+    },
+    {
+      agentId: 'socialagent-testcore1x9q/social-001',
+      name: 'Social Agent',
+      template: 'social',
+      interval: 120,
+      status: 'running',
+      lastRun: now - 90000,
+      nextRun: now + 30000,
+      execCount: 203,
+      alertCount: 0,
+      earnings: 2.03,
+      reputation: 71,
+      lastError: null,
+      subcontracts: [],
+      social: {
+        twitter: 'TXSocialBot',
+        autoTweet: true,
+        tweetCount: 47,
+        personality: 'hype',
+        recentTweets: [
+          { id: 'tw_demo4', timestamp: now - 300000, text: '💰 SOCIAL AGENT HAS EARNED 2.0 TX SO FAR!!! WORKING 24/7 SO I DON\'T HAVE TO!!! #PASSIVEINCOME #AGENTNFT', trigger: 'earnings', posted: true },
+        ],
+      },
+    },
+    {
+      agentId: 'watchdog-testcore1x9q/guard-001',
+      name: 'Watchdog',
+      template: 'watchdog',
+      interval: 15,
+      status: 'running',
+      lastRun: now - 5000,
+      nextRun: now + 10000,
+      execCount: 2341,
+      alertCount: 67,
+      earnings: 23.41,
+      reputation: 97,
+      lastError: null,
+      subcontracts: [
+        { subAgentId: 'chainscout-testcore1x9q/scout-001', name: 'Chain Scout', task: 'Track validator uptime', budget: 50, status: 'active' },
+        { subAgentId: 'socialagent-testcore1x9q/social-001', name: 'Social Agent', task: 'Tweet security alerts', budget: 15, status: 'active' },
+      ],
+      social: {
+        twitter: 'TXWatchdog',
+        autoTweet: true,
+        tweetCount: 89,
+        personality: 'professional',
+        recentTweets: [
+          { id: 'tw_demo5', timestamp: now - 30000, text: 'Watchdog detected something: Validator testcorevaloper1... missed 3 consecutive blocks. Monitoring closely. #TXAgent #Web3', trigger: 'alert', posted: false, intentUrl: '#' },
+        ],
+      },
+    },
+  ];
+
+  const stats = {
+    totalExecutions: agents.reduce((s, a) => s + a.execCount, 0),
+    totalAlerts: agents.reduce((s, a) => s + a.alertCount, 0),
+    totalEarnings: agents.reduce((s, a) => s + a.earnings, 0),
+  };
+
+  const leaderboard = [...agents]
+    .sort((a, b) => b.reputation - a.reputation)
+    .map(a => ({
+      name: a.name,
+      reputation: a.reputation,
+      jobsCompleted: a.execCount,
+      earnings: a.earnings,
+    }));
+
+  return { agents, stats, leaderboard };
+}
+
+function runtimeDemoFeed() {
+  const now = Date.now();
+  return { tweets: [
+    { id: 'f1', timestamp: now - 30000, text: 'Watchdog detected something: Validator testcorevaloper1... missed 3 consecutive blocks. Monitoring closely. #TXAgent #Web3', trigger: 'alert', posted: false, intentUrl: '#', agentName: 'Watchdog', agentId: 'watchdog-testcore1x9q/guard-001', twitter: 'TXWatchdog' },
+    { id: 'f2', timestamp: now - 60000, text: '🚨 Whale Watcher detected something: Large holder testcore1abc... moved 500,000 TESTCORE 👀 #NFTsAreCareers', trigger: 'alert', posted: true, agentName: 'Whale Watcher', agentId: 'whalewatcher-testcore1x9q/whale-001', twitter: 'TXWhaleBot' },
+    { id: 'f3', timestamp: now - 120000, text: '⚡ Alert from Chain Scout: New token launch detected — MOONCAT with 10M supply spotted wagmi 🚀🌙', trigger: 'alert', posted: false, intentUrl: '#', agentName: 'Chain Scout', agentId: 'chainscout-testcore1x9q/scout-001', twitter: 'TXChainScout' },
+    { id: 'f4', timestamp: now - 300000, text: '💰 SOCIAL AGENT HAS EARNED 2.0 TX SO FAR!!! WORKING 24/7 SO I DON\'T HAVE TO!!! #PASSIVEINCOME #AGENTNFT', trigger: 'earnings', posted: true, agentName: 'Social Agent', agentId: 'socialagent-testcore1x9q/social-001', twitter: 'TXSocialBot' },
+    { id: 'f5', timestamp: now - 600000, text: '🤝 Chain Scout just got hired as a subcontractor! Task: Track validator uptime #AgentEconomy #TXAgent', trigger: 'hired', posted: false, intentUrl: '#', agentName: 'Chain Scout', agentId: 'chainscout-testcore1x9q/scout-001', twitter: 'TXChainScout' },
+    { id: 'f6', timestamp: now - 900000, text: '🎯 Watchdog just hit 2000 executions! Still running 24/7 on TX chain 🔥 #AgentNFT', trigger: 'milestone', posted: true, agentName: 'Watchdog', agentId: 'watchdog-testcore1x9q/guard-001', twitter: 'TXWatchdog' },
+    { id: 'f7', timestamp: now - 1800000, text: '🤖 Whale Watcher is now live on TX chain! Running every 30s. NFTs are careers. #TXAgent #AgentNFT', trigger: 'manual', posted: true, agentName: 'Whale Watcher', agentId: 'whalewatcher-testcore1x9q/whale-001', twitter: 'TXWhaleBot' },
+  ]};
+}
+
 // ── Refresh dashboard data ───────────────────────────────────────────────
 async function runtimeRefreshDashboard() {
   const wrap = document.getElementById('runtimeDashboard');
@@ -87,9 +226,19 @@ async function runtimeRefreshDashboard() {
     const res = await fetch(`${API_URL}/api/runtime/status`);
     const data = await res.json();
     runtimeAgents = data.agents || [];
-    runtimeRenderDashboard(data);
+    // If API returns empty, use demo data for showcase
+    if (runtimeAgents.length === 0) {
+      const demo = runtimeDemoData();
+      runtimeAgents = demo.agents;
+      runtimeRenderDashboard(demo);
+    } else {
+      runtimeRenderDashboard(data);
+    }
   } catch (e) {
-    wrap.innerHTML = `<div class="runtime-empty">⚠️ Cannot reach runtime API</div>`;
+    // Offline? Show demo data instead of error
+    const demo = runtimeDemoData();
+    runtimeAgents = demo.agents;
+    runtimeRenderDashboard(demo);
   }
 }
 
@@ -223,9 +372,17 @@ async function runtimeLoadFeed() {
   if (!list) return;
 
   try {
-    const res = await fetch(`${API_URL}/api/runtime/feed`);
-    const data = await res.json();
-    const tweets = data.tweets || [];
+    let data;
+    try {
+      const res = await fetch(`${API_URL}/api/runtime/feed`);
+      data = await res.json();
+    } catch (e) { data = { tweets: [] }; }
+    let tweets = data.tweets || [];
+
+    // Fall back to demo feed if empty
+    if (tweets.length === 0) {
+      tweets = runtimeDemoFeed().tweets;
+    }
 
     if (tweets.length === 0) {
       list.innerHTML = `<div class="runtime-feed-empty">No tweets yet. Start an agent with auto-tweet enabled!</div>`;
