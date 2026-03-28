@@ -1343,26 +1343,11 @@ app.post("/api/scout-mint", async (req, res) => {
     const txWallet = await importWallet(process.env.AGENT_MNEMONIC, networkName);
     client = await TxClient.connectWithWallet(txWallet);
 
-    const metadata = {
-      type: "access-pass",
-      tier: "scout",
-      level: 1,
-      name: "Scout Pass",
-      transfer: "soulbound",
-      duration: 0,
-      expiresAt: null,
-      autoMinted: true,
-      image: "https://solomentelabs.com/assets/scout-pass.png",
-      features: ["view-tokens", "view-nfts", "exchange", "browse-agents"],
-      issuedAt: new Date().toISOString(),
-      wallet,
-    };
-
     const symbol = "scoutpass";
     const classResult = await issueNFTClass(client, {
       symbol,
       name: "Scout Pass",
-      description: "Free soulbound identity pass — required for all TXAI tools. Auto-minted on first wallet connect.",
+      description: "TXAI Scout Pass — soulbound identity NFT",
       uri: "",
       royaltyRate: "0",
       features: { disableSending: true },
@@ -1373,10 +1358,13 @@ app.post("/api/scout-mint", async (req, res) => {
     }
 
     const nftId = "scout-" + Date.now().toString(36);
+    // Coreum URI max 256 chars — use a short hosted URL for metadata
+    const nftUri = "https://solomentelabs.com/assets/scout-pass.svg";
+
     await mintNFT(client, {
       classId: classResult.classId!,
       id: nftId,
-      uri: "data:application/json;base64," + Buffer.from(JSON.stringify(metadata)).toString("base64"),
+      uri: nftUri,
       recipient: wallet,
     });
 
