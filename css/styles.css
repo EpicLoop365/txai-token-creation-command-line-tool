@@ -3226,6 +3226,38 @@ textarea.agent-resume-input{resize:vertical}
 .runtime-log-msg{flex:1;color:var(--text);word-break:break-word}
 .runtime-log-dur{color:var(--muted);font-family:var(--mono);font-size:.58rem;flex-shrink:0}
 
+/* Tweet preview on agent card */
+.runtime-tweet-preview{margin-bottom:8px;padding:8px 10px;background:var(--bg2);border-radius:6px;border-left:2px solid #1da1f2}
+.runtime-tweet-text{font-size:.68rem;color:var(--text);line-height:1.5;word-break:break-word}
+
+/* Agent feed */
+.runtime-feed{margin-top:24px}
+.runtime-feed-list{display:flex;flex-direction:column;gap:8px}
+.runtime-feed-empty{text-align:center;color:var(--muted);font-size:.78rem;padding:24px;background:var(--bg2);border-radius:8px}
+.runtime-feed-item{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px;border-left:3px solid #1da1f2;transition:all .15s}
+.runtime-feed-item:hover{border-color:#1da1f2}
+.runtime-feed-item.posted{opacity:.6;border-left-color:#22c55e}
+.runtime-feed-header{display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap}
+.runtime-feed-agent{font-size:.75rem;font-weight:700;color:var(--text)}
+.runtime-feed-handle{font-size:.65rem;color:#1da1f2}
+.runtime-feed-trigger{font-size:.55rem;padding:2px 6px;border-radius:8px;background:rgba(29,161,242,.1);color:#1da1f2;text-transform:uppercase;font-weight:600;letter-spacing:.03em}
+.runtime-feed-time{font-size:.58rem;color:var(--muted);margin-left:auto;font-family:var(--mono)}
+.runtime-feed-text{font-size:.78rem;color:var(--text);line-height:1.6;margin-bottom:8px;word-break:break-word}
+.runtime-feed-actions{display:flex;gap:6px;align-items:center}
+.runtime-feed-posted-badge{font-size:.62rem;color:#22c55e;font-weight:600}
+
+/* Compose tweet area */
+.runtime-compose{margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border)}
+.runtime-compose textarea{resize:vertical;min-height:60px;font-family:var(--font)}
+.runtime-compose-footer{display:flex;justify-content:space-between;align-items:center;margin-top:6px}
+.runtime-compose-count{font-size:.62rem;color:var(--muted);font-family:var(--mono)}
+
+/* Tweet list in modal */
+.runtime-tweet-list{display:flex;flex-direction:column;gap:8px;max-height:50vh;overflow-y:auto}
+
+/* Form divider */
+.runtime-form-divider{height:1px;background:var(--border);margin:12px 0}
+
 /* Subcontract form */
 .runtime-sub-form{display:flex;flex-direction:column;gap:8px}
 .runtime-sub-form label{font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;font-family:var(--mono);font-weight:600}

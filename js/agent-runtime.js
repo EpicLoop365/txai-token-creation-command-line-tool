@@ -16,6 +16,9 @@ async function runtimeRegister(agentClassId, agentNftId, opts = {}) {
         classId: agentClassId,
         nftId: agentNftId,
         interval: opts.interval || 60,
+        twitter: opts.twitter || '',
+        personality: opts.personality || 'default',
+        autoTweet: opts.autoTweet !== false,
         network: typeof getSelectedNetwork === 'function' ? getSelectedNetwork() : 'testnet',
       }),
     });
@@ -161,10 +164,17 @@ function runtimeRenderDashboard(data) {
               `).join('')}
             </div>
           ` : ''}
+          ${agent.social?.recentTweets?.length > 0 ? `
+            <div class="runtime-tweet-preview">
+              <div class="runtime-sub-label">🐦 Latest Tweet:</div>
+              <div class="runtime-tweet-text">${escapeHtml(agent.social.recentTweets[0].text)}</div>
+            </div>
+          ` : ''}
           <div class="runtime-agent-actions">
             <button class="runtime-btn logs" onclick="runtimeShowLogs('${agent.agentId}')">📋 Logs</button>
             <button class="runtime-btn sub" onclick="runtimeShowSubcontract('${agent.agentId}')">🔗 Hire Sub</button>
-            ${agent.social?.twitter ? `<a class="runtime-btn tw" href="https://twitter.com/${agent.social.twitter}" target="_blank">🐦 @${agent.social.twitter}</a>` : ''}
+            <button class="runtime-btn tw" onclick="runtimeShowTweets('${agent.agentId}')">🐦 ${agent.social?.tweetCount || 0} Tweets</button>
+            <button class="runtime-btn" onclick="runtimeShowSocial('${agent.agentId}')">⚙️ Social</button>
             <button class="runtime-btn stop" onclick="runtimeStop('${agent.agentId}')">⏹ Stop</button>
           </div>
         </div>
@@ -193,7 +203,206 @@ function runtimeRenderDashboard(data) {
     `;
   }
 
+  // Global tweet feed
+  html += `
+    <div class="runtime-feed" id="runtimeFeed">
+      <div class="runtime-section-title">🐦 Agent Feed</div>
+      <div class="runtime-feed-list" id="runtimeFeedList">Loading...</div>
+    </div>
+  `;
+
   wrap.innerHTML = html;
+
+  // Load feed
+  runtimeLoadFeed();
+}
+
+// ── Global agent tweet feed ──────────────────────────────────────────────
+async function runtimeLoadFeed() {
+  const list = document.getElementById('runtimeFeedList');
+  if (!list) return;
+
+  try {
+    const res = await fetch(`${API_URL}/api/runtime/feed`);
+    const data = await res.json();
+    const tweets = data.tweets || [];
+
+    if (tweets.length === 0) {
+      list.innerHTML = `<div class="runtime-feed-empty">No tweets yet. Start an agent with auto-tweet enabled!</div>`;
+      return;
+    }
+
+    list.innerHTML = tweets.map(t => `
+      <div class="runtime-feed-item ${t.posted ? 'posted' : ''}">
+        <div class="runtime-feed-header">
+          <span class="runtime-feed-agent">${escapeHtml(t.agentName)}</span>
+          ${t.twitter ? `<span class="runtime-feed-handle">@${escapeHtml(t.twitter)}</span>` : ''}
+          <span class="runtime-feed-trigger">${t.trigger}</span>
+          <span class="runtime-feed-time">${new Date(t.timestamp).toLocaleTimeString()}</span>
+        </div>
+        <div class="runtime-feed-text">${escapeHtml(t.text)}</div>
+        <div class="runtime-feed-actions">
+          ${!t.posted ? `
+            <a class="runtime-btn tw" href="${t.intentUrl}" target="_blank" onclick="runtimeMarkPosted('${t.agentId}','${t.id}')">Post to X →</a>
+          ` : `<span class="runtime-feed-posted-badge">✅ Posted</span>`}
+          <button class="runtime-btn" onclick="navigator.clipboard.writeText('${escapeHtml(t.text).replace(/'/g, "\\'")}')">📋 Copy</button>
+        </div>
+      </div>
+    `).join('');
+  } catch (e) {
+    list.innerHTML = `<div class="runtime-feed-empty">Could not load feed</div>`;
+  }
+}
+
+async function runtimeMarkPosted(agentId, tweetId) {
+  try {
+    await fetch(`${API_URL}/api/runtime/tweet/mark-posted`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ agentId, tweetId }),
+    });
+    // Refresh after a moment (let the intent URL open first)
+    setTimeout(runtimeLoadFeed, 2000);
+  } catch (e) {}
+}
+
+// ── Show tweets modal ────────────────────────────────────────────────────
+async function runtimeShowTweets(agentId) {
+  const parts = agentId.split('/');
+  let tweets = [];
+  let agentName = agentId;
+
+  try {
+    const res = await fetch(`${API_URL}/api/runtime/tweets/${parts[0]}/${parts[1]}?limit=30`);
+    const data = await res.json();
+    tweets = data.tweets || [];
+    agentName = data.name || agentId;
+  } catch (e) {}
+
+  const overlay = document.createElement('div');
+  overlay.className = 'runtime-overlay';
+  overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+
+  const tweetHtml = tweets.length === 0
+    ? '<div class="runtime-feed-empty">No tweets yet</div>'
+    : tweets.map(t => `
+        <div class="runtime-feed-item ${t.posted ? 'posted' : ''}">
+          <div class="runtime-feed-header">
+            <span class="runtime-feed-trigger">${t.trigger}</span>
+            <span class="runtime-feed-time">${new Date(t.timestamp).toLocaleString()}</span>
+            ${t.posted ? '<span class="runtime-feed-posted-badge">✅</span>' : ''}
+          </div>
+          <div class="runtime-feed-text">${escapeHtml(t.text)}</div>
+          ${!t.posted ? `
+            <a class="runtime-btn tw" href="${t.intentUrl}" target="_blank" onclick="runtimeMarkPosted('${agentId}','${t.id}')">Post to X →</a>
+          ` : ''}
+        </div>
+      `).join('');
+
+  // Compose new tweet
+  overlay.innerHTML = `
+    <div class="runtime-modal">
+      <div class="runtime-modal-header">
+        <h3>🐦 ${escapeHtml(agentName)} — Tweets</h3>
+        <button class="runtime-modal-close" onclick="this.closest('.runtime-overlay').remove()">&times;</button>
+      </div>
+      <div class="runtime-compose">
+        <textarea id="runtimeComposeText" class="runtime-input" rows="3" maxlength="280" placeholder="Compose a tweet as ${escapeHtml(agentName)}..."></textarea>
+        <div class="runtime-compose-footer">
+          <span class="runtime-compose-count">0/280</span>
+          <button class="runtime-btn primary" onclick="runtimePostManual('${agentId}')">Queue Tweet</button>
+        </div>
+      </div>
+      <div class="runtime-tweet-list">${tweetHtml}</div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  // Character counter
+  const ta = document.getElementById('runtimeComposeText');
+  const counter = overlay.querySelector('.runtime-compose-count');
+  ta.addEventListener('input', () => {
+    counter.textContent = `${ta.value.length}/280`;
+  });
+}
+
+async function runtimePostManual(agentId) {
+  const text = document.getElementById('runtimeComposeText')?.value?.trim();
+  if (!text) return;
+
+  try {
+    await fetch(`${API_URL}/api/runtime/tweet`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ agentId, text }),
+    });
+    document.querySelector('.runtime-overlay')?.remove();
+    runtimeRefreshDashboard();
+  } catch (e) {
+    alert('Failed to queue tweet');
+  }
+}
+
+// ── Social settings modal ────────────────────────────────────────────────
+function runtimeShowSocial(agentId) {
+  const agent = runtimeAgents.find(a => a.agentId === agentId);
+  if (!agent) return;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'runtime-overlay';
+  overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+
+  overlay.innerHTML = `
+    <div class="runtime-modal">
+      <div class="runtime-modal-header">
+        <h3>⚙️ ${escapeHtml(agent.name)} — Social Config</h3>
+        <button class="runtime-modal-close" onclick="this.closest('.runtime-overlay').remove()">&times;</button>
+      </div>
+      <div class="runtime-sub-form">
+        <label>Twitter/X Handle</label>
+        <input id="runtimeSocialTwitter" class="runtime-input" placeholder="@myagent" value="${escapeHtml(agent.social?.twitter || '')}">
+
+        <label>Telegram Channel</label>
+        <input id="runtimeSocialTelegram" class="runtime-input" placeholder="@mychannel" value="${escapeHtml(agent.social?.telegram || '')}">
+
+        <label>Tweet Personality</label>
+        <select id="runtimeSocialPersonality" class="runtime-input">
+          <option value="default" ${agent.social?.personality === 'default' ? 'selected' : ''}>Default — balanced, informative</option>
+          <option value="hype" ${agent.social?.personality === 'hype' ? 'selected' : ''}>Hype — ALL CAPS, excited!!!</option>
+          <option value="chill" ${agent.social?.personality === 'chill' ? 'selected' : ''}>Chill — calm, minimal emoji</option>
+          <option value="degen" ${agent.social?.personality === 'degen' ? 'selected' : ''}>Degen — crypto slang, moon vibes</option>
+          <option value="professional" ${agent.social?.personality === 'professional' ? 'selected' : ''}>Professional — formal, data-driven</option>
+        </select>
+
+        <label style="display:flex;align-items:center;gap:8px;margin-top:12px">
+          <input type="checkbox" id="runtimeSocialAutoTweet" ${agent.social?.autoTweet !== false ? 'checked' : ''}>
+          Auto-tweet on alerts, milestones & earnings
+        </label>
+
+        <button class="runtime-btn primary" style="margin-top:14px" onclick="runtimeSaveSocial('${agentId}')">Save Settings</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+
+async function runtimeSaveSocial(agentId) {
+  const twitter = document.getElementById('runtimeSocialTwitter')?.value?.trim().replace(/^@/, '') || '';
+  const telegram = document.getElementById('runtimeSocialTelegram')?.value?.trim().replace(/^@/, '') || '';
+  const personality = document.getElementById('runtimeSocialPersonality')?.value || 'default';
+  const autoTweet = document.getElementById('runtimeSocialAutoTweet')?.checked !== false;
+
+  try {
+    await fetch(`${API_URL}/api/runtime/social`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ agentId, twitter, telegram, personality, autoTweet }),
+    });
+    document.querySelector('.runtime-overlay')?.remove();
+    runtimeRefreshDashboard();
+  } catch (e) {
+    alert('Failed to save social settings');
+  }
 }
 
 // ── Show logs modal ──────────────────────────────────────────────────────
@@ -289,13 +498,16 @@ async function runtimeStartAgent() {
   const classId = document.getElementById('runtimeClassId')?.value?.trim();
   const nftId = document.getElementById('runtimeNftId')?.value?.trim();
   const interval = parseInt(document.getElementById('runtimeInterval')?.value) || 60;
+  const twitter = document.getElementById('runtimeTwitter')?.value?.trim().replace(/^@/, '') || '';
+  const personality = document.getElementById('runtimePersonality')?.value || 'default';
+  const autoTweet = document.getElementById('runtimeAutoTweet')?.checked !== false;
 
   if (!classId || !nftId) return alert('Enter Class ID and NFT ID');
 
   const btn = document.querySelector('#runtimeStartForm .runtime-btn.primary');
   if (btn) { btn.disabled = true; btn.textContent = 'Starting...'; }
 
-  const result = await runtimeRegister(classId, nftId, { interval });
+  const result = await runtimeRegister(classId, nftId, { interval, twitter, personality, autoTweet });
 
   if (btn) { btn.disabled = false; btn.textContent = 'Start Agent'; }
 

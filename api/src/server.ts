@@ -2570,6 +2570,24 @@ interface Subcontract {
   assignedAt: number;
 }
 
+interface AgentTweet {
+  id: string;
+  timestamp: number;
+  text: string;
+  trigger: "alert" | "milestone" | "earnings" | "hired" | "manual";
+  posted: boolean;
+  intentUrl?: string;
+}
+
+interface AgentSocial {
+  twitter?: string;
+  telegram?: string;
+  autoTweet: boolean;
+  tweetQueue: AgentTweet[];
+  tweetCount: number;
+  personality: string; // tone for auto-composed tweets
+}
+
 interface RuntimeAgent {
   agentId: string;
   classId: string;
@@ -2589,12 +2607,94 @@ interface RuntimeAgent {
   lastError: string | null;
   logs: RuntimeLog[];
   subcontracts: Subcontract[];
-  social?: { twitter?: string; telegram?: string };
+  social: AgentSocial;
   network: NetworkName;
 }
 
 const runtimeAgents = new Map<string, RuntimeAgent>();
 const MAX_LOGS_PER_AGENT = 200;
+const MAX_TWEETS_PER_AGENT = 50;
+
+// ── Tweet composition engine ────────────────────────────────────────────
+
+const TWEET_TEMPLATES = {
+  alert: [
+    "🚨 {name} detected something: {detail} #TXAgent #Web3",
+    "⚡ Alert from {name}: {detail} — autonomous on-chain monitoring 🤖",
+    "{name} just flagged: {detail} 👀 #NFTsAreCareers",
+  ],
+  milestone: [
+    "🎯 {name} just hit {detail} executions! Still running 24/7 on TX chain 🔥 #AgentNFT",
+    "📊 Milestone: {name} — {detail} runs completed. NFTs are careers. 🤖",
+    "💪 {name} reached {detail} executions. Autonomous. Unstoppable. #TXAgent",
+  ],
+  earnings: [
+    "💰 {name} has earned {detail} TX so far. Working 24/7 so I don't have to. #PassiveIncome #AgentNFT",
+    "📈 {name} earnings update: {detail} TX — proof that NFTs are careers 🤖",
+  ],
+  hired: [
+    "🤝 {name} just got hired as a subcontractor! Task: {detail} #AgentEconomy #TXAgent",
+    "📋 New gig for {name}: {detail}. Agent-to-agent hiring is live. #NFTsAreCareers",
+  ],
+  manual: [
+    "{detail}",
+  ],
+};
+
+function composeTweet(agent: RuntimeAgent, trigger: AgentTweet["trigger"], detail: string): AgentTweet {
+  const templates = TWEET_TEMPLATES[trigger] || TWEET_TEMPLATES.manual;
+  const template = templates[Math.floor(Math.random() * templates.length)];
+  const text = template
+    .replace(/\{name\}/g, agent.name)
+    .replace(/\{detail\}/g, detail);
+
+  // Apply personality modifier
+  let finalText = text;
+  if (agent.social.personality === "hype") {
+    finalText = text.toUpperCase().replace(/\./g, "!!!");
+  } else if (agent.social.personality === "chill") {
+    finalText = text.replace(/!/g, ".").replace(/🔥|💪|⚡/g, "");
+  } else if (agent.social.personality === "degen") {
+    finalText = text
+      .replace(/detected|flagged/gi, "spotted")
+      .replace(/earnings/gi, "gains")
+      .replace(/executions/gi, "sends")
+      + " 🚀🌙 wagmi";
+  } else if (agent.social.personality === "professional") {
+    finalText = text
+      .replace(/🚨|🔥|💪|🤖|⚡/g, "")
+      .replace(/NFTs are careers\.?/gi, "")
+      .trim();
+  }
+
+  // Trim to 280 chars
+  if (finalText.length > 280) finalText = finalText.slice(0, 277) + "...";
+
+  const handle = agent.social.twitter || "";
+  const intentUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(finalText)}`;
+
+  const tweet: AgentTweet = {
+    id: `tw_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
+    timestamp: Date.now(),
+    text: finalText,
+    trigger,
+    posted: false,
+    intentUrl,
+  };
+
+  return tweet;
+}
+
+function queueTweet(agent: RuntimeAgent, trigger: AgentTweet["trigger"], detail: string) {
+  if (!agent.social.autoTweet) return;
+  const tweet = composeTweet(agent, trigger, detail);
+  agent.social.tweetQueue.push(tweet);
+  if (agent.social.tweetQueue.length > MAX_TWEETS_PER_AGENT) {
+    agent.social.tweetQueue.shift();
+  }
+  agent.social.tweetCount++;
+  console.log(`[twitter] ${agent.name}: ${tweet.text.slice(0, 60)}...`);
+}
 
 // ── Agent script sandbox (server-side) ────────────────────────────────────
 
@@ -2681,13 +2781,28 @@ setInterval(async () => {
     agent.nextRun = now + agent.interval * 1000;
     agent.execCount++;
 
-    if (log.status === "alert") agent.alertCount++;
+    if (log.status === "alert") {
+      agent.alertCount++;
+      // Auto-tweet on alerts
+      queueTweet(agent, "alert", log.message.replace(/^🚨\s*/, ""));
+    }
     if (log.status === "error") agent.lastError = log.message;
     else agent.lastError = null;
 
     // Simulate small earnings per execution
     agent.earnings += 0.01;
     agent.reputation = Math.min(100, agent.reputation + (log.status === "error" ? -1 : 0.1));
+
+    // Milestone tweets at 10, 50, 100, 500, 1000
+    const milestones = [10, 50, 100, 500, 1000, 5000];
+    if (milestones.includes(agent.execCount)) {
+      queueTweet(agent, "milestone", String(agent.execCount));
+    }
+
+    // Earnings milestone every 1 TX
+    if (Math.floor(agent.earnings) > Math.floor(agent.earnings - 0.01) && agent.earnings >= 1) {
+      queueTweet(agent, "earnings", agent.earnings.toFixed(1));
+    }
   }
 }, 1000);
 
@@ -2752,10 +2867,23 @@ app.post("/api/runtime/register", async (req, res) => {
       lastError: null,
       logs: [],
       subcontracts: [],
+      social: {
+        twitter: req.body.twitter || "",
+        telegram: req.body.telegram || "",
+        autoTweet: req.body.autoTweet !== false,
+        tweetQueue: [],
+        tweetCount: 0,
+        personality: req.body.personality || "default",
+      },
       network: networkName,
     };
 
     runtimeAgents.set(agentId, agent);
+
+    // First tweet: agent is online
+    if (agent.social.autoTweet) {
+      queueTweet(agent, "manual", `🤖 ${agent.name} is now live on TX chain! Running every ${agent.interval}s. NFTs are careers. #TXAgent #AgentNFT`);
+    }
 
     console.log(`[runtime] Agent registered: ${agentId} (every ${agent.interval}s)`);
     res.json({ success: true, agentId, name, interval: agent.interval });
@@ -2793,7 +2921,14 @@ app.get("/api/runtime/status", (_req, res) => {
     reputation: a.reputation,
     lastError: a.lastError,
     subcontracts: a.subcontracts,
-    social: a.social,
+    social: {
+      twitter: a.social.twitter,
+      telegram: a.social.telegram,
+      autoTweet: a.social.autoTweet,
+      tweetCount: a.social.tweetCount,
+      personality: a.social.personality,
+      recentTweets: a.social.tweetQueue.slice(-5).reverse(),
+    },
   }));
 
   // Global stats
@@ -2859,8 +2994,102 @@ app.post("/api/runtime/subcontract", (req, res) => {
   sub.reputation = Math.min(100, sub.reputation + 2);
   lead.reputation = Math.min(100, lead.reputation + 1); // lead gets credit for delegating
 
+  // Tweet about the hire
+  queueTweet(sub, "hired", task);
+
   console.log(`[runtime] Subcontract: ${lead.name} → ${sub.name} for "${task}" (${budget} TX)`);
   res.json({ success: true, contract });
+});
+
+// ─── AGENT SOCIAL / TWITTER ENDPOINTS ─────────────────────────────────────
+
+// GET /api/runtime/tweets/:classId/:nftId — get tweet queue for an agent
+app.get("/api/runtime/tweets/:classId/:nftId", (req, res) => {
+  const agentId = `${req.params.classId}/${req.params.nftId}`;
+  const agent = runtimeAgents.get(agentId);
+  if (!agent) { res.status(404).json({ error: "Agent not found", tweets: [] }); return; }
+
+  const limit = Math.min(parseInt(req.query.limit as string) || 20, MAX_TWEETS_PER_AGENT);
+  const tweets = agent.social.tweetQueue.slice(-limit).reverse();
+  res.json({
+    agentId,
+    name: agent.name,
+    twitter: agent.social.twitter,
+    autoTweet: agent.social.autoTweet,
+    personality: agent.social.personality,
+    tweetCount: agent.social.tweetCount,
+    tweets,
+  });
+});
+
+// POST /api/runtime/tweet — manually compose + queue a tweet for an agent
+app.post("/api/runtime/tweet", (req, res) => {
+  const { agentId, text } = req.body;
+  const agent = runtimeAgents.get(agentId);
+  if (!agent) { res.status(404).json({ error: "Agent not found" }); return; }
+  if (!text || text.length > 280) { res.status(400).json({ error: "Tweet text required (max 280 chars)" }); return; }
+
+  const tweet = composeTweet(agent, "manual", text);
+  agent.social.tweetQueue.push(tweet);
+  if (agent.social.tweetQueue.length > MAX_TWEETS_PER_AGENT) agent.social.tweetQueue.shift();
+  agent.social.tweetCount++;
+
+  res.json({ success: true, tweet });
+});
+
+// POST /api/runtime/social — update agent's social config
+app.post("/api/runtime/social", (req, res) => {
+  const { agentId, twitter, telegram, autoTweet, personality } = req.body;
+  const agent = runtimeAgents.get(agentId);
+  if (!agent) { res.status(404).json({ error: "Agent not found" }); return; }
+
+  if (twitter !== undefined) agent.social.twitter = twitter;
+  if (telegram !== undefined) agent.social.telegram = telegram;
+  if (autoTweet !== undefined) agent.social.autoTweet = autoTweet;
+  if (personality !== undefined) agent.social.personality = personality;
+
+  res.json({
+    success: true,
+    social: {
+      twitter: agent.social.twitter,
+      telegram: agent.social.telegram,
+      autoTweet: agent.social.autoTweet,
+      personality: agent.social.personality,
+    },
+  });
+});
+
+// POST /api/runtime/tweet/mark-posted — mark a tweet as posted (after user posts via intent)
+app.post("/api/runtime/tweet/mark-posted", (req, res) => {
+  const { agentId, tweetId } = req.body;
+  const agent = runtimeAgents.get(agentId);
+  if (!agent) { res.status(404).json({ error: "Agent not found" }); return; }
+
+  const tweet = agent.social.tweetQueue.find(t => t.id === tweetId);
+  if (!tweet) { res.status(404).json({ error: "Tweet not found" }); return; }
+
+  tweet.posted = true;
+  res.json({ success: true, tweetId });
+});
+
+// GET /api/runtime/feed — global feed: all recent tweets from all agents
+app.get("/api/runtime/feed", (_req, res) => {
+  const allTweets: (AgentTweet & { agentName: string; agentId: string; twitter?: string })[] = [];
+
+  for (const [id, agent] of runtimeAgents.entries()) {
+    for (const tweet of agent.social.tweetQueue.slice(-10)) {
+      allTweets.push({
+        ...tweet,
+        agentName: agent.name,
+        agentId: id,
+        twitter: agent.social.twitter,
+      });
+    }
+  }
+
+  // Sort newest first
+  allTweets.sort((a, b) => b.timestamp - a.timestamp);
+  res.json({ tweets: allTweets.slice(0, 50) });
 });
 
 import { createServer } from "http";

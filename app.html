@@ -1408,7 +1408,28 @@
         <input class="runtime-input" id="runtimeNftId" placeholder="e.g. whale-001">
         <label class="runtime-label">Interval (seconds)</label>
         <input class="runtime-input" id="runtimeInterval" type="number" value="60" min="10" max="3600">
-        <button class="runtime-btn primary" onclick="runtimeStartAgent()">Start Agent</button>
+
+        <div class="runtime-form-divider"></div>
+        <div class="runtime-form-title" style="font-size:.8rem;margin-top:12px">🐦 Social (optional)</div>
+
+        <label class="runtime-label">Twitter/X Handle</label>
+        <input class="runtime-input" id="runtimeTwitter" placeholder="@myagent (tweets auto-composed)">
+
+        <label class="runtime-label">Tweet Personality</label>
+        <select class="runtime-input" id="runtimePersonality">
+          <option value="default">Default — balanced</option>
+          <option value="hype">Hype — ALL CAPS!!!</option>
+          <option value="chill">Chill — calm, minimal</option>
+          <option value="degen">Degen — crypto slang</option>
+          <option value="professional">Professional — formal</option>
+        </select>
+
+        <label class="runtime-label" style="display:flex;align-items:center;gap:8px;margin-top:8px;text-transform:none;letter-spacing:0;font-family:var(--font)">
+          <input type="checkbox" id="runtimeAutoTweet" checked>
+          Auto-tweet on alerts, milestones & earnings
+        </label>
+
+        <button class="runtime-btn primary" style="margin-top:14px" onclick="runtimeStartAgent()">Start Agent</button>
       </div>
 
       <!-- Dashboard -->
