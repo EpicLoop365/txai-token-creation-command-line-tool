@@ -46,16 +46,17 @@
 <section class="landing-hero" id="landingHero">
   <div class="container">
     <div class="hero-content">
-      <h1 class="hero-title">The infrastructure layer for<br><span class="hero-accent">Smart Tokens</span></h1>
-      <p class="hero-sub">Issue, manage, trade, and automate tokens with built-in compliance — all enforced on-chain. No smart contracts required.</p>
+      <h1 class="hero-title">Create &amp; airdrop NFTs to<br><span class="hero-accent">any community — free</span></h1>
+      <p class="hero-sub">The fastest way to mint Smart Tokens and NFTs on Coreum. One-click airdrops to validator stakers and token holders. Zero platform fees. Built-in DEX.</p>
       <div class="hero-stats">
-        <div class="hero-stat"><span class="hero-stat-val">5</span><span class="hero-stat-lbl">Tools</span></div>
-        <div class="hero-stat"><span class="hero-stat-val">On-Chain</span><span class="hero-stat-lbl">Settlement</span></div>
+        <div class="hero-stat"><span class="hero-stat-val">0%</span><span class="hero-stat-lbl">Platform Fee</span></div>
+        <div class="hero-stat"><span class="hero-stat-val">1-Click</span><span class="hero-stat-lbl">Airdrop</span></div>
         <div class="hero-stat"><span class="hero-stat-val">Coreum</span><span class="hero-stat-lbl">L1 Blockchain</span></div>
       </div>
       <div class="hero-actions">
-        <button class="hero-cta" onclick="document.getElementById('demo').scrollIntoView({behavior:'smooth'})">Open Platform</button>
-        <a class="hero-link" href="https://docs.coreum.dev" target="_blank">Read Docs</a>
+        <button class="hero-cta" onclick="document.getElementById('demo').scrollIntoView({behavior:'smooth'});setTimeout(()=>{switchTab('create');setCreateMode('airdrop')},400)">Launch Airdrop Tool</button>
+        <button class="hero-cta-secondary" onclick="document.getElementById('demo').scrollIntoView({behavior:'smooth'})">Explore Platform</button>
+        <a class="hero-link" href="https://docs.coreum.dev" target="_blank">Docs</a>
       </div>
     </div>
   </div>
@@ -79,21 +80,25 @@
     <!-- Wallet Choice Modal -->
     <div class="wallet-choice-overlay" id="walletChoiceOverlay" onclick="if(event.target===this)closeWalletChoice()">
       <div class="wallet-choice-modal">
-        <div class="wallet-choice-title">How do you want to create this token?</div>
-        <div class="wallet-choice-subtitle">Choose who owns and controls the token after creation</div>
-        <div class="wallet-choice-cards">
-          <div class="wallet-choice-card" onclick="chooseWalletMode('agent')">
-            <div class="wc-icon">&#129302;</div>
-            <div class="wc-label">AI Agent Wallet</div>
-            <div class="wc-desc">Use this if you do not want to connect a wallet. The AI agent creates and owns the token for you.</div>
-            <span class="wc-badge free">No wallet needed</span>
+        <div class="wallet-choice-title">Connect Your Wallet</div>
+        <div class="wallet-choice-subtitle">Choose a wallet to connect to TXAI</div>
+        <div class="wallet-choice-cards wallet-choice-cards--nav">
+          <div class="wallet-choice-card wallet-choice-card--primary recommended" id="navWcKeplr" onclick="navConnectKeplr()">
+            <div class="wc-icon"><svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="40" height="40" rx="8" fill="#7B6FE8"/><path d="M11 29V11H15.5V18.2L22.1 11H28L20.5 19.1L28.5 29H22.3L16.8 21.5L15.5 22.9V29H11Z" fill="white"/></svg></div>
+            <div class="wc-label">Keplr Wallet</div>
+            <div class="wc-desc">Connect your Keplr browser extension to sign transactions and own your tokens.</div>
+            <span class="wc-badge own">Full control</span>
           </div>
-          <div class="wallet-choice-card recommended" onclick="chooseWalletMode('connect')">
-            <div class="wc-icon">&#128273;</div>
-            <div class="wc-label">Your Wallet</div>
-            <div class="wc-desc">Connect Keplr or Leap &mdash; you are the issuer. You can mint, burn, freeze &amp; manage the token.</div>
-            <span class="wc-badge own">You own the token</span>
+          <div class="wallet-choice-card wallet-choice-card--secondary" id="navWcDemo" onclick="navConnectDemo()">
+            <div class="wc-icon" style="font-size:1.5rem">&#129302;</div>
+            <div class="wc-label">Demo Wallet</div>
+            <div class="wc-desc">Try TXAI without a wallet. AI agent creates tokens for you on testnet.</div>
+            <span class="wc-badge free">No extension needed</span>
           </div>
+        </div>
+        <div class="wallet-choice-install-hint" id="wcInstallHint" style="display:none">
+          <span>Keplr not detected.</span>
+          <a href="https://www.keplr.app/download" target="_blank" rel="noopener">Install Keplr Extension</a>
         </div>
         <button class="wallet-choice-dismiss" onclick="closeWalletChoice()">Cancel</button>
       </div>
@@ -1509,7 +1514,8 @@
 <!-- Modular JavaScript -->
 <script src="js/txdb.js?v=11"></script>
 <script src="js/config.js?v=11"></script>
-<script src="js/wallet.js?v=10"></script>
+<script src="js/keplr.js?v=1"></script>
+<script src="js/wallet.js?v=11"></script>
 <script src="js/chat.js?v=10"></script>
 <script src="js/create-token.js?v=15"></script>
 <script src="js/create-nft.js?v=10"></script>

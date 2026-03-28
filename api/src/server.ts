@@ -84,6 +84,36 @@ setInterval(() => {
   }
 }, 5 * 60_000);
 
+// ─── NETWORK RESOLUTION ─────────────────────────────────────────────────────
+// Reads an optional `network` query param or body field to select testnet/mainnet.
+// Defaults to the TX_NETWORK env var, then to 'testnet'.
+
+import type { Request } from "express";
+import type { NetworkConfig } from "./tx-sdk";
+
+function getNetwork(req: Request): { networkName: NetworkName; network: NetworkConfig } {
+  const raw =
+    (req.query?.network as string) ||
+    (req.body?.network as string) ||
+    (process.env.TX_NETWORK as string) ||
+    "testnet";
+  const networkName: NetworkName = raw === "mainnet" ? "mainnet" : "testnet";
+  return { networkName, network: NETWORKS[networkName] };
+}
+
+/** Guard: block agent-wallet operations on mainnet */
+function blockMainnetAgentWallet(req: Request, res: express.Response): boolean {
+  const { networkName } = getNetwork(req);
+  if (networkName === "mainnet" && process.env.AGENT_MNEMONIC) {
+    res.status(403).json({
+      error:
+        "Mainnet operations require connecting your own wallet via Keplr. The demo wallet is testnet-only.",
+    });
+    return true; // blocked
+  }
+  return false; // allowed
+}
+
 // ─── APP SETUP ───────────────────────────────────────────────────────────────
 
 const app = express();
@@ -155,6 +185,20 @@ app.get("/health", async (_req, res) => {
   healthInfo.anthropicKeySet = !!process.env.ANTHROPIC_API_KEY;
 
   res.json(healthInfo);
+});
+
+// ─── NETWORK INFO ───────────────────────────────────────────────────────────
+
+app.get("/api/network-info", (_req, res) => {
+  res.json({
+    available: ["testnet", "mainnet"],
+    default: (process.env.TX_NETWORK as NetworkName) || "testnet",
+    networks: {
+      testnet: NETWORKS.testnet,
+      mainnet: NETWORKS.mainnet,
+    },
+    usage: "Add ?network=mainnet or { network: 'mainnet' } in the request body to switch networks.",
+  });
 });
 
 // ─── TEST CONNECTION ────────────────────────────────────────────────────────
@@ -359,6 +403,9 @@ app.post("/api/create-token", async (req, res) => {
     });
     return;
   }
+
+  // Block mainnet usage with agent wallet
+  if (blockMainnetAgentWallet(req, res)) return;
 
   // Check API key
   if (!process.env.ANTHROPIC_API_KEY) {
@@ -623,6 +670,7 @@ app.get("/api/token-info", async (req, res) => {
 app.post("/api/token/mint", async (req, res) => {
   const { denom, amount, recipient } = req.body as { denom?: string; amount?: string; recipient?: string };
   if (!denom || !amount) { res.status(400).json({ error: "Missing denom or amount." }); return; }
+  if (blockMainnetAgentWallet(req, res)) return;
   if (!process.env.AGENT_MNEMONIC) { res.status(500).json({ error: "Server not configured." }); return; }
   const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
   try {
@@ -637,6 +685,7 @@ app.post("/api/token/mint", async (req, res) => {
 app.post("/api/token/burn", async (req, res) => {
   const { denom, amount } = req.body as { denom?: string; amount?: string };
   if (!denom || !amount) { res.status(400).json({ error: "Missing denom or amount." }); return; }
+  if (blockMainnetAgentWallet(req, res)) return;
   if (!process.env.AGENT_MNEMONIC) { res.status(500).json({ error: "Server not configured." }); return; }
   const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
   try {
@@ -651,6 +700,7 @@ app.post("/api/token/burn", async (req, res) => {
 app.post("/api/token/freeze", async (req, res) => {
   const { denom, account, amount } = req.body as { denom?: string; account?: string; amount?: string };
   if (!denom || !account || !amount) { res.status(400).json({ error: "Missing denom, account, or amount." }); return; }
+  if (blockMainnetAgentWallet(req, res)) return;
   if (!process.env.AGENT_MNEMONIC) { res.status(500).json({ error: "Server not configured." }); return; }
   const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
   try {
@@ -665,6 +715,7 @@ app.post("/api/token/freeze", async (req, res) => {
 app.post("/api/token/unfreeze", async (req, res) => {
   const { denom, account, amount } = req.body as { denom?: string; account?: string; amount?: string };
   if (!denom || !account || !amount) { res.status(400).json({ error: "Missing denom, account, or amount." }); return; }
+  if (blockMainnetAgentWallet(req, res)) return;
   if (!process.env.AGENT_MNEMONIC) { res.status(500).json({ error: "Server not configured." }); return; }
   const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
   try {
@@ -679,6 +730,7 @@ app.post("/api/token/unfreeze", async (req, res) => {
 app.post("/api/token/global-freeze", async (req, res) => {
   const { denom } = req.body as { denom?: string };
   if (!denom) { res.status(400).json({ error: "Missing denom." }); return; }
+  if (blockMainnetAgentWallet(req, res)) return;
   if (!process.env.AGENT_MNEMONIC) { res.status(500).json({ error: "Server not configured." }); return; }
   const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
   try {
@@ -861,6 +913,7 @@ app.post("/api/send", async (req, res) => {
   if (!to || !denom || !amount) {
     res.status(400).json({ error: "Missing 'to', 'denom', and 'amount'." }); return;
   }
+  if (blockMainnetAgentWallet(req, res)) return;
   if (!process.env.AGENT_MNEMONIC) {
     res.status(500).json({ error: "Server not configured." }); return;
   }
@@ -907,6 +960,7 @@ app.post("/api/airdrop", async (req, res) => {
   if (recipients.length > 50) {
     res.status(400).json({ error: "Max 50 recipients per request." }); return;
   }
+  if (blockMainnetAgentWallet(req, res)) return;
   if (!process.env.AGENT_MNEMONIC) {
     res.status(500).json({ error: "Server not configured." }); return;
   }
@@ -957,7 +1011,8 @@ app.get("/api/stakers/:validatorAddr", async (req, res) => {
     res.status(400).json({ error: "Missing validator address." }); return;
   }
 
-  const baseUrl = "https://full-node.testnet-1.coreum.dev:1317";
+  const { network } = getNetwork(req);
+  const baseUrl = network.restEndpoint;
   const allAddresses: string[] = [];
   let nextKey: string | null = null;
 
@@ -1008,7 +1063,8 @@ app.get("/api/holders/:denom", async (req, res) => {
   // If manual addresses provided, verify balances on-chain
   if (manualAddresses) {
     const addresses = manualAddresses.split(",").map((a) => a.trim()).filter(Boolean);
-    const baseUrl = "https://full-node.testnet-1.coreum.dev:1317";
+    const { network: holderNetwork } = getNetwork(req);
+    const baseUrl = holderNetwork.restEndpoint;
     const holders: string[] = [];
     const errors: string[] = [];
 
@@ -1076,6 +1132,7 @@ app.post("/api/nft-airdrop", async (req, res) => {
   if (recipients.length > 100) {
     res.status(400).json({ error: "Max 100 recipients per call." }); return;
   }
+  if (blockMainnetAgentWallet(req, res)) return;
   if (!process.env.AGENT_MNEMONIC) {
     res.status(500).json({ error: "Server not configured." }); return;
   }
@@ -2135,9 +2192,8 @@ app.get("/api/subs/verify", async (req, res) => {
       return res.status(400).json({ error: "Missing address or denom" });
     }
 
-    const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
-    const network = NETWORKS[networkName];
-    const restUrl = network.restEndpoint;
+    const { network: subsNetwork } = getNetwork(req);
+    const restUrl = subsNetwork.restEndpoint;
 
     // Check balance of the pass token
     const balRes = await fetch(
