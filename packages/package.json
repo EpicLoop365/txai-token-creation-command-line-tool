@@ -1,0 +1,23 @@
+{
+  "name": "@solomente/txai-monorepo",
+  "private": true,
+  "workspaces": [
+    "core",
+    "preflight",
+    "airdrop",
+    "voting",
+    "sdk"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "clean": "npm run clean --workspaces",
+    "build:core": "npm run build -w core",
+    "build:preflight": "npm run build -w preflight",
+    "build:airdrop": "npm run build -w airdrop",
+    "build:voting": "npm run build -w voting",
+    "build:sdk": "npm run build -w sdk"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  }
+}

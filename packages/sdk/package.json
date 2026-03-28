@@ -31,5 +31,14 @@
     "coreum-js-nightly": "*",
     "@anthropic-ai/sdk": ">=0.20.0"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/EpicLoop365/solomente-txai-studio.git",
+    "directory": "packages/sdk"
+  },
+  "homepage": "https://solomentelabs.com",
+  "publishConfig": {
+    "access": "public"
+  },
   "license": "MIT"
 }

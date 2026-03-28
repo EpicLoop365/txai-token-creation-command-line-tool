@@ -1055,13 +1055,87 @@
 
       </div><!-- end manage-info-card -->
 
+      <!-- Quick Links to moved sections -->
+      <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap">
+        <button class="sa-template-btn" onclick="switchTab('airdrop')" style="font-size:.78rem">Airdrop Tokens</button>
+        <button class="sa-template-btn" onclick="switchTab('dao')" style="font-size:.78rem">DAO Voting</button>
+        <button class="sa-template-btn" onclick="switchTab('analytics')" style="font-size:.78rem">Analytics</button>
+      </div>
+
+    </div><!-- end manage-wrap -->
+
+    <!-- ===== AIRDROP TAB ===== -->
+    <div class="manage-wrap" id="airdropWrap" style="display:none">
+
+      <!-- Airdrop Hero -->
+      <div style="text-align:center;padding:28px 16px 20px">
+        <div style="font-size:2rem;margin-bottom:6px">🚀</div>
+        <h2 style="font-size:1.3rem;font-weight:700;color:var(--text);margin:0 0 8px">Smart Airdrop Agent</h2>
+        <p style="font-size:.82rem;color:var(--muted);max-width:480px;margin:0 auto 16px;line-height:1.5">Distribute tokens to your community in one prompt. AI resolves stakers, NFT holders, token holders — verifies everything before sending.</p>
+      </div>
+
+      <!-- Template Prompts -->
+      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:20px;padding:0 16px">
+        <button class="sa-template-btn" onclick="smartAirdropOpen();setTimeout(()=>{const t=document.getElementById('saPromptInput');if(t){t.value='Airdrop 1000 MYTOKEN to all stakers of testcorevaloper1...';t.focus()}},300)">
+          Reward Stakers
+        </button>
+        <button class="sa-template-btn" onclick="smartAirdropOpen();setTimeout(()=>{const t=document.getElementById('saPromptInput');if(t){t.value='Airdrop 500 MYTOKEN to all holders of NFT class my-nft-class';t.focus()}},300)">
+          NFT Holder Drop
+        </button>
+        <button class="sa-template-btn" onclick="smartAirdropOpen();setTimeout(()=>{const t=document.getElementById('saPromptInput');if(t){t.value='Airdrop 100 MYTOKEN to all holders of utestcore with minimum balance 1000000';t.focus()}},300)">
+          Token Holder Reward
+        </button>
+        <button class="sa-template-btn" onclick="smartAirdropOpen();setTimeout(()=>{const t=document.getElementById('saPromptInput');if(t){t.value='';t.setAttribute('placeholder','Paste addresses or upload a CSV...');t.focus()}},300)">
+          CSV / Manual List
+        </button>
+      </div>
+
+      <!-- Launch Button -->
+      <div style="text-align:center;margin-bottom:24px">
+        <button class="sa-launch-btn" onclick="smartAirdropOpen()">Launch Airdrop Agent</button>
+      </div>
+
+      <!-- Feature Cards -->
+      <div class="sa-feature-grid">
+        <div class="sa-feature-card">
+          <div class="sa-feature-icon">🧠</div>
+          <div class="sa-feature-title">Natural Language</div>
+          <div class="sa-feature-desc">Describe your airdrop in plain English. AI parses recipients, amounts, and token details automatically.</div>
+        </div>
+        <div class="sa-feature-card">
+          <div class="sa-feature-icon">🔍</div>
+          <div class="sa-feature-title">Preflight Checks</div>
+          <div class="sa-feature-desc">Balance, gas, freeze status, whitelist compliance — all verified before a single token moves.</div>
+        </div>
+        <div class="sa-feature-card">
+          <div class="sa-feature-icon">📊</div>
+          <div class="sa-feature-title">Dry Run</div>
+          <div class="sa-feature-desc">Simulate the full airdrop with batch breakdown and gas estimates. No tokens sent until you confirm.</div>
+        </div>
+        <div class="sa-feature-card">
+          <div class="sa-feature-icon">⏰</div>
+          <div class="sa-feature-title">Schedule & Vest</div>
+          <div class="sa-feature-desc">Time-delayed drops, price triggers, cliff vesting, linear unlock — your distribution, your timeline.</div>
+        </div>
+        <div class="sa-feature-card">
+          <div class="sa-feature-icon">🛡️</div>
+          <div class="sa-feature-title">Exclusion Lists</div>
+          <div class="sa-feature-desc">Auto-exclude exchanges, known bots, or any address. Keep airdrops going to real community members.</div>
+        </div>
+        <div class="sa-feature-card">
+          <div class="sa-feature-icon">📧</div>
+          <div class="sa-feature-title">Review & Deliver</div>
+          <div class="sa-feature-desc">Email or Telegram the recipient list for review before executing. Full transparency for your team.</div>
+        </div>
+      </div>
+
       <!-- NFT Airdrop Wizard -->
-      <div class="manage-action-card" id="nftAirdropWrap" style="margin-top:16px">
+      <div class="manage-action-card" id="nftAirdropWrap" style="margin:24px 16px 0">
         <div class="manage-action-hdr" style="cursor:pointer" onclick="this.parentElement.querySelector('.manage-action-body').style.display=this.parentElement.querySelector('.manage-action-body').style.display==='none'?'block':'none'">
           <span class="manage-action-icon">🎨</span> NFT Airdrop Wizard
           <span style="margin-left:auto;font-size:.65rem;color:var(--muted)">Mint + distribute NFTs to communities</span>
         </div>
-        <div class="manage-action-body">
+        <div class="manage-action-body" style="display:none">
 
           <!-- Step indicators -->
           <div class="wiz-steps" id="nftAdWizSteps" style="margin-bottom:14px">
@@ -1108,26 +1182,10 @@
               <div class="cp-section-title" style="font-size:.85rem">Smart Token Features</div>
               <p style="color:var(--muted);font-size:.72rem;margin:0 0 10px">TX protocol-enforced rules — can't be bypassed by anyone.</p>
               <div class="nft-ad-features">
-                <label class="nft-ad-feature-toggle">
-                  <input type="checkbox" id="nftAdSoulbound">
-                  <span class="nft-ad-feature-label">🔒 Soulbound</span>
-                  <span class="nft-ad-feature-hint">NFTs can never be transferred — locked to recipient's wallet forever</span>
-                </label>
-                <label class="nft-ad-feature-toggle">
-                  <input type="checkbox" id="nftAdWhitelist">
-                  <span class="nft-ad-feature-label">🛡 Whitelist-Gated</span>
-                  <span class="nft-ad-feature-hint">Only pre-approved wallets can receive transfers</span>
-                </label>
-                <label class="nft-ad-feature-toggle">
-                  <input type="checkbox" id="nftAdFreeze">
-                  <span class="nft-ad-feature-label">❄️ Freezable</span>
-                  <span class="nft-ad-feature-hint">Issuer can freeze individual NFTs or the entire class</span>
-                </label>
-                <label class="nft-ad-feature-toggle">
-                  <input type="checkbox" id="nftAdBurn">
-                  <span class="nft-ad-feature-label">🔥 Burnable</span>
-                  <span class="nft-ad-feature-hint">Holders can burn (destroy) their own NFT</span>
-                </label>
+                <label class="nft-ad-feature-toggle"><input type="checkbox" id="nftAdSoulbound"><span class="nft-ad-feature-label">🔒 Soulbound</span><span class="nft-ad-feature-hint">NFTs can never be transferred — locked to recipient's wallet forever</span></label>
+                <label class="nft-ad-feature-toggle"><input type="checkbox" id="nftAdWhitelist"><span class="nft-ad-feature-label">🛡 Whitelist-Gated</span><span class="nft-ad-feature-hint">Only pre-approved wallets can receive transfers</span></label>
+                <label class="nft-ad-feature-toggle"><input type="checkbox" id="nftAdFreeze"><span class="nft-ad-feature-label">❄️ Freezable</span><span class="nft-ad-feature-hint">Issuer can freeze individual NFTs or the entire class</span></label>
+                <label class="nft-ad-feature-toggle"><input type="checkbox" id="nftAdBurn"><span class="nft-ad-feature-label">🔥 Burnable</span><span class="nft-ad-feature-hint">Holders can burn (destroy) their own NFT</span></label>
               </div>
               <div class="nft-ad-feature-note" id="nftAdFeatureNote" style="display:none"></div>
             </div>
@@ -1206,83 +1264,9 @@
 
           <!-- History -->
           <div class="cp-section" style="margin-top:20px;border-top:1px solid var(--border);padding-top:16px">
-            <div class="cp-section-title" style="font-size:.75rem;color:var(--muted)">Past Airdrops</div>
+            <div class="cp-section-title" style="font-size:.75rem;color:var(--muted)">Past NFT Airdrops</div>
             <div id="nftAdHistory" style="font-size:.72rem;color:var(--muted)">No airdrops yet.</div>
           </div>
-        </div>
-      </div>
-
-      <!-- Quick Links to moved sections -->
-      <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap">
-        <button class="sa-template-btn" onclick="switchTab('airdrop')" style="font-size:.78rem">Airdrop Tokens</button>
-        <button class="sa-template-btn" onclick="switchTab('dao')" style="font-size:.78rem">DAO Voting</button>
-        <button class="sa-template-btn" onclick="switchTab('analytics')" style="font-size:.78rem">Analytics</button>
-      </div>
-
-    </div><!-- end manage-wrap -->
-
-    <!-- ===== AIRDROP TAB ===== -->
-    <div class="manage-wrap" id="airdropWrap" style="display:none">
-
-      <!-- Airdrop Hero -->
-      <div style="text-align:center;padding:28px 16px 20px">
-        <div style="font-size:2rem;margin-bottom:6px">🚀</div>
-        <h2 style="font-size:1.3rem;font-weight:700;color:var(--text);margin:0 0 8px">Smart Airdrop Agent</h2>
-        <p style="font-size:.82rem;color:var(--muted);max-width:480px;margin:0 auto 16px;line-height:1.5">Distribute tokens to your community in one prompt. AI resolves stakers, NFT holders, token holders — verifies everything before sending.</p>
-      </div>
-
-      <!-- Template Prompts -->
-      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:20px;padding:0 16px">
-        <button class="sa-template-btn" onclick="smartAirdropOpen();setTimeout(()=>{const t=document.getElementById('saPromptInput');if(t){t.value='Airdrop 1000 MYTOKEN to all stakers of testcorevaloper1...';t.focus()}},300)">
-          Reward Stakers
-        </button>
-        <button class="sa-template-btn" onclick="smartAirdropOpen();setTimeout(()=>{const t=document.getElementById('saPromptInput');if(t){t.value='Airdrop 500 MYTOKEN to all holders of NFT class my-nft-class';t.focus()}},300)">
-          NFT Holder Drop
-        </button>
-        <button class="sa-template-btn" onclick="smartAirdropOpen();setTimeout(()=>{const t=document.getElementById('saPromptInput');if(t){t.value='Airdrop 100 MYTOKEN to all holders of utestcore with minimum balance 1000000';t.focus()}},300)">
-          Token Holder Reward
-        </button>
-        <button class="sa-template-btn" onclick="smartAirdropOpen();setTimeout(()=>{const t=document.getElementById('saPromptInput');if(t){t.value='';t.setAttribute('placeholder','Paste addresses or upload a CSV...');t.focus()}},300)">
-          CSV / Manual List
-        </button>
-      </div>
-
-      <!-- Launch Button -->
-      <div style="text-align:center;margin-bottom:24px">
-        <button class="sa-launch-btn" onclick="smartAirdropOpen()">Launch Airdrop Agent</button>
-      </div>
-
-      <!-- Feature Cards -->
-      <div class="sa-feature-grid">
-        <div class="sa-feature-card">
-          <div class="sa-feature-icon">🧠</div>
-          <div class="sa-feature-title">Natural Language</div>
-          <div class="sa-feature-desc">Describe your airdrop in plain English. AI parses recipients, amounts, and token details automatically.</div>
-        </div>
-        <div class="sa-feature-card">
-          <div class="sa-feature-icon">🔍</div>
-          <div class="sa-feature-title">Preflight Checks</div>
-          <div class="sa-feature-desc">Balance, gas, freeze status, whitelist compliance — all verified before a single token moves.</div>
-        </div>
-        <div class="sa-feature-card">
-          <div class="sa-feature-icon">📊</div>
-          <div class="sa-feature-title">Dry Run</div>
-          <div class="sa-feature-desc">Simulate the full airdrop with batch breakdown and gas estimates. No tokens sent until you confirm.</div>
-        </div>
-        <div class="sa-feature-card">
-          <div class="sa-feature-icon">⏰</div>
-          <div class="sa-feature-title">Schedule & Vest</div>
-          <div class="sa-feature-desc">Time-delayed drops, price triggers, cliff vesting, linear unlock — your distribution, your timeline.</div>
-        </div>
-        <div class="sa-feature-card">
-          <div class="sa-feature-icon">🛡️</div>
-          <div class="sa-feature-title">Exclusion Lists</div>
-          <div class="sa-feature-desc">Auto-exclude exchanges, known bots, or any address. Keep airdrops going to real community members.</div>
-        </div>
-        <div class="sa-feature-card">
-          <div class="sa-feature-icon">📧</div>
-          <div class="sa-feature-title">Review & Deliver</div>
-          <div class="sa-feature-desc">Email or Telegram the recipient list for review before executing. Full transparency for your team.</div>
         </div>
       </div>
 

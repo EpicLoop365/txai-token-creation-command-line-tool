@@ -10,8 +10,39 @@
 // ─── Core (tokens, NFTs, DEX, wallet, faucet) ───────────────────────────────
 export * from "@solomente/txai-core";
 
-// ─── Preflight (compliance checks) ──────────────────────────────────────────
-export * from "@solomente/txai-preflight";
+// ─── Preflight (compliance checks) — explicit to avoid NFTClassInfo collision
+export {
+  runPreflight,
+  buildResult,
+  createQuerier,
+  preflightTokenSend,
+  preflightTokenIssue,
+  preflightNFTMint,
+  preflightNFTTransfer,
+  preflightAirdrop,
+  preflightDexOrder,
+  CoreumRestQuerier,
+  CheckId,
+  type TransactionType,
+  type PreflightResult,
+  type PreflightCheck,
+  type PreflightParams,
+  type CheckSeverity,
+  type CheckCategory,
+  type ComplianceNFT,
+  type TokenSendParams,
+  type TokenIssueParams,
+  type NFTMintParams,
+  type NFTTransferParams,
+  type AirdropParams,
+  type DexOrderParams,
+  type CheckIdType,
+  type IChainQuerier,
+  type TokenInfo,
+  type NFTOwnerResponse,
+} from "@solomente/txai-preflight";
+// NFTClassInfo from preflight aliased to avoid collision with core
+export type { NFTClassInfo as PreflightNFTClassInfo } from "@solomente/txai-preflight";
 
 // ─── Airdrop (NLP parsing, vesting, scheduling, delivery) ───────────────────
 export * from "@solomente/txai-airdrop";

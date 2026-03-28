@@ -20,5 +20,14 @@
   "peerDependencies": {
     "@anthropic-ai/sdk": ">=0.20.0"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/EpicLoop365/solomente-txai-studio.git",
+    "directory": "packages/airdrop"
+  },
+  "homepage": "https://solomentelabs.com",
+  "publishConfig": {
+    "access": "public"
+  },
   "license": "MIT"
 }

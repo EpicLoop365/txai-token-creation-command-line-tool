@@ -57,8 +57,11 @@ function switchTab(tab){
       const tokens = typeof txdbGetTokens === 'function' ? txdbGetTokens() : [];
       if(tokens.length > 0){
         manageInput.value = tokens[0].denom;
-        if(typeof loadManageToken === 'function') setTimeout(() => loadManageToken(), 200);
       }
+    }
+    // Auto-load if field has a value (populated or just set)
+    if(manageInput && manageInput.value.trim()){
+      if(typeof manageLoadToken === 'function') setTimeout(() => manageLoadToken(), 200);
     }
     if(manageInput) manageInput.focus();
     if(typeof authLoadGrants === 'function') authLoadGrants();

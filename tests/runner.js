@@ -13,9 +13,15 @@
  *   --api <url>        API base URL (default: production)
  *   --site <url>       Frontend URL for asset tests
  *   --alert-email <e>  Send failure alerts to this email
+ *   --telegram <id>    Send failure alerts to this Telegram chat ID
+ *   --webhook <url>    POST failure alerts to this webhook URL
  *   --json             Output structured JSON results
  *   --quiet            Only output on failure
  *   --suite <name>     Run only a specific suite (general|airdrop|all)
+ *
+ * Environment variables:
+ *   TELEGRAM_BOT_TOKEN   Bot token for Telegram alerts
+ *   SMOKE_WEBHOOK_URL    Default webhook URL for alerts
  */
 
 const { execSync, spawn } = require("child_process");
@@ -35,6 +41,9 @@ function hasFlag(name) {
 const API = getArg("--api") || "https://txai-token-creation-production.up.railway.app";
 const SITE = getArg("--site") || "https://epicloop365.github.io/solomente-txai-studio";
 const ALERT_EMAIL = getArg("--alert-email");
+const TELEGRAM_CHAT = getArg("--telegram");
+const TELEGRAM_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "";
+const WEBHOOK_URL = getArg("--webhook") || process.env.SMOKE_WEBHOOK_URL || "";
 const JSON_OUTPUT = hasFlag("--json");
 const QUIET = hasFlag("--quiet");
 const SUITE = getArg("--suite") || "all";
@@ -134,51 +143,91 @@ function runSuite(suite) {
 
 // ─── ALERT ──────────────────────────────────────────────────────────────────
 
-async function sendAlert(results) {
-  if (!ALERT_EMAIL) return;
-
+function buildAlertMessage(results) {
   const totalFailed = results.reduce((sum, r) => sum + r.failed, 0);
-  if (totalFailed === 0) return; // No alert needed
-
   const totalPassed = results.reduce((sum, r) => sum + r.passed, 0);
   const totalTests = results.reduce((sum, r) => sum + r.total, 0);
 
   const failureDetails = results
     .filter((r) => r.failed > 0)
     .map((r) => {
-      const lines = [`Suite: ${r.suite} (${r.failed}/${r.total} failed)`];
+      const lines = [`${r.suite}: ${r.failed}/${r.total} failed`];
       r.failures.forEach((f) => lines.push(`  - ${f.test}: ${f.error}`));
       return lines.join("\n");
     })
     .join("\n\n");
 
-  try {
-    const res = await fetch(`${API}/api/smart-airdrop/send-review`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        resolved: {
-          recipients: [],
-          totalAmount: "0",
-          invalidAddresses: [],
-          duplicatesRemoved: 0,
-          sourceBreakdown: {},
-        },
-        delivery: { type: "email", target: ALERT_EMAIL },
-        tokenDenom: "SMOKE-TEST-ALERT",
-        // Hijack the review system to send an alert
-        _alert: true,
-        _alertBody: `TXAI Smoke Test Alert\n\nResult: ${totalFailed} FAILURES out of ${totalTests} tests\nPassed: ${totalPassed} | Failed: ${totalFailed}\nTime: ${new Date().toISOString()}\n\n${failureDetails}`,
-      }),
-      signal: AbortSignal.timeout(15000),
-    });
+  return {
+    totalFailed,
+    totalPassed,
+    totalTests,
+    text: `TXAI Smoke Test Alert\n\n${totalFailed} FAILURES / ${totalTests} tests\nPassed: ${totalPassed} | Failed: ${totalFailed}\nTime: ${new Date().toISOString()}\n\n${failureDetails}`,
+    json: { totalPassed, totalFailed, totalTests, timestamp: new Date().toISOString(), failures: results.flatMap(r => r.failures.map(f => ({ suite: r.suite, ...f }))) },
+  };
+}
 
-    if (res.ok) {
-      console.log(`\n  Alert sent to ${ALERT_EMAIL}`);
-    }
-  } catch (err) {
-    console.error(`\n  Failed to send alert: ${err.message}`);
+async function sendAlert(results) {
+  const { totalFailed, text, json } = buildAlertMessage(results);
+  if (totalFailed === 0) {
+    if (!QUIET) console.log("\n  All tests passed — no alert needed.");
+    return;
   }
+
+  const promises = [];
+
+  // Telegram alert
+  if (TELEGRAM_CHAT && TELEGRAM_TOKEN) {
+    promises.push(
+      fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chat_id: TELEGRAM_CHAT, text, parse_mode: "HTML" }),
+        signal: AbortSignal.timeout(15000),
+      })
+        .then((r) => r.ok ? console.log(`\n  Telegram alert sent to chat ${TELEGRAM_CHAT}`) : console.error(`\n  Telegram alert failed: ${r.status}`))
+        .catch((err) => console.error(`\n  Telegram alert error: ${err.message}`))
+    );
+  }
+
+  // Webhook alert
+  if (WEBHOOK_URL) {
+    promises.push(
+      fetch(WEBHOOK_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ source: "txai-smoke-tests", ...json }),
+        signal: AbortSignal.timeout(15000),
+      })
+        .then((r) => r.ok ? console.log(`\n  Webhook alert sent to ${WEBHOOK_URL}`) : console.error(`\n  Webhook alert failed: ${r.status}`))
+        .catch((err) => console.error(`\n  Webhook alert error: ${err.message}`))
+    );
+  }
+
+  // Email alert (via TXAI API)
+  if (ALERT_EMAIL) {
+    promises.push(
+      fetch(`${API}/api/smart-airdrop/send-review`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          resolved: { recipients: [], totalAmount: "0", invalidAddresses: [], duplicatesRemoved: 0, sourceBreakdown: {} },
+          delivery: { type: "email", target: ALERT_EMAIL },
+          tokenDenom: "SMOKE-TEST-ALERT",
+          _alert: true,
+          _alertBody: text,
+        }),
+        signal: AbortSignal.timeout(15000),
+      })
+        .then((r) => r.ok ? console.log(`\n  Email alert sent to ${ALERT_EMAIL}`) : console.error(`\n  Email alert failed: ${r.status}`))
+        .catch((err) => console.error(`\n  Email alert error: ${err.message}`))
+    );
+  }
+
+  if (promises.length === 0) {
+    console.log("\n  No alert channels configured. Use --telegram, --webhook, or --alert-email.");
+  }
+
+  await Promise.allSettled(promises);
 }
 
 // ─── MAIN ───────────────────────────────────────────────────────────────────
