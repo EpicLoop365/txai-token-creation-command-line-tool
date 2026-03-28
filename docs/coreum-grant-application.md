@@ -112,7 +112,7 @@ TXAI Studio directly addresses Wave 4's focus areas:
 
 ## Team
 
-**Solo developer** — Full-stack builder, active on Coreum testnet since early 2026. Previously had funds recovered by Cosmo Rescue (a Coreum validator), which inspired the fund-recovery agent template. Deeply embedded in the Coreum community.
+**Solo developer** — CS degree, object-oriented background (C++, Java, Linux). Former build engineer at a top software company. Production experience with data pipeline systems. Open-source advocate. Active TX community member with hundreds of posts on X covering Smart Tokens, AI agents, and blockchain architecture.
 
 ---
 

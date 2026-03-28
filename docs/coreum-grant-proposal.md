@@ -1,10 +1,4 @@
-# TX Governance Proposal — Community Grant
-# Format: On-chain governance vote (like Proposals #36-38)
-
----
-
-## Proposal Title
-**TXAI: Proof-of-Contribution Distribution Engine for TX Smart Token Ecosystems**
+# TXAI: Proof-of-Contribution Distribution Engine for TX Smart Token Ecosystems
 
 ---
 
@@ -16,11 +10,11 @@ TXAI Studio is a working platform (live on testnet) that lets anyone mint AI Age
 
 1. **You earn more.** TXAI introduces a second reward layer for ALL TX delegators — not tied to any validator. Stake TX → qualify for TXAI rewards. Use the platform → earn significantly more. Your stake becomes the entry ticket to a larger economy.
 
-2. **More fees for you.** Every agent running is constant transaction volume. 100 agents at 5-min intervals = 28,800 tx/day. Job payments, pass mints, subscription renewals — all TX fees distributed to stakers.
+2. **More network activity.** Every agent that triggers an action — a trade, a job payment, a pass mint, a subscription renewal — is real on-chain usage. More agents = more adoption = a stronger, more active network.
 
 3. **Buy pressure on TX.** Creator Pass (50 TX), Pro Pass (200 TX), job payments, subscription renewals — all denominated in TX. Sustained demand, not one-time hype.
 
-4. **TX becomes the smart chain.** This is the first project using `disable_sending`, `whitelisting`, and Smart Token metadata together. It proves TX can do things no other chain can. That attracts builders → more projects → more fees.
+4. **TX becomes the smart chain.** This is the first project using `disable_sending`, `whitelisting`, and Smart Token metadata together. It proves TX can do things no other chain can. That attracts builders → more projects → stronger ecosystem.
 
 **This isn't an idea.** Token creator, NFT minter, airdrop wizard, 7 agent templates, script editor, job board, soulbound passes, runtime engine — all built, all testable right now.
 
@@ -49,7 +43,7 @@ Every agent creates recurring transactions:
 - Airdrop distributions
 - Social feed updates
 
-100 active agents at 5-min intervals = ~28,800 transactions/day. 1,000 agents = 288,000 tx/day. These fees go to stakers.
+More agents running = more real on-chain usage, proving TX is the chain where autonomous economies get built.
 
 **2. Token demand**
 - Creator Pass costs 50 TX (soulbound — burned from circulation)
@@ -95,7 +89,7 @@ Everything is open source. Other builders can fork it, extend it, build on top o
 | Item | % | What It Does |
 |------|---|-------------|
 | Mainnet deployment | 30% | Move from testnet to production mainnet |
-| On-chain job escrow | 20% | Trustless agent payments (more tx for stakers) |
+| On-chain job escrow | 20% | Trustless agent payments with escrow |
 | Twitter API integration | 15% | Agents tweet autonomously, bringing attention to TX |
 | Security audit | 15% | Professional audit before mainnet launch |
 | Cross-chain agents | 10% | Monitor other chains, bring activity back to TX |
@@ -137,10 +131,62 @@ This is not a traditional airdrop. TXAI distributes ownership based on three lay
 
 **Anti-gaming:** Soulbound Scout Pass (auto-minted on wallet connect) = one identity per wallet, enforced at protocol level via `disable_sending`. Minimum thresholds prevent dust spam. Agent reputation scores prevent farming empty bots.
 
-**The flywheel:** Stake → Use → Deploy Agents → Earn → Reinvest → More activity → More fees for all stakers
+**The flywheel:** Stake → Use → Deploy Agents → Earn → Reinvest → More adoption → Stronger network
+
+### Infrastructure Plan & Cost Justification
+
+**Current Stack (covers 0–1,000 users):**
+
+| Service | Cost | Handles |
+|---------|------|---------|
+| Railway (API hosting) | $5/mo | Single instance, auto-deploy from GitHub |
+| GitHub Pages (frontend) | Free | Static site hosting, custom domain |
+| Coreum testnet | Free | All chain interactions during development |
+| Domain (solomentelabs.com) | $12/yr | Professional web presence |
+| **Current monthly burn** | **~$6/mo** | **Fully functional, live today** |
+
+This is intentional. We built lean to prove the concept before asking for money. Every feature works on $6/month.
+
+**Phase 2 — Mainnet + Growth (1,000–10,000 users):**
+
+| Service | Cost | Why |
+|---------|------|-----|
+| Railway Pro or Fly.io | $20-50/mo | Multiple instances, persistent runtime |
+| PostgreSQL (managed) | $15-30/mo | Replace in-memory storage for analytics, agent logs, job history |
+| Coreum mainnet | Gas costs | Real CORE for agent execution, pass minting |
+| Redis (caching) | $10/mo | Agent state, session cache, rate limiting |
+| **Monthly burn** | **$50-100/mo** | **Scales to 10K users** |
+
+**Phase 3 — Scale (10,000+ users):**
+
+| Service | Cost | Why |
+|---------|------|-----|
+| Dedicated cloud (AWS/GCP or Akash) | $200-500/mo | Horizontal scaling, load balancing |
+| Production database cluster | $100-200/mo | High-availability, backups |
+| Monitoring (Datadog/Grafana) | $50/mo | Uptime, error tracking, performance |
+| CDN for frontend | $20/mo | Global performance |
+| **Monthly burn** | **$400-1,000/mo** | **Scales to 100K+ users** |
+
+**Why this matters for voters:** We're not asking for money to figure out if this works. We already proved it works on $6/month. The grant funds the transition from "working testnet demo" to "production mainnet product" — with clear, accountable infrastructure costs at every stage.
+
+**12-month infrastructure budget: $3,000–$6,000** (less than 10% of the grant). The rest goes to development, audit, and ecosystem growth.
 
 ### Requested Amount
-[TO BE DETERMINED — research typical community pool grant sizes for TX governance]
+
+**50,000 CORE** (~$15,000–$25,000 USD depending on market price)
+
+| Category | Amount | % |
+|----------|--------|---|
+| Development (6 months full-time) | 20,000 CORE | 40% |
+| Security audit (pre-mainnet) | 10,000 CORE | 20% |
+| Mainnet deployment + infrastructure (12 months) | 5,000 CORE | 10% |
+| On-chain job escrow development | 5,000 CORE | 10% |
+| Twitter API + agent social integration | 3,000 CORE | 6% |
+| Documentation + developer onboarding | 3,000 CORE | 6% |
+| Cross-chain agent monitoring | 2,000 CORE | 4% |
+| Community bounties + ecosystem grants | 2,000 CORE | 4% |
+
+**Accountability:** Funds drawn in milestone-based tranches. Each milestone has a deliverable + demo. Community can verify progress at any time at https://solomentelabs.com.
 
 ### Why TX and Only TX
 
@@ -153,7 +199,7 @@ This platform literally cannot exist on Ethereum, Solana, or any other chain bec
 We don't use TX because it's convenient. We use TX because it's the only chain where this is possible.
 
 ### Team
-Solo developer, active community member. Had funds personally recovered by Cosmo Rescue (TX validator), which inspired the fund-recovery agent template. Building on TX because I believe in the technology, not because of a grant.
+CS degree, object-oriented background (C++, Java, Linux). Former build engineer at a top software company. Previously built production-scale web scraping and data pipeline systems. Open-source advocate. Active TX community member with hundreds of posts on X covering Smart Tokens, AI agents, and blockchain architecture.
 
 ---
 
@@ -178,5 +224,5 @@ Solo developer, active community member. Had funds personally recovered by Cosmo
 ### Pre-Vote Strategy
 - DM SHΣA with demo video + proposal draft
 - Post in TX Discord / Telegram governance channels
-- Reach out to Cosmo Rescue — they'd benefit from the fund-recovery agent template
+- Reach out to Cosmo Rescue — potential partnership for agent templates
 - Ask 2-3 validators to publicly support before going on-chain
