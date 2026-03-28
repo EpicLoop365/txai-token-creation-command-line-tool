@@ -1344,6 +1344,9 @@ app.post("/api/scout-mint", async (req, res) => {
     client = await TxClient.connectWithWallet(txWallet);
 
     const symbol = "scoutpass";
+    let classId: string | null = null;
+
+    // Try to issue a new class; if symbol already exists, find the existing one
     const classResult = await issueNFTClass(client, {
       symbol,
       name: "Scout Pass",
@@ -1353,23 +1356,30 @@ app.post("/api/scout-mint", async (req, res) => {
       features: { disableSending: true },
     });
 
-    if (!classResult.success) {
+    if (classResult.success) {
+      classId = classResult.classId!;
+      console.log(`[scout-mint] Created new Scout Pass class: ${classId}`);
+    } else if (classResult.error?.includes("already used")) {
+      // Class already exists — derive the classId from symbol + issuer address
+      const issuerAddr = txWallet.address;
+      classId = `${symbol}-${issuerAddr}`;
+      console.log(`[scout-mint] Reusing existing Scout Pass class: ${classId}`);
+    } else {
       throw new Error(`NFT class failed: ${classResult.error}`);
     }
 
     const nftId = "scout-" + Date.now().toString(36);
-    // Coreum URI max 256 chars — use a short hosted URL for metadata
     const nftUri = "https://solomentelabs.com/assets/scout-pass.svg";
 
     await mintNFT(client, {
-      classId: classResult.classId!,
+      classId,
       id: nftId,
       uri: nftUri,
       recipient: wallet,
     });
 
     scoutMintedWallets.add(wallet);
-    console.log(`[scout-mint] Minted Scout Pass → ${wallet} (class: ${classResult.classId})`);
+    console.log(`[scout-mint] Minted Scout Pass → ${wallet} (class: ${classId})`);
 
     res.json({
       success: true,
