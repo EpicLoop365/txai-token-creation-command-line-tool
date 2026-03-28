@@ -215,13 +215,18 @@ app.use(
     origin: (origin, callback) => {
       // Allow requests with no origin (curl, server-to-server)
       if (!origin) return callback(null, true);
+      // Allow all solomentelabs.com variants and localhost
       if (
         allowedOrigins.length === 0 ||
         allowedOrigins.includes(origin) ||
-        origin.startsWith("http://localhost")
+        origin.includes("solomentelabs.com") ||
+        origin.includes("epicloop365.github.io") ||
+        origin.startsWith("http://localhost") ||
+        origin.startsWith("https://localhost")
       ) {
         return callback(null, true);
       }
+      console.warn("[CORS] Blocked origin:", origin);
       callback(new Error("Not allowed by CORS"));
     },
     credentials: true,
