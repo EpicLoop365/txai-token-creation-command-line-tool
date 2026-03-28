@@ -322,7 +322,8 @@ function updateChatStarters(tab) {
 
 /* Reset deploy buttons */
 function resetDeployBtns(){
-  resetDeployBtns();
+  const btn = document.getElementById('demoBtn');
+  if(btn){ btn.disabled = false; btn.textContent = 'Deploy Token (Testnet)'; }
   const cb = document.getElementById('demoBtnCustom');
   if(cb) cb.disabled = false;
 }
