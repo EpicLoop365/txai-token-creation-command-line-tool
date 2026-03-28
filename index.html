@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Solomente Labs — Smart Token Utility Platform | Built on Coreum</title>
-<meta name="description" content="The Stripe for Smart Tokens — subscriptions, access, permissions, and autonomous liquidity, all enforced on-chain. Built on Coreum.">
+<title>TXAI Studio — Utility Assets: Tokens, NFTs & AI Agents on Coreum</title>
+<meta name="description" content="Create tokens, NFTs, and AI agents that work for you. Free airdrop tool, built-in DEX, token-gated access. The best NFTs won't be rare — they'll be profitable.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -57,7 +57,7 @@ nav .links a{font-size:.85rem;color:var(--text-dim);font-weight:500}
 .hero-badge .dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 .hero h1{
-  font-size:3.2rem;font-weight:800;line-height:1.1;margin-bottom:16px;
+  font-size:3.2rem;font-weight:800;line-height:1.1;margin-bottom:20px;
   background:linear-gradient(135deg,var(--text) 0%,var(--purple) 50%,var(--green) 100%);
   -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
 }
@@ -79,24 +79,71 @@ nav .links a{font-size:.85rem;color:var(--text-dim);font-weight:500}
   display:inline-flex;align-items:center;gap:8px;
 }
 .btn-secondary:hover{border-color:var(--purple);color:var(--text);background:rgba(124,109,250,.06)}
-.hero-note{margin-top:24px;font-size:.8rem;color:var(--text-muted)}
 
-/* Features */
-.features{padding:80px 24px;max-width:1120px;margin:0 auto}
+/* Manifesto */
+.manifesto{padding:80px 24px;max-width:720px;margin:0 auto;text-align:center}
+.manifesto blockquote{
+  font-size:1.3rem;font-weight:600;line-height:1.5;color:var(--text);
+  border-left:3px solid var(--purple);padding:0 0 0 24px;text-align:left;
+  margin:0 0 20px;
+}
+.manifesto .attr{font-size:.85rem;color:var(--text-muted);text-align:left;padding-left:27px}
+
+/* Utility Assets */
+.assets{padding:80px 24px;max-width:1120px;margin:0 auto}
 .section-label{
   text-align:center;font-size:.78rem;font-weight:700;text-transform:uppercase;
   letter-spacing:2px;color:var(--purple);margin-bottom:12px;
 }
-.section-title{text-align:center;font-size:2rem;font-weight:800;margin-bottom:48px}
-.feature-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px}
-.feature-card{
+.section-title{text-align:center;font-size:2rem;font-weight:800;margin-bottom:16px}
+.section-sub{text-align:center;font-size:1rem;color:var(--text-muted);margin-bottom:48px;max-width:600px;margin-left:auto;margin-right:auto}
+.asset-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px}
+.asset-card{
   background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);
-  padding:28px 24px;transition:all .3s;
+  padding:28px 22px;transition:all .3s;text-align:center;
 }
-.feature-card:hover{border-color:var(--border-light);transform:translateY(-4px);box-shadow:0 8px 30px rgba(0,0,0,.3)}
-.feature-icon{font-size:2rem;margin-bottom:12px}
-.feature-title{font-weight:700;font-size:1.05rem;margin-bottom:6px}
-.feature-desc{font-size:.88rem;color:var(--text-muted);line-height:1.6}
+.asset-card:hover{border-color:var(--border-light);transform:translateY(-4px);box-shadow:0 8px 30px rgba(0,0,0,.3)}
+.asset-icon{font-size:2.2rem;margin-bottom:10px}
+.asset-title{font-weight:700;font-size:1rem;margin-bottom:6px}
+.asset-desc{font-size:.82rem;color:var(--text-muted);line-height:1.5}
+.asset-tag{display:inline-block;margin-top:10px;padding:3px 10px;border-radius:999px;font-size:.65rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.tag-free{background:rgba(6,214,160,.12);color:var(--green);border:1px solid rgba(6,214,160,.2)}
+.tag-pass{background:rgba(124,109,250,.1);color:var(--purple);border:1px solid rgba(124,109,250,.2)}
+.tag-new{background:rgba(251,191,36,.1);color:#fbbf24;border:1px solid rgba(251,191,36,.2)}
+
+/* Agents */
+.agents{padding:80px 24px;max-width:1120px;margin:0 auto}
+.agent-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px}
+.agent-card{
+  background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);
+  padding:20px 16px;text-align:center;transition:all .3s;
+}
+.agent-card:hover{border-color:var(--purple);transform:translateY(-3px)}
+.agent-emoji{font-size:1.8rem;margin-bottom:8px}
+.agent-name{font-weight:700;font-size:.85rem;margin-bottom:4px}
+.agent-job{font-size:.72rem;color:var(--text-muted);line-height:1.4}
+
+/* Comparison */
+.compare{padding:80px 24px;max-width:800px;margin:0 auto}
+.compare-table{width:100%;border-collapse:collapse;font-size:.85rem}
+.compare-table th{text-align:left;padding:12px 16px;border-bottom:2px solid var(--border-light);color:var(--text-muted);font-weight:600;font-size:.75rem;text-transform:uppercase;letter-spacing:.5px}
+.compare-table td{padding:12px 16px;border-bottom:1px solid var(--border)}
+.compare-table tr:last-child td{border-bottom:none}
+.compare-table .us{color:var(--green);font-weight:700}
+.compare-table .them{color:var(--text-muted)}
+
+/* Tokenomics */
+.tokenomics{padding:80px 24px;max-width:900px;margin:0 auto}
+.token-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:28px}
+.token-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:24px;text-align:center}
+.token-val{font-size:1.6rem;font-weight:800;color:var(--purple);font-family:var(--mono)}
+.token-label{font-size:.78rem;color:var(--text-muted);margin-top:4px}
+.token-breakdown{display:flex;flex-direction:column;gap:10px}
+.token-row{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm)}
+.token-row-label{font-size:.85rem;font-weight:600}
+.token-row-val{font-size:.85rem;color:var(--purple);font-family:var(--mono);font-weight:700}
+.token-row-bar{flex:1;height:4px;background:var(--border);border-radius:2px;margin:0 14px;overflow:hidden}
+.token-row-fill{height:100%;border-radius:2px;background:var(--purple)}
 
 /* How It Works */
 .how{padding:80px 24px;max-width:900px;margin:0 auto}
@@ -115,15 +162,6 @@ nav .links a{font-size:.85rem;color:var(--text-dim);font-weight:500}
 }
 .step-content h3{font-size:1.1rem;font-weight:700;margin-bottom:4px}
 .step-content p{font-size:.9rem;color:var(--text-muted);line-height:1.6}
-
-/* Tech */
-.tech{padding:60px 24px 80px;text-align:center}
-.tech-badges{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:24px}
-.tech-badge{
-  padding:10px 20px;border-radius:999px;border:1px solid var(--border);
-  background:var(--bg2);font-size:.82rem;font-weight:600;color:var(--text-dim);
-  display:flex;align-items:center;gap:8px;
-}
 
 /* CTA */
 .cta{padding:80px 24px;text-align:center}
@@ -151,9 +189,14 @@ footer{padding:40px 24px;border-top:1px solid var(--border)}
   .hero h1{font-size:2.2rem}
   .hero p{font-size:1rem}
   .hero-actions{flex-direction:column;align-items:center}
-  .feature-grid{grid-template-columns:1fr}
+  .asset-grid{grid-template-columns:1fr 1fr}
+  .agent-grid{grid-template-columns:1fr 1fr 1fr}
+  .token-grid{grid-template-columns:1fr}
+  .compare-table{font-size:.75rem}
+  .compare-table td,.compare-table th{padding:8px 10px}
   .steps::before{left:23px}
   .step-num{width:48px;height:48px;font-size:1rem}
+  .manifesto blockquote{font-size:1.05rem}
 }
 </style>
 </head>
@@ -161,12 +204,12 @@ footer{padding:40px 24px;border-top:1px solid var(--border)}
 
 <nav>
   <div class="inner">
-    <div class="logo"><span>&gt;_</span> Solomente Labs</div>
+    <div class="logo"><span>&gt;_</span> TXAI Studio</div>
     <div class="links">
-      <a href="#features">Features</a>
-      <a href="#how">How It Works</a>
-      <a href="https://epicloop365.github.io/tx-tokenomics/" target="_blank">Tokenomics</a>
-      <a href="https://github.com/EpicLoop365/txai-token-creation-command-line-tool" target="_blank">GitHub</a>
+      <a href="#assets">Assets</a>
+      <a href="#agents">Agents</a>
+      <a href="#tokenomics">Tokenomics</a>
+      <a href="https://github.com/EpicLoop365/txai-studio" target="_blank">GitHub</a>
       <a href="app.html" class="nav-cta">Launch App</a>
     </div>
   </div>
@@ -175,57 +218,206 @@ footer{padding:40px 24px;border-top:1px solid var(--border)}
 <!-- Hero -->
 <section class="hero">
   <div class="hero-content">
-    <div class="hero-badge"><span class="dot"></span> Live on Coreum Testnet</div>
-    <h1>The Smart Token<br>Utility Platform</h1>
+    <div class="hero-badge"><span class="dot"></span> Live on Coreum</div>
+    <h1>The best NFTs won't be rare.<br>They'll be profitable.</h1>
     <p>
-      Issue tokens that <strong>work</strong> &mdash; subscriptions, access passes, permissions &mdash;
-      or tokens that <strong>trade</strong> with autonomous AI liquidity. All enforced on-chain.
+      Create utility assets that <strong>work</strong> &mdash; tokens, NFTs, and AI agents
+      that trade, monitor, tweet, and earn on your behalf. All enforced on-chain.
     </p>
     <div class="hero-actions">
-      <a href="app.html" class="btn-primary">Launch TXAI Studio &rarr;</a>
-      <a href="https://epicloop365.github.io/tx-tokenomics/" target="_blank" class="btn-secondary">
-        <span style="font-size:1.1em">&#9670;</span>
-        Tokenomics
-      </a>
+      <a href="app.html" class="btn-primary">Launch Studio &rarr;</a>
+      <a href="#agents" class="btn-secondary">Meet the Agents</a>
     </div>
-    <p class="hero-note">Free to use &mdash; no wallet required to get started</p>
   </div>
 </section>
 
-<!-- Features -->
-<section class="features" id="features">
-  <div class="section-label">What You Can Build</div>
-  <h2 class="section-title">Everything you need for smart tokens</h2>
-  <div class="feature-grid">
-    <div class="feature-card">
-      <div class="feature-icon">&#9889;</div>
-      <div class="feature-title">AI Token Creation</div>
-      <div class="feature-desc">Describe your token in plain English &mdash; Claude AI configures and deploys it to the blockchain in seconds.</div>
+<!-- Manifesto -->
+<section class="manifesto">
+  <blockquote>
+    Owning an NFT shouldn't mean owning a JPEG.<br>
+    It should mean owning an agent &mdash; a digital worker that can trade, execute, follow rules, and generate value on your behalf.<br><br>
+    The NFT isn't the asset. It's the control layer.<br>
+    Smart Tokens enforce what it can do. AI defines how it behaves.
+  </blockquote>
+  <div class="attr">&mdash; The TXAI thesis</div>
+</section>
+
+<!-- Utility Assets -->
+<section class="assets" id="assets">
+  <div class="section-label">Utility Assets</div>
+  <h2 class="section-title">Five asset types. One platform.</h2>
+  <p class="section-sub">Everything is a programmable on-chain asset. Create, manage, trade, and automate &mdash; no smart contracts required.</p>
+  <div class="asset-grid">
+    <div class="asset-card">
+      <div class="asset-icon">&#9889;</div>
+      <div class="asset-title">Token</div>
+      <div class="asset-desc">Programmable money. Mintable, burnable, freezable, with transfer fees and IBC bridging.</div>
+      <span class="asset-tag tag-free">Free</span>
     </div>
-    <div class="feature-card">
-      <div class="feature-icon">&#129302;</div>
-      <div class="feature-title">Agent Swarms</div>
-      <div class="feature-desc">Launch AI trading agents that populate your orderbook with real buy/sell orders and stress-test your token.</div>
+    <div class="asset-card">
+      <div class="asset-icon">&#127912;</div>
+      <div class="asset-title">NFT</div>
+      <div class="asset-desc">Smart NFTs with royalties, freezing, whitelisting, soulbound &mdash; more than art.</div>
+      <span class="asset-tag tag-free">Free</span>
     </div>
-    <div class="feature-card">
-      <div class="feature-icon">&#128200;</div>
-      <div class="feature-title">DEX Trading</div>
-      <div class="feature-desc">Full order book exchange with limit &amp; market orders. Watch your token trade live on the Coreum DEX.</div>
+    <div class="asset-card">
+      <div class="asset-icon">&#129302;</div>
+      <div class="asset-title">Agent NFT</div>
+      <div class="asset-desc">AI agents minted as NFTs. They trade, monitor, tweet, and earn. Transfer the NFT, transfer the agent.</div>
+      <span class="asset-tag tag-new">New</span>
     </div>
-    <div class="feature-card">
-      <div class="feature-icon">&#127912;</div>
-      <div class="feature-title">Smart NFTs</div>
-      <div class="feature-desc">Mint NFT collections with built-in features &mdash; freezing, burning, royalties, and soulbound tokens.</div>
+    <div class="asset-card">
+      <div class="asset-icon">&#128640;</div>
+      <div class="asset-title">Airdrop</div>
+      <div class="asset-desc">One-click NFT drops to validator stakers or token holders. Free &mdash; zero platform fees.</div>
+      <span class="asset-tag tag-free">Free</span>
     </div>
-    <div class="feature-card">
-      <div class="feature-icon">&#9881;&#65039;</div>
-      <div class="feature-title">Token Management</div>
-      <div class="feature-desc">Mint, burn, freeze, clawback, whitelist, and set transfer fees. Full issuer control panel.</div>
+    <div class="asset-card">
+      <div class="asset-icon">&#127915;</div>
+      <div class="asset-title">Access Pass</div>
+      <div class="asset-desc">Subscription tokens with payment splitting. Mint on purchase, verify by balance.</div>
+      <span class="asset-tag tag-pass">Creator Pass</span>
     </div>
-    <div class="feature-card">
-      <div class="feature-icon">&#128274;</div>
-      <div class="feature-title">Auth &amp; Permissions</div>
-      <div class="feature-desc">Delegate wallet permissions with Cosmos authz grants. Let others trade or manage tokens on your behalf.</div>
+  </div>
+</section>
+
+<!-- Agent NFTs -->
+<section class="agents" id="agents">
+  <div class="section-label">Agent NFTs</div>
+  <h2 class="section-title">Your NFT has a job</h2>
+  <p class="section-sub">Seven agent types that work 24/7. Configure, mint, and own &mdash; or sell them on the built-in DEX.</p>
+  <div class="agent-grid">
+    <div class="agent-card">
+      <div class="agent-emoji">&#128051;</div>
+      <div class="agent-name">Whale Watcher</div>
+      <div class="agent-job">Monitors large holder movements</div>
+    </div>
+    <div class="agent-card">
+      <div class="agent-emoji">&#128301;</div>
+      <div class="agent-name">Chain Scout</div>
+      <div class="agent-job">Tracks new launches and volume</div>
+    </div>
+    <div class="agent-card">
+      <div class="agent-emoji">&#128202;</div>
+      <div class="agent-name">Holder Analytics</div>
+      <div class="agent-job">Distribution and growth metrics</div>
+    </div>
+    <div class="agent-card">
+      <div class="agent-emoji">&#128065;</div>
+      <div class="agent-name">Event Monitor</div>
+      <div class="agent-job">Watches mints, burns, transfers</div>
+    </div>
+    <div class="agent-card">
+      <div class="agent-emoji">&#128737;</div>
+      <div class="agent-name">Price Guardian</div>
+      <div class="agent-job">DEX price alerts and thresholds</div>
+    </div>
+    <div class="agent-card">
+      <div class="agent-emoji">&#128197;</div>
+      <div class="agent-name">Airdrop Scheduler</div>
+      <div class="agent-job">Auto-airdrops on schedule</div>
+    </div>
+    <div class="agent-card">
+      <div class="agent-emoji">&#128227;</div>
+      <div class="agent-name">Social Agent</div>
+      <div class="agent-job">Auto-tweets from chain data</div>
+    </div>
+  </div>
+</section>
+
+<!-- Comparison -->
+<section class="compare" id="compare">
+  <div class="section-label">Why TXAI</div>
+  <h2 class="section-title">We're not a marketplace. We're the factory.</h2>
+  <table class="compare-table">
+    <thead>
+      <tr><th>Feature</th><th>Bidds / OpenSea</th><th>TXAI Studio</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>NFT Creation</td><td class="them">Manual, multi-step</td><td class="us">3-step wizard</td></tr>
+      <tr><td>Airdrop to stakers</td><td class="them">Not available</td><td class="us">One click, free</td></tr>
+      <tr><td>Platform fee</td><td class="them">1&ndash;7.5%</td><td class="us">0%</td></tr>
+      <tr><td>AI agents</td><td class="them">None</td><td class="us">7 types, mintable as NFTs</td></tr>
+      <tr><td>Built-in DEX</td><td class="them">No (external)</td><td class="us">Full orderbook exchange</td></tr>
+      <tr><td>Token creation</td><td class="them">No</td><td class="us">AI-powered, 30 seconds</td></tr>
+      <tr><td>Subscription passes</td><td class="them">No</td><td class="us">Mint &amp; verify on-chain</td></tr>
+      <tr><td>Mainnet + Testnet</td><td class="them">Mainnet only</td><td class="us">Both, toggle in nav</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- Tokenomics -->
+<section class="tokenomics" id="tokenomics">
+  <div class="section-label">Tokenomics</div>
+  <h2 class="section-title">TX Token</h2>
+  <p class="section-sub">The native utility token powering TXAI Studio. Hold TX to unlock premium tools, earn from agent resales, and govern the platform.</p>
+
+  <div class="token-grid">
+    <div class="token-card">
+      <div class="token-val">100M</div>
+      <div class="token-label">Total Supply</div>
+    </div>
+    <div class="token-card">
+      <div class="token-val">TX</div>
+      <div class="token-label">Symbol</div>
+    </div>
+    <div class="token-card">
+      <div class="token-val">6</div>
+      <div class="token-label">Decimals</div>
+    </div>
+    <div class="token-card">
+      <div class="token-val">Coreum</div>
+      <div class="token-label">Blockchain</div>
+    </div>
+  </div>
+
+  <div class="token-breakdown">
+    <div class="token-row">
+      <span class="token-row-label">Community &amp; Airdrops</span>
+      <div class="token-row-bar"><div class="token-row-fill" style="width:35%"></div></div>
+      <span class="token-row-val">35%</span>
+    </div>
+    <div class="token-row">
+      <span class="token-row-label">Development &amp; Team</span>
+      <div class="token-row-bar"><div class="token-row-fill" style="width:20%"></div></div>
+      <span class="token-row-val">20%</span>
+    </div>
+    <div class="token-row">
+      <span class="token-row-label">DEX Liquidity</span>
+      <div class="token-row-bar"><div class="token-row-fill" style="width:20%"></div></div>
+      <span class="token-row-val">20%</span>
+    </div>
+    <div class="token-row">
+      <span class="token-row-label">Agent Rewards Pool</span>
+      <div class="token-row-bar"><div class="token-row-fill" style="width:15%"></div></div>
+      <span class="token-row-val">15%</span>
+    </div>
+    <div class="token-row">
+      <span class="token-row-label">Ecosystem Grants</span>
+      <div class="token-row-bar"><div class="token-row-fill" style="width:10%"></div></div>
+      <span class="token-row-val">10%</span>
+    </div>
+  </div>
+
+  <div style="margin-top:32px;text-align:center">
+    <div class="section-label" style="margin-bottom:20px">TX Utility</div>
+    <div class="asset-grid" style="max-width:700px;margin:0 auto">
+      <div class="asset-card" style="padding:18px 16px">
+        <div class="asset-title" style="font-size:.88rem">Creator Pass</div>
+        <div class="asset-desc">Hold TX to mint Creator Pass NFTs that unlock premium tools</div>
+      </div>
+      <div class="asset-card" style="padding:18px 16px">
+        <div class="asset-title" style="font-size:.88rem">Agent Royalties</div>
+        <div class="asset-desc">5&ndash;10% royalty on every Agent NFT resale, paid in TX</div>
+      </div>
+      <div class="asset-card" style="padding:18px 16px">
+        <div class="asset-title" style="font-size:.88rem">Governance</div>
+        <div class="asset-desc">Vote on new agent types, fee structures, and platform features</div>
+      </div>
+      <div class="asset-card" style="padding:18px 16px">
+        <div class="asset-title" style="font-size:.88rem">Agent Rewards</div>
+        <div class="asset-desc">Top-performing agents earn TX from the rewards pool</div>
+      </div>
     </div>
   </div>
 </section>
@@ -233,62 +425,49 @@ footer{padding:40px 24px;border-top:1px solid var(--border)}
 <!-- How It Works -->
 <section class="how" id="how">
   <div class="section-label">How It Works</div>
-  <h2 class="section-title">Three steps to your own token</h2>
+  <h2 class="section-title">From idea to on-chain in 60 seconds</h2>
   <div class="steps">
     <div class="step">
       <div class="step-num">1</div>
       <div class="step-content">
-        <h3>Describe Your Token</h3>
-        <p>Type something like &ldquo;a gaming token called GEMS with 5M supply, mintable and burnable&rdquo; &mdash; or use the custom builder for full control.</p>
+        <h3>Choose Your Asset</h3>
+        <p>Pick from 5 utility asset types: tokens, NFTs, AI agents, airdrops, or access passes. Use the AI prompt or build manually.</p>
       </div>
     </div>
     <div class="step">
       <div class="step-num">2</div>
       <div class="step-content">
-        <h3>AI Deploys It</h3>
-        <p>Claude AI parses your description, configures the smart token features, and deploys it to the Coreum testnet in under 30 seconds.</p>
+        <h3>Configure &amp; Deploy</h3>
+        <p>Set features, rules, and parameters. Smart Tokens enforce your constraints on-chain &mdash; no smart contracts needed.</p>
       </div>
     </div>
     <div class="step">
       <div class="step-num">3</div>
       <div class="step-content">
-        <h3>Trade &amp; Manage</h3>
-        <p>Launch an AI agent swarm to populate the orderbook, trade on the DEX, and manage your token &mdash; all from the same dashboard.</p>
+        <h3>Trade, Manage &amp; Automate</h3>
+        <p>Trade on the built-in DEX, manage with the admin panel, and let your AI agents work 24/7. Transfer or sell anytime.</p>
       </div>
     </div>
-  </div>
-</section>
-
-<!-- Tech Stack -->
-<section class="tech">
-  <div class="section-label">Built With</div>
-  <h2 class="section-title">Production-grade infrastructure</h2>
-  <div class="tech-badges">
-    <div class="tech-badge">&#9939; Coreum Blockchain</div>
-    <div class="tech-badge">&#129302; Claude AI (Anthropic)</div>
-    <div class="tech-badge">&#128230; @txai/agent-sdk</div>
-    <div class="tech-badge">&#128279; Cosmos SDK / IBC</div>
-    <div class="tech-badge">&#128737; Keplr &amp; Leap Wallets</div>
   </div>
 </section>
 
 <!-- CTA -->
 <section class="cta">
   <div class="cta-box">
-    <h2>Ready to build?</h2>
-    <p>No wallet needed to get started. Create your first smart token in under a minute.</p>
-    <a href="app.html" class="btn-primary">Launch TXAI Smart Token Studio &rarr;</a>
+    <h2>The best NFTs won't be rare. They'll be profitable.</h2>
+    <p>Create your first utility asset in under a minute. Free to start, no wallet required.</p>
+    <a href="app.html" class="btn-primary">Launch TXAI Studio &rarr;</a>
   </div>
 </section>
 
 <!-- Footer -->
 <footer>
   <div class="footer-inner">
-    <div class="footer-left">Built by <span>Solomente Labs</span> with Claude AI + Coreum Smart Tokens</div>
+    <div class="footer-left">Built by <span>Solomente Labs</span> &mdash; TXAI Studio</div>
     <div class="footer-links">
       <a href="app.html">App</a>
-      <a href="https://epicloop365.github.io/tx-tokenomics/" target="_blank">Tokenomics</a>
-      <a href="https://github.com/EpicLoop365/txai-token-creation-command-line-tool" target="_blank">GitHub</a>
+      <a href="#tokenomics">Tokenomics</a>
+      <a href="https://github.com/EpicLoop365/txai-studio" target="_blank">GitHub</a>
       <a href="https://docs.coreum.dev" target="_blank">Coreum Docs</a>
     </div>
   </div>
