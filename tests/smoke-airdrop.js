@@ -366,6 +366,42 @@ console.log(`  Time: ${new Date().toISOString()}\n`);
     return `closed: ${data.success !== false}`;
   });
 
+  // ─── 9. Feature Flags ───────────────────────────────────────────────
+  console.log("\n── Feature Flags ──\n");
+
+  await test("Flags: endpoint returns flags", async () => {
+    const { status, data } = await get("/api/flags");
+    if (status !== 200) throw new Error(`Status ${status}`);
+    if (!data.flags || !Array.isArray(data.flags)) throw new Error("No flags array");
+    return `flags: ${data.flags.length}, enabled: ${data.flags.filter(f => f.enabled).length}`;
+  });
+
+  await test("Flags: has categories", async () => {
+    const { status, data } = await get("/api/flags");
+    if (status !== 200) throw new Error(`Status ${status}`);
+    const cats = Object.keys(data.byCategory || {});
+    if (cats.length === 0) throw new Error("No categories");
+    return `categories: ${cats.join(", ")}`;
+  });
+
+  await test("Flags: smart_airdrop is enabled", async () => {
+    const { status, data } = await get("/api/flags");
+    if (status !== 200) throw new Error(`Status ${status}`);
+    const flag = data.flags.find(f => f.name === "smart_airdrop");
+    if (!flag) throw new Error("smart_airdrop flag not found");
+    if (!flag.enabled) throw new Error("smart_airdrop is disabled");
+    return `enabled: true`;
+  });
+
+  await test("Flags: dao_voting is enabled", async () => {
+    const { status, data } = await get("/api/flags");
+    if (status !== 200) throw new Error(`Status ${status}`);
+    const flag = data.flags.find(f => f.name === "dao_voting");
+    if (!flag) throw new Error("dao_voting flag not found");
+    if (!flag.enabled) throw new Error("dao_voting is disabled");
+    return `enabled: true`;
+  });
+
   // ─── Summary ──────────────────────────────────────────────────────
   console.log("\n═══════════════════════════════════════");
   console.log("  SMART AIRDROP + DAO SMOKE RESULTS");

@@ -100,6 +100,8 @@ import {
   DAOProposal,
   DAOVote,
 } from "./dao-voting";
+import { requestLogger, log, airdropLog, daoLog, vestingLog, scheduleLog, createScopedLogger } from "./logger";
+import { isEnabled, getAllFlags, getFlagsByCategory, requireFlag } from "./feature-flags";
 
 // ─── RATE LIMITER ────────────────────────────────────────────────────────────
 
@@ -275,6 +277,9 @@ app.use(
 
 app.use(express.json({ limit: "1mb" }));
 
+// Structured request logging
+app.use(requestLogger);
+
 // Trust proxy for rate limiting behind Railway's load balancer
 app.set("trust proxy", 1);
 
@@ -310,6 +315,15 @@ app.get("/health", async (_req, res) => {
   healthInfo.anthropicKeySet = !!process.env.ANTHROPIC_API_KEY;
 
   res.json(healthInfo);
+});
+
+// ─── FEATURE FLAGS STATUS ────────────────────────────────────────────────────
+
+app.get("/api/flags", (_req, res) => {
+  res.json({
+    flags: getAllFlags(),
+    byCategory: getFlagsByCategory(),
+  });
 });
 
 // ─── NETWORK INFO ───────────────────────────────────────────────────────────
@@ -3469,7 +3483,7 @@ app.get("/api/runtime/feed", (_req, res) => {
 
 // ─── SMART AIRDROP: PARSE ──────────────────────────────────────────────────
 
-app.post("/api/smart-airdrop/parse", async (req, res) => {
+app.post("/api/smart-airdrop/parse", requireFlag("smart_airdrop"), async (req, res) => {
   const { prompt } = req.body as { prompt?: string };
 
   if (!prompt || typeof prompt !== "string") {
@@ -3490,16 +3504,20 @@ app.post("/api/smart-airdrop/parse", async (req, res) => {
   try {
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
     const intent = await parseAirdropPrompt(prompt, anthropic);
+    airdropLog.info("Parsed airdrop prompt", {
+      correlationId: req.correlationId,
+      data: { sources: intent.sources?.length, tokenDenom: intent.tokenDenom },
+    });
     res.json({ intent });
   } catch (err) {
-    console.error("[smart-airdrop/parse] Error:", (err as Error).message);
+    airdropLog.error("Parse failed", { correlationId: req.correlationId, error: err as Error });
     res.status(500).json({ error: (err as Error).message });
   }
 });
 
 // ─── SMART AIRDROP: RESOLVE ───────────────────────────────────────────────
 
-app.post("/api/smart-airdrop/resolve", async (req, res) => {
+app.post("/api/smart-airdrop/resolve", requireFlag("smart_airdrop"), async (req, res) => {
   const { intent, sender, network: reqNetwork } = req.body as {
     intent?: AirdropIntent;
     sender?: string;
@@ -3542,7 +3560,7 @@ app.post("/api/smart-airdrop/resolve", async (req, res) => {
 
 // ─── SMART AIRDROP: EXECUTE (SSE) ────────────────────────────────────────
 
-app.post("/api/smart-airdrop/execute", async (req, res) => {
+app.post("/api/smart-airdrop/execute", requireFlag("smart_airdrop"), async (req, res) => {
   const { denom, recipients, sender, network: reqNetwork } = req.body as {
     denom?: string;
     recipients?: Array<{ address: string; amount: string }>;
@@ -3759,7 +3777,7 @@ app.post("/api/smart-airdrop/send-review", async (req, res) => {
 
 // ─── SMART AIRDROP: DRY RUN ──────────────────────────────────────────────
 
-app.post("/api/smart-airdrop/dry-run", async (req, res) => {
+app.post("/api/smart-airdrop/dry-run", requireFlag("smart_airdrop"), async (req, res) => {
   const { denom, recipients, sender, network: reqNetwork } = req.body as {
     denom?: string;
     recipients?: Array<{ address: string; amount: string }>;
@@ -3900,7 +3918,7 @@ app.post("/api/smart-airdrop/dry-run", async (req, res) => {
 
 // ─── SMART AIRDROP: SCHEDULE ─────────────────────────────────────────────
 
-app.post("/api/smart-airdrop/schedule", async (req, res) => {
+app.post("/api/smart-airdrop/schedule", requireFlag("airdrop_scheduling"), async (req, res) => {
   const {
     denom,
     recipients,
@@ -3962,6 +3980,10 @@ app.post("/api/smart-airdrop/schedule", async (req, res) => {
     triggerDirection,
   });
 
+  scheduleLog.info("Airdrop scheduled", {
+    correlationId: req.correlationId,
+    data: { id: scheduled.id, type: scheduleType, recipients: recipients.length, denom },
+  });
   res.json({ ok: true, scheduled });
 });
 
@@ -4314,7 +4336,7 @@ app.get("/receipt/:id", (req, res) => {
 
 // ─── SMART AIRDROP: VESTING ─────────────────────────────────────────────
 
-app.post("/api/smart-airdrop/vesting-preview", (req, res) => {
+app.post("/api/smart-airdrop/vesting-preview", requireFlag("airdrop_vesting"), (req, res) => {
   const { recipients, schedule } = req.body as {
     recipients?: Array<{ address: string; amount: string }>;
     schedule?: VestingSchedule;
@@ -4337,7 +4359,7 @@ app.post("/api/smart-airdrop/vesting-preview", (req, res) => {
   }
 });
 
-app.post("/api/smart-airdrop/execute-vested", async (req, res) => {
+app.post("/api/smart-airdrop/execute-vested", requireFlag("airdrop_vesting"), async (req, res) => {
   const { denom, recipients, sender, network: reqNetwork, schedule } = req.body as {
     denom?: string;
     recipients?: Array<{ address: string; amount: string }>;
@@ -4432,7 +4454,7 @@ app.get("/api/smart-airdrop/vesting-plans/:id", (req, res) => {
 
 // ─── DAO VOTING ─────────────────────────────────────────────────────────────
 
-app.post("/api/dao/create-proposal", (req, res) => {
+app.post("/api/dao/create-proposal", requireFlag("dao_voting"), (req, res) => {
   const {
     title, description, options, gateType,
     nftClassId, tokenDenom, minTokenBalance,
@@ -4530,7 +4552,7 @@ app.get("/api/dao/proposals/:id", (req, res) => {
   res.json({ proposal, results: getResults(proposal.id) });
 });
 
-app.post("/api/dao/vote", async (req, res) => {
+app.post("/api/dao/vote", requireFlag("dao_voting"), async (req, res) => {
   const { proposalId, voter, option, network: reqNetwork } = req.body as {
     proposalId?: string;
     voter?: string;
@@ -4605,6 +4627,10 @@ app.post("/api/dao/vote", async (req, res) => {
     return;
   }
 
+  daoLog.info("Vote cast", {
+    correlationId: req.correlationId,
+    data: { proposalId, voter: vote.voter, option: vote.option, power: vote.power },
+  });
   res.json({ vote, currentResults: getResults(proposalId) });
 });
 
@@ -4672,6 +4698,14 @@ attachWebSocket(server);
 
 server.listen(PORT, () => {
   const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
+  log("info", "startup", "TXAI Smart Token Studio API started", {
+    data: {
+      port: PORT,
+      network: networkName,
+      flags: getAllFlags().filter(f => f.enabled).map(f => f.name),
+      logLevel: process.env.LOG_LEVEL || "info",
+    },
+  });
   console.log(`TXAI Smart Token Studio API on port ${PORT}`);
   console.log(`Network: ${networkName}`);
   console.log(`WebSocket: ws://localhost:${PORT}/ws`);
