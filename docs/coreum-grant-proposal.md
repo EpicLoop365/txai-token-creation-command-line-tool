@@ -173,18 +173,18 @@ This is intentional. We built lean to prove the concept before asking for money.
 
 ### Requested Amount
 
-**50,000 CORE** (~$15,000–$25,000 USD depending on market price)
+**2,500,000 CORE**
 
 | Category | Amount | % |
 |----------|--------|---|
-| Development (6 months full-time) | 20,000 CORE | 40% |
-| Security audit (pre-mainnet) | 10,000 CORE | 20% |
-| Mainnet deployment + infrastructure (12 months) | 5,000 CORE | 10% |
-| On-chain job escrow development | 5,000 CORE | 10% |
-| Twitter API + agent social integration | 3,000 CORE | 6% |
-| Documentation + developer onboarding | 3,000 CORE | 6% |
-| Cross-chain agent monitoring | 2,000 CORE | 4% |
-| Community bounties + ecosystem grants | 2,000 CORE | 4% |
+| Development (12 months full-time) | 1,000,000 CORE | 40% |
+| Security audit (pre-mainnet, professional firm) | 500,000 CORE | 20% |
+| On-chain job escrow + agent execution engine | 300,000 CORE | 12% |
+| Infrastructure (hosting, databases, scaling — 12 months) | 150,000 CORE | 6% |
+| Twitter API + autonomous agent social layer | 150,000 CORE | 6% |
+| Cross-chain agent monitoring (IBC + EVM) | 150,000 CORE | 6% |
+| SDK documentation + developer onboarding | 125,000 CORE | 5% |
+| Community bounties + ecosystem builder grants | 125,000 CORE | 5% |
 
 **Accountability:** Funds drawn in milestone-based tranches. Each milestone has a deliverable + demo. Community can verify progress at any time at https://solomentelabs.com.
 
