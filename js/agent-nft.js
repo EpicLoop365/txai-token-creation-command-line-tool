@@ -83,6 +83,20 @@ const AGENT_NFT_TEMPLATES = [
       { key: 'schedule', label: 'Schedule', type: 'text', placeholder: 'weekly' },
       { key: 'recipients', label: 'Recipient source', type: 'text', placeholder: 'validator:testcorevaloper1...' }
     ]
+  },
+  {
+    id: 'social-agent',
+    name: 'Social Agent',
+    desc: 'Auto-tweets from on-chain data. Whale alerts, milestones, daily summaries — always-on social presence.',
+    icon: '\u{1F4E3}',
+    symbol: 'SOCIAL',
+    params: [
+      { key: 'denom', label: 'Token to track', type: 'text', placeholder: 'e.g. mytoken-testcore1...' },
+      { key: 'triggers', label: 'Tweet triggers', type: 'text', placeholder: 'whale,milestone,daily,price' },
+      { key: 'whaleThreshold', label: 'Whale alert threshold', type: 'number', placeholder: '100000' },
+      { key: 'tweetTemplate', label: 'Tweet template', type: 'text', placeholder: '🐋 Whale alert! {amount} ${symbol} moved' },
+      { key: 'interval', label: 'Check every (minutes)', type: 'number', placeholder: '15', default: 15 }
+    ]
   }
 ];
 
