@@ -2571,6 +2571,27 @@ footer{
 .gate-tier-owned{font-size:.72rem;font-weight:600;color:var(--green);padding:10px 0}
 .gate-tier-locked{font-size:.62rem;color:var(--muted);padding:8px 0}
 .gate-modal-footer{text-align:center;margin-top:18px;font-size:.6rem;color:var(--text-muted);font-style:italic}
+.gate-tier-expiry{font-size:.58rem;color:var(--muted);margin-top:2px;font-style:italic}
+
+/* Duration Picker */
+.gate-duration-picker{width:100%;margin-top:6px}
+.gate-duration-label{font-size:.6rem;font-weight:600;color:var(--text-dim);margin-bottom:6px;text-transform:uppercase;letter-spacing:.3px}
+.gate-duration-options{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+@media(max-width:480px){.gate-duration-options{grid-template-columns:repeat(2,1fr)}}
+.gate-dur-btn{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 4px;border:1px solid var(--border);border-radius:6px;background:transparent;color:var(--text-dim);cursor:pointer;transition:all .15s;position:relative}
+.gate-dur-btn:hover{border-color:var(--purple);background:rgba(124,109,250,.05)}
+.gate-dur-btn.default{border-color:var(--purple-dim)}
+.gate-dur-btn:disabled{opacity:.5;cursor:wait}
+.gate-dur-period{font-size:.62rem;font-weight:600;color:var(--text)}
+.gate-dur-price{font-size:.7rem;font-weight:700;color:var(--green);font-family:var(--mono)}
+.gate-dur-save{font-size:.48rem;font-weight:600;color:#f59e0b;background:rgba(245,158,11,.1);padding:1px 4px;border-radius:3px}
+
+/* Expiry success */
+.gate-success-expiry{font-size:.7rem;color:var(--muted);font-family:var(--mono);margin-top:4px}
+
+/* Nav badge states */
+.gate-badge.expired{color:#ef4444;border-color:rgba(239,68,68,.3);animation:pulse-dot 1.5s infinite}
+.gate-badge.expiring-soon{animation:pulse-dot 2s infinite}
 
 /* Upgrade Success */
 .gate-upgrade-success{display:flex;flex-direction:column;align-items:center;text-align:center;padding:30px 20px;gap:12px}

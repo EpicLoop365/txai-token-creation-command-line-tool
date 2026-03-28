@@ -16,10 +16,26 @@
  *   whitelisted → whitelisting       → can only transfer to approved addresses (controlled marketplace)
  *   open        → (no restriction)   → fully transferable to anyone
  */
+/*
+ * Duration options:
+ *   0 = lifetime (never expires)
+ *   N = days until expiry
+ *
+ * Renewal: pay again → mint new pass with fresh expiry. Old expired pass stays as history badge.
+ */
+const PASS_DURATIONS = [
+  { days: 1,   label: '24 Hours', multiplier: 0.1 },     // 10% of monthly price
+  { days: 7,   label: '7 Days',   multiplier: 0.3 },     // 30% of monthly price
+  { days: 30,  label: '30 Days',  multiplier: 1 },        // base price
+  { days: 90,  label: '90 Days',  multiplier: 2.7 },      // 10% off (3x * 0.9)
+  { days: 365, label: '1 Year',   multiplier: 9 },        // 25% off (12x * 0.75)
+  { days: 0,   label: 'Lifetime', multiplier: 25 },       // ~2 years worth, never expires
+];
+
 const PASS_TIERS = {
-  scout:   { level: 1, name: 'Scout Pass',   icon: '\u{1F50D}', color: '#6b7280', price: 0,    transfer: 'soulbound',   desc: 'Browse, view tokens & NFTs, use DEX' },
-  creator: { level: 2, name: 'Creator Pass',  icon: '\u{1F3A8}', color: '#7c6dfa', price: 50,   transfer: 'soulbound',   desc: 'Create tokens, mint NFTs, basic airdrops, 3 agent templates' },
-  pro:     { level: 3, name: 'Pro Pass',       icon: '\u{26A1}',  color: '#06d6a0', price: 200,  transfer: 'whitelisted', desc: 'All agents, custom scripts, unlimited airdrops, priority execution' },
+  scout:   { level: 1, name: 'Scout Pass',   icon: '\u{1F50D}', color: '#6b7280', price: 0,    transfer: 'soulbound',   duration: 0, autoMint: true, desc: 'Free identity pass — required for all tools. Auto-minted on first connect.' },
+  creator: { level: 2, name: 'Creator Pass',  icon: '\u{1F3A8}', color: '#7c6dfa', price: 50,   transfer: 'soulbound',   duration: 30, desc: 'Create tokens, mint NFTs, basic airdrops, 3 agent templates' },
+  pro:     { level: 3, name: 'Pro Pass',       icon: '\u{26A1}',  color: '#06d6a0', price: 200,  transfer: 'whitelisted', duration: 30, desc: 'All agents, custom scripts, unlimited airdrops, priority execution' },
 };
 
 // Which tier each feature requires
@@ -46,7 +62,7 @@ const FEATURE_TIERS = {
   'provider-tools':   3,
 };
 
-let gateCache = null;   // { tier, level, ts, wallet, nfts }
+let gateCache = null;   // { tier, level, ts, wallet, expiresAt, expired }
 let gateChecking = false;
 
 /* ── Get current wallet ── */
@@ -67,14 +83,14 @@ async function tokenGateCheck(blockElementId, feature) {
 
   // Use cache if fresh (60s)
   if (gateCache && gateCache.wallet === wallet && (Date.now() - gateCache.ts < 60000)) {
-    return gateEvaluate(blockElementId, feature, gateCache.level);
+    return gateEvaluate(blockElementId, feature, gateCache);
   }
 
-  // Query chain for user's passes
+  // Query chain for user's passes (now returns full info including expiry)
   try {
-    const level = await gateQueryTier(wallet);
-    gateCache = { tier: gateLevelToName(level), level, ts: Date.now(), wallet };
-    return gateEvaluate(blockElementId, feature, level);
+    const result = await gateQueryTier(wallet);
+    gateCache = { ...result, ts: Date.now(), wallet };
+    return gateEvaluate(blockElementId, feature, gateCache);
   } catch {
     // Fail open on error
     return false;
@@ -82,8 +98,15 @@ async function tokenGateCheck(blockElementId, feature) {
 }
 
 /* ── Evaluate access ── */
-function gateEvaluate(blockElementId, feature, userLevel) {
+function gateEvaluate(blockElementId, feature, cacheEntry) {
   const requiredLevel = FEATURE_TIERS[feature] || 1;
+  const userLevel = cacheEntry.level || 0;
+
+  // Check if pass has expired
+  if (cacheEntry.expired && userLevel >= requiredLevel) {
+    tokenGateShowPrompt(blockElementId, 'expired', cacheEntry.tier);
+    return true; // blocked — expired
+  }
 
   if (userLevel >= requiredLevel) {
     return false; // allowed
@@ -95,7 +118,7 @@ function gateEvaluate(blockElementId, feature, userLevel) {
   return true; // blocked
 }
 
-/* ── Query chain for highest pass tier ── */
+/* ── Query chain for highest pass tier + check expiry ── */
 async function gateQueryTier(wallet) {
   try {
     const network = (window.txaiWallet && window.txaiWallet.chainId === 'coreum-mainnet-1') ? 'mainnet' : 'testnet';
@@ -107,28 +130,63 @@ async function gateQueryTier(wallet) {
     const data = await res.json();
     const nfts = data.nfts || [];
 
-    let highestLevel = 0;
+    let best = { level: 0, tier: 'none', expired: false, expiresAt: null, daysLeft: null };
 
     for (const nft of nfts) {
       const classId = (nft.class_id || '').toLowerCase();
 
-      // Check for Pro pass
+      // Determine tier from class ID
+      let nftLevel = 0;
+      let nftTier = 'none';
       if (classId.includes('propass') || classId.includes('pro-pass') || classId.includes('txaipro')) {
-        highestLevel = Math.max(highestLevel, 3);
+        nftLevel = 3; nftTier = 'pro';
+      } else if (classId.includes('creatorpass') || classId.includes('creator-pass') || classId.includes('txaicreator')) {
+        nftLevel = 2; nftTier = 'creator';
+      } else if (classId.includes('scoutpass') || classId.includes('scout-pass') || classId.includes('txaiscout')) {
+        nftLevel = 1; nftTier = 'scout';
       }
-      // Check for Creator pass
-      else if (classId.includes('creatorpass') || classId.includes('creator-pass') || classId.includes('txaicreator')) {
-        highestLevel = Math.max(highestLevel, 2);
+
+      if (nftLevel === 0) continue;
+
+      // Try to parse metadata from URI for expiry check
+      let expiresAt = null;
+      let expired = false;
+      let daysLeft = null;
+
+      try {
+        const uri = nft.uri || nft.data?.uri || '';
+        if (uri.startsWith('data:application/json;base64,')) {
+          const json = JSON.parse(atob(uri.split(',')[1]));
+          if (json.expiresAt) {
+            expiresAt = json.expiresAt;
+            const expiryDate = new Date(json.expiresAt);
+            expired = expiryDate <= new Date();
+            daysLeft = expired ? 0 : Math.ceil((expiryDate - new Date()) / (1000 * 60 * 60 * 24));
+          }
+          // Lifetime pass (duration: 0) never expires
+          if (json.duration === 0) {
+            expired = false;
+            daysLeft = null;
+            expiresAt = null;
+          }
+        }
+      } catch {
+        // Can't parse metadata — assume valid (fail open)
+        expired = false;
       }
-      // Check for Scout pass
-      else if (classId.includes('scoutpass') || classId.includes('scout-pass') || classId.includes('txaiscout')) {
-        highestLevel = Math.max(highestLevel, 1);
+
+      // Prefer highest non-expired tier, but track expired highest too
+      if (!expired && nftLevel > best.level) {
+        best = { level: nftLevel, tier: nftTier, expired: false, expiresAt, daysLeft };
+      } else if (expired && nftLevel > best.level && best.level === 0) {
+        // Only use expired pass if we have nothing better
+        best = { level: nftLevel, tier: nftTier, expired: true, expiresAt, daysLeft: 0 };
       }
     }
 
-    return highestLevel;
+    return best;
   } catch {
-    return 0; // no pass
+    return { level: 0, tier: 'none', expired: false, expiresAt: null, daysLeft: null };
   }
 }
 
@@ -142,8 +200,14 @@ function gateLevelToName(level) {
 
 /* ── Get current user tier (from cache) ── */
 function gateGetCurrentTier() {
-  if (!gateCache) return { level: 0, name: 'none' };
-  return { level: gateCache.level, name: gateCache.tier };
+  if (!gateCache) return { level: 0, name: 'none', expired: false, daysLeft: null, expiresAt: null };
+  return {
+    level: gateCache.level,
+    name: gateCache.tier,
+    expired: gateCache.expired || false,
+    daysLeft: gateCache.daysLeft,
+    expiresAt: gateCache.expiresAt,
+  };
 }
 
 /* ── Show gate prompt ── */
@@ -166,6 +230,18 @@ function tokenGateShowPrompt(nearElementId, reason, requiredTier) {
         <span>All tools require a connected wallet + NFT pass.</span>
       </div>
       <button class="token-gate-btn" onclick="globalShowWalletOptions()">Connect Wallet</button>
+    `;
+  } else if (reason === 'expired') {
+    const tier = PASS_TIERS[requiredTier] || PASS_TIERS.creator;
+    const current = gateGetCurrentTier();
+    prompt.innerHTML = `
+      <div class="token-gate-icon">\u{23F0}</div>
+      <div class="token-gate-text">
+        <strong>${tier.name} expired</strong>
+        <span>Your ${tier.name} expired${current.expiresAt ? ' on ' + new Date(current.expiresAt).toLocaleDateString() : ''}. Renew to continue using these tools.</span>
+      </div>
+      <button class="token-gate-btn" onclick="tokenGateShowUpgrade('${requiredTier}')">Renew ${tier.name}</button>
+      <button class="token-gate-dismiss" onclick="this.parentElement.remove()">\u2715</button>
     `;
   } else if (reason === 'upgrade') {
     const tier = PASS_TIERS[requiredTier] || PASS_TIERS.creator;
@@ -225,11 +301,26 @@ function tokenGateShowUpgrade(targetTier) {
     const canUpgrade = tier.level === current.level + 1 || (current.level === 0 && tier.level === 1);
     const isOwned = tier.level <= current.level;
 
+    // Check if current pass is expired (show renew instead of owned)
+    const currentInfo = gateGetCurrentTier();
+    const isExpired = isOwned && isCurrent && currentInfo.expired;
+
     let btnHtml = '';
-    if (isOwned) {
-      btnHtml = '<div class="gate-tier-owned">\u2713 Owned</div>';
+    if (isOwned && !isExpired) {
+      // Show days remaining if applicable
+      const daysLeft = currentInfo.daysLeft;
+      const expiryNote = (isCurrent && daysLeft !== null && daysLeft > 0)
+        ? `<div class="gate-tier-expiry">${daysLeft} day${daysLeft !== 1 ? 's' : ''} remaining</div>`
+        : (isCurrent && daysLeft === null) ? '<div class="gate-tier-expiry">Lifetime access</div>' : '';
+      btnHtml = `<div class="gate-tier-owned">\u2713 Owned</div>${expiryNote}`;
+    } else if (isExpired) {
+      // Expired — show duration picker + renew
+      btnHtml = gateRenderDurationPicker(key, tier);
+    } else if (tier.price === 0) {
+      btnHtml = `<button class="gate-tier-buy-btn" onclick="tokenGateMintPass('${key}', 0)">Mint Free</button>`;
     } else if (canUpgrade || isTarget) {
-      btnHtml = `<button class="gate-tier-buy-btn" onclick="tokenGateMintPass('${key}')">${tier.price === 0 ? 'Mint Free' : 'Upgrade — ' + tier.price + ' TX'}</button>`;
+      // Paid tier — show duration picker
+      btnHtml = gateRenderDurationPicker(key, tier);
     } else {
       btnHtml = `<div class="gate-tier-locked">\u{1F512} Unlock ${PASS_TIERS[gateLevelToName(tier.level - 1)]?.name || 'previous tier'} first</div>`;
     }
@@ -277,6 +368,49 @@ function tokenGateShowUpgrade(targetTier) {
   });
 }
 
+/* ── Render duration picker for a tier ── */
+function gateRenderDurationPicker(tierKey, tier) {
+  let html = '<div class="gate-duration-picker">';
+  html += '<div class="gate-duration-label">Choose duration:</div>';
+  html += '<div class="gate-duration-options">';
+
+  for (const dur of PASS_DURATIONS) {
+    if (tier.price === 0 && dur.days !== 0) continue; // Scout is always free lifetime
+
+    const price = dur.days === 0
+      ? Math.round(tier.price * dur.multiplier)
+      : Math.round(tier.price * dur.multiplier);
+    const isDefault = dur.days === 30;
+    const perDay = dur.days > 0 ? (price / dur.days).toFixed(1) : '';
+    const savingPct = dur.multiplier < dur.days / 30
+      ? Math.round((1 - (dur.multiplier / (dur.days / 30))) * 100) + '% off'
+      : '';
+
+    html += `
+      <button class="gate-dur-btn ${isDefault ? 'default' : ''}"
+        onclick="tokenGateMintPass('${tierKey}', ${dur.days})"
+        title="${dur.days > 0 ? perDay + ' TX/day' : 'One-time purchase'}">
+        <span class="gate-dur-period">${dur.label}</span>
+        <span class="gate-dur-price">${price > 0 ? price + ' TX' : 'Free'}</span>
+        ${savingPct ? '<span class="gate-dur-save">' + savingPct + '</span>' : ''}
+      </button>`;
+  }
+
+  html += '</div></div>';
+  return html;
+}
+
+/* ── Calculate price for tier + duration ── */
+function gateCalcPrice(tierKey, durationDays) {
+  const tier = PASS_TIERS[tierKey];
+  if (!tier || tier.price === 0) return 0;
+
+  const dur = PASS_DURATIONS.find(d => d.days === durationDays);
+  if (!dur) return tier.price; // fallback to base
+
+  return Math.round(tier.price * dur.multiplier);
+}
+
 /* ── Feature lists per tier ── */
 function gateGetFeatureList(tierKey) {
   const features = {
@@ -307,10 +441,13 @@ function gateGetFeatureList(tierKey) {
   return list.map(f => `<div class="gate-feature-item">\u2713 ${f}</div>`).join('');
 }
 
-/* ── Mint / Upgrade Pass ── */
-async function tokenGateMintPass(tierKey) {
+/* ── Mint / Upgrade / Renew Pass ── */
+async function tokenGateMintPass(tierKey, durationDays) {
   const tier = PASS_TIERS[tierKey];
   if (!tier) return;
+
+  // Default duration
+  if (durationDays === undefined) durationDays = tier.duration;
 
   const wallet = gateGetWallet();
   if (!wallet) {
@@ -318,22 +455,26 @@ async function tokenGateMintPass(tierKey) {
     return;
   }
 
+  const actualPrice = gateCalcPrice(tierKey, durationDays);
+
   // Find the buy button and show loading
-  const btns = document.querySelectorAll('.gate-tier-buy-btn');
-  btns.forEach(b => { b.disabled = true; b.textContent = 'Minting...'; });
+  const btns = document.querySelectorAll('.gate-tier-buy-btn, .gate-dur-btn');
+  btns.forEach(b => { b.disabled = true; });
+  const clickedBtn = event && event.target ? event.target.closest('button') : null;
+  if (clickedBtn) clickedBtn.textContent = 'Minting...';
 
   try {
     // For paid tiers, we need to send payment first, then mint
-    if (tier.price > 0) {
+    if (actualPrice > 0) {
       // Send payment to platform wallet
       const payRes = await fetch(`${API_URL}/api/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           to: 'testcore15s5gdh74x5fwwyyt2wspahdqmhf0x5nzvlelcf', // Platform wallet
-          amount: tier.price,
+          amount: actualPrice,
           denom: 'utestcore',
-          memo: `TXAI Pass Upgrade: ${tierKey}`,
+          memo: `TXAI Pass: ${tierKey} / ${durationDays}d`,
         }),
       });
       const payData = await payRes.json();
@@ -341,6 +482,17 @@ async function tokenGateMintPass(tierKey) {
         throw new Error(payData.error || 'Payment failed');
       }
     }
+
+    // Calculate expiry date
+    const now = new Date();
+    let expiresAt = null;
+    if (durationDays > 0) {
+      const expiry = new Date(now.getTime() + (durationDays * 24 * 60 * 60 * 1000));
+      expiresAt = expiry.toISOString();
+    }
+    // durationDays === 0 means lifetime (no expiry)
+
+    const durLabel = PASS_DURATIONS.find(d => d.days === durationDays)?.label || durationDays + ' Days';
 
     // Mint the pass NFT
     const passName = tier.name;
@@ -350,11 +502,15 @@ async function tokenGateMintPass(tierKey) {
       tier: tierKey,
       level: tier.level,
       name: passName,
-      transfer: tier.transfer,  // soulbound | whitelisted | open
+      transfer: tier.transfer,
+      duration: durationDays,
+      durationLabel: durLabel,
+      expiresAt: expiresAt,          // null = lifetime
+      price: actualPrice,
       features: Object.entries(FEATURE_TIERS)
         .filter(([, lvl]) => lvl <= tier.level)
         .map(([feat]) => feat),
-      issuedAt: new Date().toISOString(),
+      issuedAt: now.toISOString(),
       wallet: wallet,
     };
 
@@ -384,9 +540,17 @@ async function tokenGateMintPass(tierKey) {
     if (!res.ok || data.error) throw new Error(data.error || 'Mint failed');
 
     // Success — update cache
-    gateCache = { tier: tierKey, level: tier.level, ts: Date.now(), wallet };
+    const daysLeft = durationDays > 0 ? durationDays : null;
+    gateCache = { tier: tierKey, level: tier.level, ts: Date.now(), wallet, expired: false, expiresAt, daysLeft };
+
+    // Update nav badge
+    tokenGateRenderBadge();
 
     // Update modal
+    const expiryMsg = expiresAt
+      ? `Expires: ${new Date(expiresAt).toLocaleDateString()} (${durationDays} days)`
+      : 'Lifetime access — never expires';
+
     const modal = document.getElementById('tokenGateUpgradeModal');
     if (modal) {
       const modalContent = modal.querySelector('.gate-modal');
@@ -397,6 +561,7 @@ async function tokenGateMintPass(tierKey) {
             <div class="gate-success-title">${tier.name} Activated!</div>
             <div class="gate-success-desc">Your ${tier.name} NFT has been minted to your wallet. New tools are now unlocked.</div>
             <div class="gate-success-class">Class: ${data.classId || 'N/A'}</div>
+            <div class="gate-success-expiry">\u{23F0} ${expiryMsg}</div>
             <button class="gate-tier-buy-btn" onclick="document.getElementById('tokenGateUpgradeModal').remove()">Start Building</button>
           </div>
         `;
@@ -434,9 +599,15 @@ function tokenGateRenderBadge() {
   const current = gateGetCurrentTier();
   if (current.level === 0) {
     el.innerHTML = '<span class="gate-badge none" onclick="tokenGateShowUpgrade(\'scout\')">No Pass</span>';
+  } else if (current.expired) {
+    const tier = PASS_TIERS[current.name];
+    el.innerHTML = `<span class="gate-badge expired" onclick="tokenGateShowUpgrade('${current.name}')" title="Click to renew">\u{23F0} ${tier.name} (Expired)</span>`;
   } else {
     const tier = PASS_TIERS[current.name];
-    el.innerHTML = `<span class="gate-badge ${current.name}" onclick="tokenGateShowUpgrade('${current.name}')" style="border-color:${tier.color}">${tier.icon} ${tier.name}</span>`;
+    const expiryHint = (current.daysLeft !== null && current.daysLeft <= 7)
+      ? ` (${current.daysLeft}d left)` : '';
+    const warnClass = (current.daysLeft !== null && current.daysLeft <= 3) ? ' expiring-soon' : '';
+    el.innerHTML = `<span class="gate-badge ${current.name}${warnClass}" onclick="tokenGateShowUpgrade('${current.name}')" style="border-color:${tier.color}">${tier.icon} ${tier.name}${expiryHint}</span>`;
   }
 }
 
@@ -445,7 +616,57 @@ async function tokenGateInit() {
   const wallet = gateGetWallet();
   if (!wallet) return;
 
-  const level = await gateQueryTier(wallet);
-  gateCache = { tier: gateLevelToName(level), level, ts: Date.now(), wallet };
+  const result = await gateQueryTier(wallet);
+  gateCache = { ...result, ts: Date.now(), wallet };
   tokenGateRenderBadge();
+
+  // Auto-mint Scout Pass if user has no pass at all
+  if (result.level === 0 && PASS_TIERS.scout.autoMint) {
+    console.log('[TXAI] No pass found — auto-minting Scout Pass...');
+    try {
+      await tokenGateAutoMintScout(wallet);
+    } catch (err) {
+      console.warn('[TXAI] Scout auto-mint failed:', err.message);
+    }
+  }
+}
+
+/* ── Auto-mint free Scout Pass (identity NFT) ── */
+async function tokenGateAutoMintScout(wallet) {
+  const tier = PASS_TIERS.scout;
+  const metadata = {
+    type: 'access-pass',
+    tier: 'scout',
+    level: 1,
+    name: tier.name,
+    transfer: 'soulbound',
+    duration: 0,           // lifetime
+    expiresAt: null,        // never expires
+    autoMinted: true,
+    features: Object.entries(FEATURE_TIERS)
+      .filter(([, lvl]) => lvl <= 1)
+      .map(([feat]) => feat),
+    issuedAt: new Date().toISOString(),
+    wallet: wallet,
+  };
+
+  const res = await fetch(`${API_URL}/api/nft-airdrop`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name: tier.name,
+      symbol: 'SCOUTPASS',
+      description: tier.desc,
+      uri: 'data:application/json;base64,' + btoa(JSON.stringify(metadata)),
+      recipients: [wallet],
+      features: ['disable_sending'],  // Soulbound
+    }),
+  });
+
+  const data = await res.json();
+  if (res.ok && !data.error) {
+    console.log('%c\u{1F50D} Scout Pass auto-minted! Class: ' + data.classId, 'color:#6b7280;font-weight:bold');
+    gateCache = { tier: 'scout', level: 1, ts: Date.now(), wallet, expired: false, expiresAt: null, daysLeft: null };
+    tokenGateRenderBadge();
+  }
 }
