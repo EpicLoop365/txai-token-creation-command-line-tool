@@ -336,10 +336,14 @@ async function _walletAutoReconnect() {
 
   try {
     const { chainId, wallet } = JSON.parse(stored);
-    const walletName = wallet || 'keplr'; // backward compat with old key format
+    const walletName = wallet || 'keplr';
 
     const provider = _walletGetProvider(walletName);
     if (!provider) return; // Extension not loaded yet
+
+    // Show "Reconnecting..." on the button while connecting
+    const btn = document.getElementById('navConnectBtn');
+    if (btn) { btn.textContent = 'Reconnecting...'; btn.disabled = true; }
 
     await keplrConnect(chainId, walletName);
 
@@ -347,6 +351,9 @@ async function _walletAutoReconnect() {
     if (typeof updateGlobalWalletUI === 'function') {
       updateGlobalWalletUI(true, walletName);
     }
+
+    // Flash "Connected" toast
+    _walletShowToast(walletName);
   } catch (err) {
     console.warn('[wallet] Auto-reconnect failed:', err.message);
     localStorage.removeItem(WALLET_LS_KEY);
@@ -418,6 +425,23 @@ function _walletUpdateNavUI(connected) {
 
 // Backward compat alias
 function _keplrUpdateNavUI(connected) { _walletUpdateNavUI(connected); }
+
+/** Show a brief "Connected" toast notification */
+function _walletShowToast(walletName) {
+  const provLabels = { keplr: 'Keplr', leap: 'Leap', cosmostation: 'Cosmostation' };
+  const label = provLabels[walletName] || walletName;
+  const toast = document.createElement('div');
+  toast.className = 'wallet-toast';
+  toast.innerHTML = '<span class="wallet-toast-dot"></span> Connected via ' + label;
+  document.body.appendChild(toast);
+  // Animate in
+  requestAnimationFrame(() => toast.classList.add('show'));
+  // Auto-remove after 3s
+  setTimeout(() => {
+    toast.classList.remove('show');
+    setTimeout(() => toast.remove(), 400);
+  }, 3000);
+}
 
 /* ---- Init: auto-reconnect when DOM is ready ---- */
 window.addEventListener('load', function() {

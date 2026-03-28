@@ -1,6 +1,42 @@
 /* ===== TXAI - Global Wallet Connection (Multi-Wallet) ===== */
 /* Part of the Solomente TXAI Compliance SDK */
 
+/** Smart connect: reconnect last wallet instantly, or show picker if first time */
+async function walletQuickConnect(){
+  // If already connected, do nothing
+  if(window.txaiWallet && window.txaiWallet.connected) return;
+
+  // Check for previously used wallet
+  const stored = localStorage.getItem('txai_wallet_connected');
+  if(stored){
+    try {
+      const { wallet } = JSON.parse(stored);
+      const provider = _walletGetProvider(wallet);
+      if(provider){
+        // Last wallet still installed — connect directly, no modal
+        await navConnectWallet(wallet);
+        return;
+      }
+    } catch(e){ /* fall through to modal */ }
+  }
+
+  // Auto-detect: if only one wallet installed, connect directly
+  const detected = walletDetect();
+  const available = [
+    detected.leap && 'leap',
+    detected.keplr && 'keplr',
+  ].filter(Boolean);
+
+  if(available.length === 1){
+    // Only one wallet — skip modal, connect directly
+    await navConnectWallet(available[0]);
+    return;
+  }
+
+  // Multiple wallets or none — show picker modal
+  globalShowWalletOptions();
+}
+
 function globalShowWalletOptions(){
   const overlay = document.getElementById('walletChoiceOverlay');
   if(!overlay) return;
