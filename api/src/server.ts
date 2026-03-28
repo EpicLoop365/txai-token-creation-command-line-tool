@@ -88,6 +88,18 @@ import {
   updateVestingPlan,
   getPendingVestingSteps,
 } from "./smart-airdrop";
+import {
+  createProposal,
+  getProposals,
+  getProposalById,
+  castVote,
+  getResults,
+  closeProposal,
+  closeExpiredProposals,
+  checkEligibility,
+  DAOProposal,
+  DAOVote,
+} from "./dao-voting";
 
 // ─── RATE LIMITER ────────────────────────────────────────────────────────────
 
@@ -4084,6 +4096,12 @@ setInterval(() => {
     }
   }
 
+  // Check DAO proposals for expiry
+  const daoExpired = closeExpiredProposals();
+  if (daoExpired > 0) {
+    console.log(`[dao-voting] Auto-closed ${daoExpired} expired proposal(s).`);
+  }
+
   // Check pending vesting steps
   const vestingSteps = getPendingVestingSteps();
   for (const { plan, step, stepIndex } of vestingSteps) {
@@ -4410,6 +4428,235 @@ app.get("/api/smart-airdrop/vesting-plans/:id", (req, res) => {
     return;
   }
   res.json({ plan });
+});
+
+// ─── DAO VOTING ─────────────────────────────────────────────────────────────
+
+app.post("/api/dao/create-proposal", (req, res) => {
+  const {
+    title, description, options, gateType,
+    nftClassId, tokenDenom, minTokenBalance,
+    votingPower, startTime, endTime, creator, network: reqNetwork,
+  } = req.body as {
+    title?: string;
+    description?: string;
+    options?: string[];
+    gateType?: "nft" | "token" | "any_wallet";
+    nftClassId?: string;
+    tokenDenom?: string;
+    minTokenBalance?: string;
+    votingPower?: "equal" | "token_weighted" | "nft_count";
+    startTime?: string;
+    endTime?: string;
+    creator?: string;
+    network?: string;
+  };
+
+  // Validate required fields
+  if (!title || !title.trim()) {
+    res.status(400).json({ error: "Title is required." });
+    return;
+  }
+  if (!options || !Array.isArray(options) || options.length < 2) {
+    res.status(400).json({ error: "At least 2 voting options are required." });
+    return;
+  }
+  if (!gateType || !["nft", "token", "any_wallet"].includes(gateType)) {
+    res.status(400).json({ error: "gateType must be 'nft', 'token', or 'any_wallet'." });
+    return;
+  }
+  if (gateType === "nft" && !nftClassId) {
+    res.status(400).json({ error: "nftClassId is required when gateType is 'nft'." });
+    return;
+  }
+  if (gateType === "token" && !tokenDenom) {
+    res.status(400).json({ error: "tokenDenom is required when gateType is 'token'." });
+    return;
+  }
+  if (!votingPower || !["equal", "token_weighted", "nft_count"].includes(votingPower)) {
+    res.status(400).json({ error: "votingPower must be 'equal', 'token_weighted', or 'nft_count'." });
+    return;
+  }
+  if (!startTime || !endTime) {
+    res.status(400).json({ error: "startTime and endTime are required." });
+    return;
+  }
+  if (new Date(endTime) <= new Date(startTime)) {
+    res.status(400).json({ error: "endTime must be after startTime." });
+    return;
+  }
+  if (!creator || !creator.trim()) {
+    res.status(400).json({ error: "creator wallet address is required." });
+    return;
+  }
+
+  const { networkName } = getNetwork(req);
+
+  const proposal = createProposal({
+    title: title.trim(),
+    description: (description || "").trim(),
+    creator: creator.trim(),
+    options: options.map((o) => o.trim()).filter(Boolean),
+    gateType,
+    nftClassId,
+    tokenDenom,
+    minTokenBalance,
+    votingPower,
+    startTime,
+    endTime,
+    network: reqNetwork || networkName,
+  });
+
+  res.json({ proposal });
+});
+
+app.get("/api/dao/proposals", (_req, res) => {
+  // Auto-close expired proposals first
+  closeExpiredProposals();
+
+  const status = _req.query.status as string | undefined;
+  const network = _req.query.network as string | undefined;
+
+  const list = getProposals({ status, network });
+  res.json({ proposals: list });
+});
+
+app.get("/api/dao/proposals/:id", (req, res) => {
+  const proposal = getProposalById(req.params.id);
+  if (!proposal) {
+    res.status(404).json({ error: "Proposal not found." });
+    return;
+  }
+  res.json({ proposal, results: getResults(proposal.id) });
+});
+
+app.post("/api/dao/vote", async (req, res) => {
+  const { proposalId, voter, option, network: reqNetwork } = req.body as {
+    proposalId?: string;
+    voter?: string;
+    option?: number;
+    network?: string;
+  };
+
+  if (!proposalId) {
+    res.status(400).json({ error: "proposalId is required." });
+    return;
+  }
+  if (!voter || !voter.trim()) {
+    res.status(400).json({ error: "voter wallet address is required." });
+    return;
+  }
+  if (option === undefined || option === null) {
+    res.status(400).json({ error: "option (index) is required." });
+    return;
+  }
+
+  const proposal = getProposalById(proposalId);
+  if (!proposal) {
+    res.status(404).json({ error: "Proposal not found." });
+    return;
+  }
+
+  // Check active and time window
+  if (proposal.status !== "active") {
+    res.status(400).json({ error: `Proposal is ${proposal.status}, not active.` });
+    return;
+  }
+  const now = new Date();
+  if (now < new Date(proposal.startTime)) {
+    res.status(400).json({ error: "Voting has not started yet." });
+    return;
+  }
+  if (now > new Date(proposal.endTime)) {
+    res.status(400).json({ error: "Voting period has ended." });
+    return;
+  }
+
+  // Check double vote
+  const alreadyVoted = proposal.votes.find((v) => v.voter === voter.trim());
+  if (alreadyVoted) {
+    res.status(400).json({ error: "You have already voted on this proposal." });
+    return;
+  }
+
+  // Check eligibility on chain
+  const { networkName, network } = getNetwork(req);
+  const restUrl = network.restEndpoint;
+
+  const eligibility = await checkEligibility(voter.trim(), proposal, networkName, restUrl);
+
+  if (!eligibility.eligible) {
+    res.status(403).json({ error: eligibility.reason || "Not eligible to vote.", eligibility });
+    return;
+  }
+
+  const vote: DAOVote = {
+    voter: voter.trim(),
+    option,
+    power: eligibility.power,
+    timestamp: new Date().toISOString(),
+    nftId: eligibility.nftId,
+    tokenBalance: eligibility.tokenBalance,
+  };
+
+  const result = castVote(proposalId, vote);
+  if (!result.success) {
+    res.status(400).json({ error: result.error });
+    return;
+  }
+
+  res.json({ vote, currentResults: getResults(proposalId) });
+});
+
+app.get("/api/dao/results/:id", (req, res) => {
+  const results = getResults(req.params.id);
+  if (!results) {
+    res.status(404).json({ error: "Proposal not found." });
+    return;
+  }
+
+  const proposal = getProposalById(req.params.id);
+  res.json({ results, voters: proposal?.votes || [] });
+});
+
+app.post("/api/dao/close/:id", (req, res) => {
+  const { creator } = req.body as { creator?: string };
+  if (!creator) {
+    res.status(400).json({ error: "creator wallet address is required." });
+    return;
+  }
+
+  const result = closeProposal(req.params.id, creator.trim());
+  if (!result.success) {
+    res.status(400).json({ error: result.error });
+    return;
+  }
+
+  res.json({ ok: true, results: getResults(req.params.id) });
+});
+
+app.post("/api/dao/check-eligibility", async (req, res) => {
+  const { proposalId, voter, network: reqNetwork } = req.body as {
+    proposalId?: string;
+    voter?: string;
+    network?: string;
+  };
+
+  if (!proposalId || !voter) {
+    res.status(400).json({ error: "proposalId and voter are required." });
+    return;
+  }
+
+  const proposal = getProposalById(proposalId);
+  if (!proposal) {
+    res.status(404).json({ error: "Proposal not found." });
+    return;
+  }
+
+  const { networkName, network } = getNetwork(req);
+  const eligibility = await checkEligibility(voter.trim(), proposal, networkName, network.restEndpoint);
+
+  res.json({ eligibility });
 });
 
 // ─── HTTP + WS SERVER ───────────────────────────────────────────────────────

@@ -1209,9 +1209,10 @@
         </div>
       </div>
 
-      <!-- Smart Airdrop Agent -->
-      <div style="margin-top:16px;margin-bottom:4px">
+      <!-- Smart Airdrop Agent & DAO Voting -->
+      <div style="margin-top:16px;margin-bottom:4px;display:flex;gap:8px;flex-wrap:wrap">
         <button class="sa-trigger-btn" onclick="smartAirdropOpen()">🤖 Smart Airdrop Agent</button>
+        <button class="sa-trigger-btn dao-trigger-btn" onclick="daoVotingOpen()">🏛️ DAO Voting</button>
       </div>
 
       <!-- Token Airdrop Tool (always visible) -->
@@ -2081,6 +2082,7 @@ async function agentTopUp() {
 </script>
 <script src="js/preflight.js?v=2"></script>
 <script src="js/smart-airdrop.js?v=1"></script>
+<script src="js/dao-voting.js?v=1"></script>
 
 </body>
 </html>
