@@ -2722,6 +2722,16 @@ footer{
 .nft-ad-royalty-btn.active{border-color:var(--accent);color:var(--accent);background:rgba(124,109,250,.08)}
 .nft-ad-royalty-btn:hover{border-color:var(--text-muted)}
 
+/* Smart Token Features */
+.nft-ad-features{display:flex;flex-direction:column;gap:8px}
+.nft-ad-feature-toggle{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:all .15s}
+.nft-ad-feature-toggle:hover{border-color:var(--accent)}
+.nft-ad-feature-toggle input[type="checkbox"]{margin-top:2px;accent-color:var(--accent);width:16px;height:16px;flex-shrink:0}
+.nft-ad-feature-toggle input:checked ~ .nft-ad-feature-label{color:var(--accent)}
+.nft-ad-feature-label{font-size:.78rem;font-weight:600;white-space:nowrap}
+.nft-ad-feature-hint{font-size:.68rem;color:var(--muted);line-height:1.4}
+.nft-ad-feature-note{margin-top:8px;padding:8px 12px;border-radius:6px;font-size:.7rem;background:rgba(124,109,250,.08);border:1px solid rgba(124,109,250,.2);color:var(--accent)}
+
 .nft-ad-preview-card{display:flex;gap:14px;align-items:center;background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:14px;transition:all .2s}
 .nft-ad-preview-img{width:64px;height:64px;border-radius:8px;background:var(--bg2);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0}
 .nft-ad-preview-img img{width:100%;height:100%;object-fit:cover}

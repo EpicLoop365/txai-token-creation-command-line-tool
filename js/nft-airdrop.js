@@ -151,7 +151,56 @@ async function nftAirdropFetchHolders() {
   }
 }
 
-/* ── Execute NFT Airdrop ── */
+/* ── Collect Smart Token Features ── */
+function nftAirdropGetFeatures() {
+  const features = {};
+  if (document.getElementById('nftAdSoulbound')?.checked) features.disableSending = true;
+  if (document.getElementById('nftAdWhitelist')?.checked) features.whitelisting = true;
+  if (document.getElementById('nftAdFreeze')?.checked) features.freezing = true;
+  if (document.getElementById('nftAdBurn')?.checked) features.burning = true;
+  return features;
+}
+
+/* ── Feature labels for review ── */
+function nftAirdropGetFeatureLabels() {
+  const labels = [];
+  if (document.getElementById('nftAdSoulbound')?.checked) labels.push('🔒 Soulbound');
+  if (document.getElementById('nftAdWhitelist')?.checked) labels.push('🛡 Whitelist');
+  if (document.getElementById('nftAdFreeze')?.checked) labels.push('❄️ Freezable');
+  if (document.getElementById('nftAdBurn')?.checked) labels.push('🔥 Burnable');
+  return labels.length ? labels.join(', ') : 'None (fully transferable)';
+}
+
+/* ── Soulbound + Whitelist mutual exclusion ── */
+(function() {
+  setTimeout(function() {
+    const sb = document.getElementById('nftAdSoulbound');
+    const wl = document.getElementById('nftAdWhitelist');
+    const note = document.getElementById('nftAdFeatureNote');
+    if (!sb || !wl) return;
+    sb.addEventListener('change', function() {
+      if (sb.checked && wl.checked) { wl.checked = false; }
+      if (sb.checked && note) { note.textContent = '🔒 Soulbound: recipients can NEVER transfer these NFTs. Enforced at the TX protocol level.'; note.style.display = ''; }
+      else if (note) { note.style.display = 'none'; }
+    });
+    wl.addEventListener('change', function() {
+      if (wl.checked && sb.checked) { sb.checked = false; }
+      if (wl.checked && note) { note.textContent = '🛡 Whitelist-Gated: only pre-approved addresses can receive transfers. Manage via the Manage tab.'; note.style.display = ''; }
+      else if (note) { note.style.display = 'none'; }
+    });
+  }, 500);
+})();
+
+/* ── Chunk array into batches ── */
+function nftAirdropChunk(arr, size) {
+  const chunks = [];
+  for (let i = 0; i < arr.length; i += size) {
+    chunks.push(arr.slice(i, i + size));
+  }
+  return chunks;
+}
+
+/* ── Execute NFT Airdrop (with auto-chunking for >100) ── */
 async function nftAirdropExecute() {
   if (nftAirdropRunning) return;
 
@@ -161,14 +210,20 @@ async function nftAirdropExecute() {
   const uri = (document.getElementById('nftAdUri').value || '').trim();
   const royaltyRate = parseFloat(document.getElementById('nftAdRoyalty').value) || 0;
   const recipients = nftAirdropParseRecipients();
+  const features = nftAirdropGetFeatures();
 
   // Validation
   if (!name) return nftAirdropShowResult(false, 'Collection name is required.');
   if (!symbol) return nftAirdropShowResult(false, 'Symbol is required.');
   if (!recipients.length) return nftAirdropShowResult(false, 'At least one recipient address is required.');
 
+  // Auto-chunk for large drops
+  const CHUNK_SIZE = 100;
+  const chunks = nftAirdropChunk(recipients, CHUNK_SIZE);
+  const batchMsg = chunks.length > 1 ? ` in ${chunks.length} batches` : '';
+
   // Confirmation
-  if (!confirm(`Airdrop ${recipients.length} NFTs to ${recipients.length} addresses?`)) return;
+  if (!confirm(`Airdrop ${recipients.length} NFTs to ${recipients.length} addresses${batchMsg}?`)) return;
 
   const btn = document.getElementById('nftAdExecuteBtn');
   const progressWrap = document.getElementById('nftAdProgress');
@@ -179,80 +234,71 @@ async function nftAirdropExecute() {
   if (btn) { btn.disabled = true; btn.textContent = 'Minting...'; }
   if (progressWrap) progressWrap.style.display = 'block';
   if (progressBar) progressBar.style.width = '0%';
-  if (progressText) progressText.textContent = 'Starting...';
+  if (progressText) progressText.textContent = chunks.length > 1 ? `Batch 1/${chunks.length}...` : 'Starting...';
 
-  nftAirdropLog('info', `Starting NFT airdrop: "${name}" (${symbol}) to ${recipients.length} recipients`);
+  nftAirdropLog('info', `Starting NFT airdrop: "${name}" (${symbol}) to ${recipients.length} recipients${batchMsg}`);
+  if (Object.keys(features).length) nftAirdropLog('info', `Smart features: ${nftAirdropGetFeatureLabels()}`);
+
+  let totalMinted = 0;
+  let totalFailed = 0;
+  const allErrors = [];
+  let lastClassId = null;
 
   try {
-    const res = await fetch(`${API_URL}/api/nft-airdrop`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name,
-        symbol,
-        description,
-        uri,
-        recipients,
-        royaltyRate,
-      }),
-    });
-
-    // Handle streaming progress if available, otherwise standard JSON
-    if (res.headers.get('content-type')?.includes('text/event-stream')) {
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-
-        const lines = buffer.split('\n');
-        buffer = lines.pop(); // keep incomplete line in buffer
-
-        for (const line of lines) {
-          const trimmed = line.trim();
-          if (!trimmed || !trimmed.startsWith('data:')) continue;
-          try {
-            const evt = JSON.parse(trimmed.slice(5));
-            if (evt.progress != null) {
-              const pct = Math.round(evt.progress * 100);
-              if (progressBar) progressBar.style.width = pct + '%';
-              if (progressText) progressText.textContent = evt.message || `${pct}%`;
-            }
-            if (evt.type === 'log') {
-              nftAirdropLog('info', evt.message);
-            }
-          } catch {}
-        }
+    for (let c = 0; c < chunks.length; c++) {
+      const chunk = chunks[c];
+      if (chunks.length > 1) {
+        nftAirdropLog('info', `Batch ${c + 1}/${chunks.length}: ${chunk.length} recipients`);
+        if (progressText) progressText.textContent = `Batch ${c + 1}/${chunks.length}...`;
       }
+
+      const res = await fetch(`${API_URL}/api/nft-airdrop`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: chunks.length > 1 ? `${name} (${c + 1})` : name,
+          symbol,
+          description,
+          uri,
+          recipients: chunk,
+          royaltyRate,
+          features: Object.keys(features).length ? features : undefined,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || data.error) {
+        nftAirdropLog('error', `Batch ${c + 1} failed: ${data.error || 'unknown'}`);
+        totalFailed += chunk.length;
+        allErrors.push(...(data.errors || [data.error || 'Batch failed']));
+        continue; // Continue to next batch
+      }
+
+      totalMinted += (data.minted || chunk.length);
+      totalFailed += (data.failed || 0);
+      if (data.errors) allErrors.push(...data.errors);
+      if (data.classId) lastClassId = data.classId;
+
+      // Update progress
+      const overallPct = Math.round(((c + 1) / chunks.length) * 100);
+      if (progressBar) progressBar.style.width = overallPct + '%';
+      nftAirdropLog('success', `Batch ${c + 1} done: ${data.minted || chunk.length} minted`);
     }
 
-    const data = res.headers.get('content-type')?.includes('text/event-stream')
-      ? null
-      : await res.json();
-
-    if (data && !res.ok) throw new Error(data.error || `HTTP ${res.status}`);
-    if (data && data.error) throw new Error(data.error);
-
-    // Complete
+    // All batches complete
     if (progressBar) progressBar.style.width = '100%';
     if (progressText) progressText.textContent = 'Done';
 
-    const classId = data?.classId || 'N/A';
-    const minted = data?.minted || recipients.length;
-    const errors = data?.errors || [];
+    const summary = `NFT airdrop complete! ${chunks.length > 1 ? chunks.length + ' batches. ' : ''}Class: ${lastClassId || 'N/A'}. Minted: ${totalMinted}/${recipients.length}.`
+      + (totalFailed ? ` Failed: ${totalFailed}` : '');
 
-    const summary = `NFT airdrop complete! Class ID: ${classId}. Minted: ${minted}/${recipients.length}.`
-      + (errors.length ? ` Errors: ${errors.length}` : '');
+    nftAirdropShowResult(totalMinted > 0, summary);
+    nftAirdropLog(totalMinted > 0 ? 'success' : 'error', summary);
 
-    nftAirdropShowResult(true, summary);
-    nftAirdropLog('success', summary);
-
-    if (errors.length) {
-      for (const e of errors.slice(0, 10)) {
-        nftAirdropLog('error', `Mint error: ${e.address || 'unknown'} — ${e.message || e}`);
+    if (allErrors.length) {
+      for (const e of allErrors.slice(0, 10)) {
+        nftAirdropLog('error', `Mint error: ${typeof e === 'string' ? e : (e.address || 'unknown') + ' — ' + (e.message || e)}`);
       }
     }
 
@@ -261,12 +307,14 @@ async function nftAirdropExecute() {
       id: Date.now(),
       name,
       symbol,
-      classId,
+      classId: lastClassId,
       recipients: recipients.length,
-      minted,
-      errors: errors.length,
+      minted: totalMinted,
+      errors: totalFailed,
+      features: nftAirdropGetFeatureLabels(),
+      batches: chunks.length,
       date: new Date().toISOString(),
-      status: errors.length === 0 ? 'success' : (minted === 0 ? 'failed' : 'partial'),
+      status: totalFailed === 0 ? 'success' : (totalMinted === 0 ? 'failed' : 'partial'),
     };
     nftAirdropHistory.unshift(entry);
     nftAirdropSaveHistory();
@@ -278,17 +326,17 @@ async function nftAirdropExecute() {
     nftAirdropShowResult(false, `Airdrop failed: ${err.message}`);
     nftAirdropLog('error', `Airdrop failed: ${err.message}`);
 
-    // Save failed entry to history
     const entry = {
       id: Date.now(),
       name,
       symbol,
       classId: null,
       recipients: recipients.length,
-      minted: 0,
-      errors: recipients.length,
+      minted: totalMinted,
+      errors: recipients.length - totalMinted,
+      features: nftAirdropGetFeatureLabels(),
       date: new Date().toISOString(),
-      status: 'failed',
+      status: totalMinted > 0 ? 'partial' : 'failed',
     };
     nftAirdropHistory.unshift(entry);
     nftAirdropSaveHistory();
@@ -404,6 +452,21 @@ function nftAdGoStep(step) {
     document.getElementById('nftAdRevCount').textContent = addrs.length + ' wallets';
     document.getElementById('nftAdRevRoyalty').textContent = (parseFloat(document.getElementById('nftAdRoyalty').value || 0) * 100) + '%';
     document.getElementById('nftAdRevGas').textContent = '~' + (addrs.length * 0.05).toFixed(2) + ' CORE';
+    // Smart features
+    const featEl = document.getElementById('nftAdRevFeatures');
+    if (featEl) featEl.textContent = nftAirdropGetFeatureLabels();
+    // Batch info for >100
+    const chunkRow = document.getElementById('nftAdRevChunkRow');
+    const chunkEl = document.getElementById('nftAdRevChunks');
+    const numChunks = Math.ceil(addrs.length / 100);
+    if (chunkRow && chunkEl) {
+      if (numChunks > 1) {
+        chunkRow.style.display = '';
+        chunkEl.textContent = numChunks + ' batches of 100 (auto-split)';
+      } else {
+        chunkRow.style.display = 'none';
+      }
+    }
   }
 
   nftAdCurrentStep = step;
