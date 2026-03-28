@@ -153,7 +153,11 @@ async function _keplrAutoReconnect() {
 
     // Update the nav UI silently
     _keplrUpdateNavUI(true);
-    updateGlobalWalletUI(true, 'keplr');
+    // updateGlobalWalletUI may not be loaded yet (defined in wallet.js),
+    // so call it safely
+    if (typeof updateGlobalWalletUI === 'function') {
+      updateGlobalWalletUI(true, 'keplr');
+    }
   } catch (err) {
     console.warn('[keplr] Auto-reconnect failed:', err.message);
     localStorage.removeItem(KEPLR_LS_KEY);
@@ -217,9 +221,9 @@ function _keplrUpdateNavUI(connected) {
 }
 
 /* ---- Init: auto-reconnect when DOM is ready ---- */
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', _keplrAutoReconnect);
-} else {
-  // DOM already loaded, but Keplr extension may inject late
-  setTimeout(_keplrAutoReconnect, 500);
-}
+// Keplr extension injects window.keplr after page load, so we wait a moment.
+// wallet.js loads synchronously right after this file, so updateGlobalWalletUI
+// will be available by the time the timeout fires.
+window.addEventListener('load', function() {
+  setTimeout(_keplrAutoReconnect, 600);
+});
