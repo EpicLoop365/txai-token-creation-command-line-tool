@@ -60,6 +60,7 @@ import {
 import { defaultRegistryTypes } from "@cosmjs/stargate";
 import { Registry, GeneratedType } from "@cosmjs/proto-signing";
 import { coreumRegistry } from "coreum-js-nightly";
+import { runPreflight } from "./preflight/index";
 
 // ─── RATE LIMITER ────────────────────────────────────────────────────────────
 
@@ -870,6 +871,41 @@ app.post("/api/token/whitelist", async (req, res) => {
     client.disconnect();
     res.json(result);
   } catch (err) { res.status(500).json({ error: (err as Error).message }); }
+});
+
+// ─── PREFLIGHT COMPLIANCE ENGINE ─────────────────────────────────────────
+// Pre-transaction validation: checks balance, gas, freeze, whitelist,
+// compliance NFT, and parameter validity BEFORE signing.
+
+app.post("/api/preflight", async (req, res) => {
+  const { txType, sender, params, network } = req.body as {
+    txType?: string;
+    sender?: string;
+    params?: Record<string, unknown>;
+    network?: string;
+  };
+
+  if (!txType || !sender) {
+    res.status(400).json({ error: "Missing required fields: txType, sender." });
+    return;
+  }
+
+  const validTypes = ["token_send", "token_issue", "nft_mint", "nft_transfer", "airdrop", "dex_place_order"];
+  if (!validTypes.includes(txType)) {
+    res.status(400).json({
+      error: `Invalid txType "${txType}". Must be one of: ${validTypes.join(", ")}`,
+    });
+    return;
+  }
+
+  const networkName = network || (process.env.TX_NETWORK as string) || "testnet";
+
+  try {
+    const result = await runPreflight({ txType: txType as any, sender, params: (params || {}) as any, network: networkName });
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: `Preflight error: ${(err as Error).message}` });
+  }
 });
 
 // ─── FAUCET PROXY (avoids CORS issues) ──────────────────────────────────
