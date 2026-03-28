@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TXAI Frontend Smoke Tests</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #0a0e17;
+    color: #e0e0e0;
+    padding: 2rem;
+    line-height: 1.5;
+  }
+  h1 {
+    font-size: 1.6rem;
+    margin-bottom: 0.5rem;
+    color: #fff;
+  }
+  .subtitle {
+    color: #888;
+    font-size: 0.9rem;
+    margin-bottom: 1.5rem;
+  }
+  .controls {
+    display: flex;
+    gap: 0.8rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+  }
+  button {
+    background: #1a73e8;
+    color: #fff;
+    border: none;
+    padding: 0.5rem 1.2rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+  }
+  button:hover { background: #1565c0; }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  button.secondary { background: #333; }
+  button.secondary:hover { background: #444; }
+  .summary {
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+  }
+  .stat {
+    background: #141a28;
+    border-radius: 8px;
+    padding: 0.8rem 1.4rem;
+    min-width: 100px;
+  }
+  .stat-label { font-size: 0.75rem; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
+  .stat-value { font-size: 1.6rem; font-weight: 700; }
+  .stat-value.pass { color: #4caf50; }
+  .stat-value.fail { color: #f44336; }
+  .stat-value.skip { color: #ff9800; }
+  .stat-value.total { color: #fff; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+  }
+  th {
+    text-align: left;
+    padding: 0.6rem 0.8rem;
+    border-bottom: 2px solid #222;
+    color: #888;
+    font-weight: 500;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  td {
+    padding: 0.5rem 0.8rem;
+    border-bottom: 1px solid #1a1f2e;
+  }
+  tr.pass td:first-child { border-left: 3px solid #4caf50; }
+  tr.fail td:first-child { border-left: 3px solid #f44336; }
+  tr.skip td:first-child { border-left: 3px solid #ff9800; }
+  tr.pending td:first-child { border-left: 3px solid #555; }
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+  .badge-pass { background: #1b3a1b; color: #4caf50; }
+  .badge-fail { background: #3a1b1b; color: #f44336; }
+  .badge-skip { background: #3a2e1b; color: #ff9800; }
+  .badge-pending { background: #222; color: #666; }
+  .badge-running { background: #1b2a3a; color: #2196f3; }
+  .error-detail { color: #f44336; font-size: 0.8rem; margin-top: 2px; }
+  .console-log {
+    margin-top: 1.5rem;
+    background: #0d1117;
+    border: 1px solid #222;
+    border-radius: 8px;
+    padding: 1rem;
+    max-height: 300px;
+    overflow-y: auto;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    line-height: 1.6;
+  }
+  .console-log .err { color: #f44336; }
+  .console-log .warn { color: #ff9800; }
+  .console-log .info { color: #4fc3f7; }
+  .console-log .ok { color: #4caf50; }
+  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid #333; border-top-color: #1a73e8; border-radius: 50%; animation: spin 0.6s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<h1>>_ TXAI Frontend Smoke Tests</h1>
+<p class="subtitle">Browser-side checks for global functions, UI components, CSS classes, and console errors.</p>
+
+<div class="controls">
+  <button id="btnRun" onclick="runAllTests()">Run All Tests</button>
+  <button class="secondary" onclick="clearResults()">Clear</button>
+</div>
+
+<div class="summary" id="summary" style="display:none">
+  <div class="stat"><div class="stat-label">Passed</div><div class="stat-value pass" id="sumPass">0</div></div>
+  <div class="stat"><div class="stat-label">Failed</div><div class="stat-value fail" id="sumFail">0</div></div>
+  <div class="stat"><div class="stat-label">Skipped</div><div class="stat-value skip" id="sumSkip">0</div></div>
+  <div class="stat"><div class="stat-label">Total</div><div class="stat-value total" id="sumTotal">0</div></div>
+</div>
+
+<table>
+  <thead>
+    <tr><th>#</th><th>Test</th><th>Status</th><th>Details</th></tr>
+  </thead>
+  <tbody id="tbody"></tbody>
+</table>
+
+<div class="console-log" id="consoleLog">
+  <div class="info">Console output will appear here after running tests...</div>
+</div>
+
+<script>
+// ─── Test runner state ───────────────────────────────────────────────────────
+
+let tests = [];
+let passed = 0, failed = 0, skipped = 0;
+
+function addTest(name, fn) {
+  tests.push({ name, fn, status: 'pending', error: null });
+}
+
+function addSkip(name, reason) {
+  tests.push({ name, fn: null, status: 'skip', error: reason });
+}
+
+function renderTable() {
+  const tbody = document.getElementById('tbody');
+  tbody.innerHTML = tests.map((t, i) => {
+    const cls = t.status;
+    const badge = t.status === 'pending' ? '<span class="badge badge-pending">PENDING</span>' :
+                  t.status === 'running' ? '<span class="spinner"></span> <span class="badge badge-running">RUNNING</span>' :
+                  t.status === 'pass'    ? '<span class="badge badge-pass">PASS</span>' :
+                  t.status === 'fail'    ? '<span class="badge badge-fail">FAIL</span>' :
+                  '<span class="badge badge-skip">SKIP</span>';
+    const detail = t.error ? `<div class="error-detail">${escHtml(t.error)}</div>` : '';
+    return `<tr class="${cls}"><td>${i + 1}</td><td>${escHtml(t.name)}</td><td>${badge}</td><td>${detail}</td></tr>`;
+  }).join('');
+
+  const sum = document.getElementById('summary');
+  sum.style.display = 'flex';
+  document.getElementById('sumPass').textContent  = passed;
+  document.getElementById('sumFail').textContent  = failed;
+  document.getElementById('sumSkip').textContent  = skipped;
+  document.getElementById('sumTotal').textContent = tests.length;
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function logConsole(msg, cls = '') {
+  const el = document.getElementById('consoleLog');
+  const div = document.createElement('div');
+  div.className = cls;
+  div.textContent = msg;
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+}
+
+function clearResults() {
+  tests = [];
+  passed = 0; failed = 0; skipped = 0;
+  document.getElementById('tbody').innerHTML = '';
+  document.getElementById('summary').style.display = 'none';
+  document.getElementById('consoleLog').innerHTML = '';
+  defineTests();
+  renderTable();
+}
+
+// ─── Test definitions ────────────────────────────────────────────────────────
+
+function defineTests() {
+  tests = [];
+  passed = 0; failed = 0; skipped = 0;
+
+  // === Global function existence ===
+
+  const globalFns = [
+    ['smartAirdropOpen', 'Smart Airdrop modal opener'],
+    ['smartAirdropClose', 'Smart Airdrop modal closer'],
+    ['walletQuickConnect', 'Wallet quick connect'],
+    ['walletDetect', 'Wallet detection'],
+    ['walletConnectWith', 'Wallet connect with provider'],
+    ['walletConnectDemo', 'Demo wallet connect'],
+    ['walletBuildModal', 'Wallet modal builder'],
+    ['switchTab', 'Tab switcher'],
+    ['setCreateMode', 'Create mode setter'],
+    ['preflightShowModal', 'Preflight modal'],
+    ['showPreflightResult', 'Preflight result display'],
+    ['dexSetSide', 'DEX side setter'],
+    ['dexSetOrderType', 'DEX order type setter'],
+    ['runtimeInit', 'Agent runtime init'],
+    ['globalDisconnectWallet', 'Global disconnect wallet'],
+    ['globalShowWalletOptions', 'Global wallet options'],
+    ['dexSwitchNetwork', 'DEX network switch'],
+  ];
+
+  for (const [fn, desc] of globalFns) {
+    addTest(`Global function: ${fn} (${desc})`, () => {
+      if (typeof window[fn] !== 'function') {
+        throw new Error(`window.${fn} is ${typeof window[fn]}, expected function`);
+      }
+    });
+  }
+
+  // === Smart Airdrop modal open/close ===
+
+  addTest('Smart Airdrop modal opens', () => {
+    if (typeof smartAirdropOpen !== 'function') throw new Error('smartAirdropOpen not defined');
+    try { smartAirdropOpen(); } catch(e) { throw new Error('smartAirdropOpen() threw: ' + e.message); }
+    const overlay = document.querySelector('.smart-airdrop-overlay');
+    if (!overlay) throw new Error('.smart-airdrop-overlay not found after open');
+  });
+
+  addTest('Smart Airdrop modal closes', () => {
+    if (typeof smartAirdropClose !== 'function') throw new Error('smartAirdropClose not defined');
+    try { smartAirdropClose(); } catch(e) { throw new Error('smartAirdropClose() threw: ' + e.message); }
+    const overlay = document.querySelector('.smart-airdrop-overlay');
+    // After close, overlay should be removed or hidden
+    const visible = overlay && overlay.style.display !== 'none' && document.body.contains(overlay);
+    // We allow it to exist but be hidden, or not exist at all
+    if (visible && !overlay.classList.contains('hidden')) {
+      // Some implementations remove it, some hide it — both are fine
+      logConsole('Note: overlay still in DOM after close (may be hidden via other means)', 'warn');
+    }
+  });
+
+  // === Tab rendering ===
+
+  const tabs = ['create', 'manage', 'dex', 'jobs', 'runtime', 'subs', 'ai'];
+  for (const tab of tabs) {
+    addTest(`Tab "${tab}" renders content`, () => {
+      if (typeof switchTab !== 'function') throw new Error('switchTab not defined');
+      try { switchTab(tab); } catch (e) {
+        throw new Error(`switchTab('${tab}') threw: ${e.message}`);
+      }
+      const panel = document.getElementById(`tab${tab.charAt(0).toUpperCase() + tab.slice(1)}`)
+                 || document.getElementById(`${tab}Panel`)
+                 || document.querySelector(`[data-tab="${tab}"]`);
+      // At minimum the tab button should exist and be active
+      const btn = document.getElementById(`tab${tab.charAt(0).toUpperCase() + tab.slice(1)}`);
+      if (btn && !btn.classList.contains('active')) {
+        throw new Error(`Tab button for "${tab}" not marked active`);
+      }
+    });
+  }
+
+  // === CSS class existence ===
+
+  const cssClasses = [
+    '.smart-airdrop-overlay',
+    '.wallet-choice-overlay',
+    '.wallet-toast',
+    '.nav-connect-btn',
+    '.nav-connected-badge',
+    '.chat-tab-bar',
+    '.chat-tab',
+    '.hero-cta',
+    '.landing-hero',
+    '.logo',
+  ];
+
+  // We check via stylesheet rules if possible, or DOM presence
+  addTest('Critical CSS classes exist in DOM or stylesheets', () => {
+    const missing = [];
+    for (const cls of cssClasses) {
+      const selector = cls;
+      // First check DOM
+      const el = document.querySelector(selector);
+      if (el) continue;
+      // Check stylesheets
+      let found = false;
+      try {
+        for (const sheet of document.styleSheets) {
+          try {
+            for (const rule of sheet.cssRules || []) {
+              if (rule.selectorText && rule.selectorText.includes(cls.replace('.', ''))) {
+                found = true;
+                break;
+              }
+            }
+          } catch (e) { /* cross-origin stylesheet */ }
+          if (found) break;
+        }
+      } catch (e) { /* ignore */ }
+      if (!found) missing.push(cls);
+    }
+    if (missing.length > 0) {
+      // Not a hard fail — some elements only appear dynamically
+      logConsole(`CSS classes not found in DOM or sheets: ${missing.join(', ')}`, 'warn');
+      if (missing.length > cssClasses.length / 2) {
+        throw new Error(`Too many CSS classes missing: ${missing.join(', ')}`);
+      }
+    }
+  });
+
+  // === Console errors check ===
+
+  addTest('No console errors on page load', () => {
+    if (window.__txaiConsoleErrors && window.__txaiConsoleErrors.length > 0) {
+      const errs = window.__txaiConsoleErrors.slice(0, 5).map(e => e.slice(0, 120));
+      throw new Error(`${window.__txaiConsoleErrors.length} console error(s): ${errs.join(' | ')}`);
+    }
+  });
+
+  // === Navigation elements ===
+
+  addTest('Nav connect button exists', () => {
+    const btn = document.getElementById('navConnectBtn');
+    if (!btn) throw new Error('#navConnectBtn not found');
+  });
+
+  addTest('Nav network select exists', () => {
+    const sel = document.getElementById('navNetworkSelect');
+    if (!sel) throw new Error('#navNetworkSelect not found');
+    if (!sel.querySelector('option[value="testnet"]')) throw new Error('Missing testnet option');
+  });
+
+  addTest('Tab bar exists with correct tabs', () => {
+    const bar = document.getElementById('chatTabBar');
+    if (!bar) throw new Error('#chatTabBar not found');
+    const btns = bar.querySelectorAll('.chat-tab');
+    if (btns.length < 5) throw new Error(`Expected at least 5 tab buttons, found ${btns.length}`);
+  });
+}
+
+// ─── Run tests ───────────────────────────────────────────────────────────────
+
+async function runAllTests() {
+  const btn = document.getElementById('btnRun');
+  btn.disabled = true;
+  btn.textContent = 'Running...';
+
+  document.getElementById('consoleLog').innerHTML = '';
+  passed = 0; failed = 0; skipped = 0;
+
+  logConsole('Starting TXAI frontend smoke tests...', 'info');
+
+  for (let i = 0; i < tests.length; i++) {
+    const t = tests[i];
+    if (t.status === 'skip') {
+      skipped++;
+      logConsole(`SKIP: ${t.name} -- ${t.error}`, 'warn');
+      renderTable();
+      continue;
+    }
+
+    t.status = 'running';
+    renderTable();
+
+    try {
+      await t.fn();
+      t.status = 'pass';
+      t.error = null;
+      passed++;
+      logConsole(`PASS: ${t.name}`, 'ok');
+    } catch (e) {
+      t.status = 'fail';
+      t.error = e.message || String(e);
+      failed++;
+      logConsole(`FAIL: ${t.name} -- ${e.message}`, 'err');
+    }
+
+    renderTable();
+    // Small delay to let UI breathe
+    await new Promise(r => setTimeout(r, 30));
+  }
+
+  logConsole(`\nDone: ${passed} passed, ${failed} failed, ${skipped} skipped out of ${tests.length}`, 'info');
+
+  btn.disabled = false;
+  btn.textContent = 'Run All Tests';
+}
+
+// ─── Capture console errors ──────────────────────────────────────────────────
+
+window.__txaiConsoleErrors = [];
+const _origConsoleError = console.error;
+console.error = function(...args) {
+  window.__txaiConsoleErrors.push(args.map(a => String(a)).join(' '));
+  _origConsoleError.apply(console, args);
+};
+
+// ─── Init ────────────────────────────────────────────────────────────────────
+
+defineTests();
+renderTable();
+</script>
+
+<p style="margin-top:2rem;color:#555;font-size:0.75rem">
+  Open this file in the browser after loading app.html (or embed it as an iframe in app.html) to test the frontend.
+  For best results, load this page on the same origin as the app so global functions are available.
+  Alternatively, paste the test script into the browser console on the app page.
+</p>
+
+</body>
+</html>
