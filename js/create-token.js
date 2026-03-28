@@ -2,10 +2,12 @@
 
 /* Tab Switching */
 function switchTab(tab){
-  const tabs = ['create','manage','dex','jobs','runtime','subs','ai'];
+  const tabs = ['create','manage','airdrop','dao','dex','jobs','runtime','subs','ai'];
   const wraps = {
     create: document.getElementById('createModeWrap'),
     manage: document.getElementById('manageWrap'),
+    airdrop: document.getElementById('airdropWrap'),
+    dao: document.getElementById('daoWrap'),
     dex: document.getElementById('dexWrap'),
     jobs: document.getElementById('jobsWrap'),
     runtime: document.getElementById('runtimeWrap'),

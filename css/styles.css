@@ -3930,6 +3930,70 @@ textarea.agent-resume-input{resize:vertical}
   transform:translateY(-1px);
 }
 
+/* ── Airdrop Tab: Template Buttons ── */
+.sa-template-btn{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:8px 16px;
+  background:rgba(124,109,250,.1);
+  color:var(--purple,#7c6dfa);
+  border:1px solid rgba(124,109,250,.25);
+  border-radius:var(--radius-sm,8px);
+  font-family:var(--sans,'DM Sans',sans-serif);
+  font-size:.75rem;font-weight:600;cursor:pointer;
+  transition:all .2s;
+}
+.sa-template-btn:hover{
+  background:rgba(124,109,250,.2);
+  border-color:rgba(124,109,250,.45);
+  transform:translateY(-1px);
+}
+
+/* ── Airdrop Tab: Launch Button ── */
+.sa-launch-btn{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:14px 32px;
+  background:linear-gradient(135deg,var(--purple,#7c6dfa),#a855f7);
+  color:#fff;border:none;border-radius:var(--radius-sm,8px);
+  font-family:var(--sans,'DM Sans',sans-serif);
+  font-size:.95rem;font-weight:700;cursor:pointer;
+  transition:all .25s;
+  box-shadow:0 4px 16px rgba(124,109,250,.3);
+}
+.sa-launch-btn:hover{
+  box-shadow:0 6px 28px rgba(124,109,250,.5);
+  transform:translateY(-2px);
+}
+
+/* ── Airdrop/DAO Tab: Feature Grid ── */
+.sa-feature-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill, minmax(200px, 1fr));
+  gap:12px;
+  padding:0 16px;
+}
+.sa-feature-card{
+  background:rgba(255,255,255,.03);
+  border:1px solid var(--border,rgba(255,255,255,.08));
+  border-radius:var(--radius-sm,8px);
+  padding:16px;
+  transition:border-color .2s;
+}
+.sa-feature-card:hover{
+  border-color:rgba(124,109,250,.3);
+}
+.sa-feature-icon{
+  font-size:1.3rem;margin-bottom:8px;
+}
+.sa-feature-title{
+  font-size:.82rem;font-weight:700;color:var(--text,#e4e4e7);margin-bottom:4px;
+}
+.sa-feature-desc{
+  font-size:.7rem;color:var(--muted,#71717a);line-height:1.45;
+}
+@media(max-width:600px){
+  .sa-feature-grid{grid-template-columns:1fr 1fr;}
+}
+
 /* ── Smart Airdrop: Header Actions ── */
 .sa-header-actions{display:flex;align-items:center;gap:6px}
 .sa-header-actions .sa-close-btn{margin-left:4px}

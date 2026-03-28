@@ -68,6 +68,8 @@
       <div class="chat-tab-bar" id="chatTabBar">
         <button class="chat-tab active" id="tabCreate" onclick="switchTab('create')">Create</button>
         <button class="chat-tab" id="tabManage" onclick="switchTab('manage')">Manage</button>
+        <button class="chat-tab" id="tabAirdrop" onclick="switchTab('airdrop')">Airdrop</button>
+        <button class="chat-tab" id="tabDao" onclick="switchTab('dao')">DAO</button>
         <button class="chat-tab" id="tabDex" onclick="switchTab('dex')">Exchange</button>
         <button class="chat-tab" id="tabJobs" onclick="switchTab('jobs')">Jobs</button>
         <button class="chat-tab" id="tabRuntime" onclick="switchTab('runtime')">Runtime</button>
@@ -1209,51 +1211,7 @@
         </div>
       </div>
 
-      <!-- Smart Airdrop Agent & DAO Voting -->
-      <div style="margin-top:16px;margin-bottom:4px;display:flex;gap:8px;flex-wrap:wrap">
-        <button class="sa-trigger-btn" onclick="smartAirdropOpen()">🤖 Smart Airdrop Agent</button>
-        <button class="sa-trigger-btn dao-trigger-btn" onclick="daoVotingOpen()">🏛️ DAO Voting</button>
-      </div>
-
-      <!-- Token Airdrop Tool (always visible) -->
-      <div class="manage-action-card airdrop-standalone">
-        <div class="manage-action-hdr">
-          <span class="manage-action-icon">📡</span> Airdrop Tool
-        </div>
-        <div class="manage-action-body">
-          <div class="airdrop-layout">
-            <div class="airdrop-left">
-              <div class="manage-field">
-                <label>Token Denom</label>
-                <input type="text" class="manage-input" id="airdropDenom" placeholder="e.g. mytoken-testcore1abc...">
-              </div>
-              <div class="manage-field">
-                <label>Amount per address</label>
-                <input type="number" class="manage-input" id="airdropAmount" placeholder="e.g. 100" step="any" min="0">
-              </div>
-              <div class="manage-field">
-                <label>Recipient Addresses <span class="airdrop-count" id="airdropAddrCount">0</span></label>
-                <textarea class="manage-input airdrop-textarea" id="airdropAddresses" placeholder="Paste wallet addresses — one per line or comma-separated" oninput="airdropParseAddresses()"></textarea>
-              </div>
-            </div>
-            <div class="airdrop-right">
-              <div class="airdrop-preview" id="airdropPreview">
-                <div class="airdrop-preview-title">Airdrop Preview</div>
-                <div class="airdrop-preview-row"><span>Recipients</span><b id="airdropPreviewCount">0</b></div>
-                <div class="airdrop-preview-row"><span>Amount each</span><b id="airdropPreviewEach">0</b></div>
-                <div class="airdrop-preview-row total"><span>Total tokens</span><b id="airdropPreviewTotal">0</b></div>
-              </div>
-              <button class="manage-exec-btn airdrop" id="airdropExecuteBtn" onclick="airdropExecute()">Send Airdrop</button>
-              <div class="airdrop-progress" id="airdropProgress" style="display:none">
-                <div class="dex-demo-bar-wrap"><div class="dex-demo-bar" id="airdropProgressBar" style="width:0%"></div></div>
-                <span class="airdrop-progress-text" id="airdropProgressText">0 / 0</span>
-              </div>
-              <div class="airdrop-log" id="airdropLog"></div>
-            </div>
-          </div>
-          <div class="airdrop-result" id="airdropResult" style="display:none"></div>
-        </div>
-      </div>
+      <!-- Smart Airdrop & DAO moved to their own tabs -->
 
       <!-- Your Agents Section -->
       <div class="manage-action-card" style="margin-top:16px">
@@ -1338,6 +1296,167 @@
       </div>
 
     </div><!-- end manage-wrap -->
+
+    <!-- ===== AIRDROP TAB ===== -->
+    <div class="manage-wrap" id="airdropWrap" style="display:none">
+
+      <!-- Airdrop Hero -->
+      <div style="text-align:center;padding:28px 16px 20px">
+        <div style="font-size:2rem;margin-bottom:6px">🚀</div>
+        <h2 style="font-size:1.3rem;font-weight:700;color:var(--text);margin:0 0 8px">Smart Airdrop Agent</h2>
+        <p style="font-size:.82rem;color:var(--muted);max-width:480px;margin:0 auto 16px;line-height:1.5">Distribute tokens to your community in one prompt. AI resolves stakers, NFT holders, token holders — verifies everything before sending.</p>
+      </div>
+
+      <!-- Template Prompts -->
+      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:20px;padding:0 16px">
+        <button class="sa-template-btn" onclick="smartAirdropOpen();setTimeout(()=>{const t=document.getElementById('saPromptInput');if(t){t.value='Airdrop 1000 MYTOKEN to all stakers of testcorevaloper1...';t.focus()}},300)">
+          Reward Stakers
+        </button>
+        <button class="sa-template-btn" onclick="smartAirdropOpen();setTimeout(()=>{const t=document.getElementById('saPromptInput');if(t){t.value='Airdrop 500 MYTOKEN to all holders of NFT class my-nft-class';t.focus()}},300)">
+          NFT Holder Drop
+        </button>
+        <button class="sa-template-btn" onclick="smartAirdropOpen();setTimeout(()=>{const t=document.getElementById('saPromptInput');if(t){t.value='Airdrop 100 MYTOKEN to all holders of utestcore with minimum balance 1000000';t.focus()}},300)">
+          Token Holder Reward
+        </button>
+        <button class="sa-template-btn" onclick="smartAirdropOpen();setTimeout(()=>{const t=document.getElementById('saPromptInput');if(t){t.value='';t.setAttribute('placeholder','Paste addresses or upload a CSV...');t.focus()}},300)">
+          CSV / Manual List
+        </button>
+      </div>
+
+      <!-- Launch Button -->
+      <div style="text-align:center;margin-bottom:24px">
+        <button class="sa-launch-btn" onclick="smartAirdropOpen()">Launch Airdrop Agent</button>
+      </div>
+
+      <!-- Feature Cards -->
+      <div class="sa-feature-grid">
+        <div class="sa-feature-card">
+          <div class="sa-feature-icon">🧠</div>
+          <div class="sa-feature-title">Natural Language</div>
+          <div class="sa-feature-desc">Describe your airdrop in plain English. AI parses recipients, amounts, and token details automatically.</div>
+        </div>
+        <div class="sa-feature-card">
+          <div class="sa-feature-icon">🔍</div>
+          <div class="sa-feature-title">Preflight Checks</div>
+          <div class="sa-feature-desc">Balance, gas, freeze status, whitelist compliance — all verified before a single token moves.</div>
+        </div>
+        <div class="sa-feature-card">
+          <div class="sa-feature-icon">📊</div>
+          <div class="sa-feature-title">Dry Run</div>
+          <div class="sa-feature-desc">Simulate the full airdrop with batch breakdown and gas estimates. No tokens sent until you confirm.</div>
+        </div>
+        <div class="sa-feature-card">
+          <div class="sa-feature-icon">⏰</div>
+          <div class="sa-feature-title">Schedule & Vest</div>
+          <div class="sa-feature-desc">Time-delayed drops, price triggers, cliff vesting, linear unlock — your distribution, your timeline.</div>
+        </div>
+        <div class="sa-feature-card">
+          <div class="sa-feature-icon">🛡️</div>
+          <div class="sa-feature-title">Exclusion Lists</div>
+          <div class="sa-feature-desc">Auto-exclude exchanges, known bots, or any address. Keep airdrops going to real community members.</div>
+        </div>
+        <div class="sa-feature-card">
+          <div class="sa-feature-icon">📧</div>
+          <div class="sa-feature-title">Review & Deliver</div>
+          <div class="sa-feature-desc">Email or Telegram the recipient list for review before executing. Full transparency for your team.</div>
+        </div>
+      </div>
+
+      <!-- Legacy Manual Airdrop (collapsed) -->
+      <details style="margin-top:24px">
+        <summary style="font-size:.75rem;color:var(--muted);cursor:pointer;font-family:var(--mono);padding:0 16px">Manual Airdrop (paste addresses)</summary>
+        <div class="manage-action-card airdrop-standalone" style="margin-top:8px">
+          <div class="manage-action-body">
+            <div class="airdrop-layout">
+              <div class="airdrop-left">
+                <div class="manage-field">
+                  <label>Token Denom</label>
+                  <input type="text" class="manage-input" id="airdropDenom" placeholder="e.g. mytoken-testcore1abc...">
+                </div>
+                <div class="manage-field">
+                  <label>Amount per address</label>
+                  <input type="number" class="manage-input" id="airdropAmount" placeholder="e.g. 100" step="any" min="0">
+                </div>
+                <div class="manage-field">
+                  <label>Recipient Addresses <span class="airdrop-count" id="airdropAddrCount">0</span></label>
+                  <textarea class="manage-input airdrop-textarea" id="airdropAddresses" placeholder="Paste wallet addresses — one per line or comma-separated" oninput="airdropParseAddresses()"></textarea>
+                </div>
+              </div>
+              <div class="airdrop-right">
+                <div class="airdrop-preview" id="airdropPreview">
+                  <div class="airdrop-preview-title">Airdrop Preview</div>
+                  <div class="airdrop-preview-row"><span>Recipients</span><b id="airdropPreviewCount">0</b></div>
+                  <div class="airdrop-preview-row"><span>Amount each</span><b id="airdropPreviewEach">0</b></div>
+                  <div class="airdrop-preview-row total"><span>Total tokens</span><b id="airdropPreviewTotal">0</b></div>
+                </div>
+                <button class="manage-exec-btn airdrop" id="airdropExecuteBtn" onclick="airdropExecute()">Send Airdrop</button>
+                <div class="airdrop-progress" id="airdropProgress" style="display:none">
+                  <div class="dex-demo-bar-wrap"><div class="dex-demo-bar" id="airdropProgressBar" style="width:0%"></div></div>
+                  <span class="airdrop-progress-text" id="airdropProgressText">0 / 0</span>
+                </div>
+                <div class="airdrop-log" id="airdropLog"></div>
+              </div>
+            </div>
+            <div class="airdrop-result" id="airdropResult" style="display:none"></div>
+          </div>
+        </div>
+      </details>
+
+      <!-- Post-Airdrop CTA -->
+      <div style="text-align:center;margin-top:28px;padding:20px;border-top:1px solid var(--border)">
+        <p style="font-size:.78rem;color:var(--muted);margin:0 0 8px">After your airdrop, recipients can trade on the DEX</p>
+        <button class="sa-template-btn" onclick="switchTab('dex')" style="font-size:.8rem">Open Exchange →</button>
+      </div>
+
+    </div><!-- end airdropWrap -->
+
+    <!-- ===== DAO TAB ===== -->
+    <div class="manage-wrap" id="daoWrap" style="display:none">
+
+      <!-- DAO Hero -->
+      <div style="text-align:center;padding:28px 16px 20px">
+        <div style="font-size:2rem;margin-bottom:6px">🏛️</div>
+        <h2 style="font-size:1.3rem;font-weight:700;color:var(--text);margin:0 0 8px">DAO Governance</h2>
+        <p style="font-size:.82rem;color:var(--muted);max-width:480px;margin:0 auto 16px;line-height:1.5">Create proposals and let your community vote. Gate access by NFT ownership, token balance, or open to all wallets.</p>
+      </div>
+
+      <!-- Quick Actions -->
+      <div style="display:flex;gap:10px;justify-content:center;margin-bottom:24px;flex-wrap:wrap;padding:0 16px">
+        <button class="sa-launch-btn" onclick="daoVotingOpen()" style="min-width:180px">Create Proposal</button>
+        <button class="sa-template-btn" onclick="daoVotingOpen()" style="font-size:.82rem">View Active Proposals</button>
+      </div>
+
+      <!-- DAO Feature Cards -->
+      <div class="sa-feature-grid">
+        <div class="sa-feature-card">
+          <div class="sa-feature-icon">🎨</div>
+          <div class="sa-feature-title">NFT-Gated Voting</div>
+          <div class="sa-feature-desc">Require specific NFT ownership to vote. Verify on-chain metadata — role, tier, status — before granting access.</div>
+        </div>
+        <div class="sa-feature-card">
+          <div class="sa-feature-icon">🪙</div>
+          <div class="sa-feature-title">Token-Weighted</div>
+          <div class="sa-feature-desc">Voting power proportional to token balance. Set minimum balance requirements. One wallet, weighted voice.</div>
+        </div>
+        <div class="sa-feature-card">
+          <div class="sa-feature-icon">🌐</div>
+          <div class="sa-feature-title">Open Governance</div>
+          <div class="sa-feature-desc">Any connected wallet can vote with equal power. Perfect for community sentiment checks and broad decisions.</div>
+        </div>
+        <div class="sa-feature-card">
+          <div class="sa-feature-icon">🔒</div>
+          <div class="sa-feature-title">Double-Vote Prevention</div>
+          <div class="sa-feature-desc">One vote per wallet, enforced on-chain. No gaming, no duplicates. Results you can trust.</div>
+        </div>
+      </div>
+
+      <!-- Flywheel CTA -->
+      <div style="text-align:center;margin-top:28px;padding:20px;border-top:1px solid var(--border)">
+        <p style="font-size:.78rem;color:var(--muted);margin:0 0 8px">Airdrop tokens to your community, then let them vote on what's next</p>
+        <button class="sa-template-btn" onclick="switchTab('airdrop')" style="font-size:.8rem">Launch Airdrop →</button>
+      </div>
+
+    </div><!-- end daoWrap -->
 
     <!-- ===== JOBS TAB ===== -->
     <div class="jobs-wrap" id="jobsWrap" style="display:none">
