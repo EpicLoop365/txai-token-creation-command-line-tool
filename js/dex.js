@@ -1502,12 +1502,16 @@ async function dexStartDemo() {
     } else {
       // Agent doesn't have tokens — show deposit modal
       dexDepositBaseDenom = dexBaseDenom;
-      document.getElementById('dexDepositAmount').textContent = checkData.tokensNeeded.toLocaleString();
-      document.getElementById('dexDepositSymbol').textContent = checkData.symbol;
-      document.getElementById('dexDepositAddress').textContent = checkData.agentAddress;
-      document.getElementById('dexDepositStatus').textContent = '';
-      document.getElementById('dexDepositStatus').className = 'dex-deposit-status';
-      document.getElementById('dexDepositCheckBtn').disabled = false;
+      const depAmount = document.getElementById('dexDepositAmount');
+      const depSymbol = document.getElementById('dexDepositSymbol');
+      const depAddr = document.getElementById('dexDepositAddress');
+      const depStatus = document.getElementById('dexDepositStatus');
+      const depCheckBtn = document.getElementById('dexDepositCheckBtn');
+      if(depAmount) depAmount.textContent = checkData.tokensNeeded.toLocaleString();
+      if(depSymbol) depSymbol.textContent = checkData.symbol;
+      if(depAddr) depAddr.textContent = checkData.agentAddress;
+      if(depStatus){ depStatus.textContent = ''; depStatus.className = 'dex-deposit-status'; }
+      if(depCheckBtn) depCheckBtn.disabled = false;
       // Check whitelisting: try server flag first, fall back to client-side REST query
       let hasWhitelisting = checkData.hasWhitelisting || false;
       if (!hasWhitelisting) {
