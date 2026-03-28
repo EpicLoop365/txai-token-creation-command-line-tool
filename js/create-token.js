@@ -2,7 +2,7 @@
 
 /* Tab Switching */
 function switchTab(tab){
-  const tabs = ['create','manage','airdrop','dao','dex','jobs','runtime','subs','ai'];
+  const tabs = ['create','manage','airdrop','dao','dex','jobs','runtime','subs','ai','analytics'];
   const wraps = {
     create: document.getElementById('createModeWrap'),
     manage: document.getElementById('manageWrap'),
@@ -13,6 +13,7 @@ function switchTab(tab){
     runtime: document.getElementById('runtimeWrap'),
     subs: document.getElementById('subsWrap'),
     ai: document.getElementById('aiModeWrap'),
+    analytics: document.getElementById('analyticsWrap'),
   };
 
   // Cleanup runtime polling when leaving runtime tab
@@ -68,6 +69,8 @@ function switchTab(tab){
     if(typeof runtimeInit === 'function') runtimeInit();
   } else if(tab === 'subs'){
     if(typeof subsInit === 'function') subsInit();
+  } else if(tab === 'analytics'){
+    if(typeof analyticsRefresh === 'function') analyticsRefresh();
   }
   const activeTab = document.querySelector('.chat-tab.active');
   if(activeTab) activeTab.scrollIntoView({behavior:'smooth',block:'nearest',inline:'nearest'});

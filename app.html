@@ -75,6 +75,7 @@
         <button class="chat-tab" id="tabRuntime" onclick="switchTab('runtime')">Runtime</button>
         <button class="chat-tab" id="tabSubs" onclick="switchTab('subs')">Subscriptions</button>
         <button class="chat-tab" id="tabAi" onclick="switchTab('ai')">AI</button>
+        <button class="chat-tab" id="tabAnalytics" onclick="switchTab('analytics')">Analytics</button>
       </div>
     </div>
 
@@ -1211,88 +1212,11 @@
         </div>
       </div>
 
-      <!-- Smart Airdrop & DAO moved to their own tabs -->
-
-      <!-- Your Agents Section -->
-      <div class="manage-action-card" style="margin-top:16px">
-        <div class="manage-action-hdr">
-          <span class="manage-action-icon">🤖</span> Your Agents
-        </div>
-        <div class="manage-action-body">
-          <p style="font-size:.72rem;color:var(--muted);margin:0 0 10px">Agent NFTs you own. Transfer the NFT to transfer the agent.</p>
-          <div id="manageAgentList" style="font-size:.72rem;color:var(--muted)">No agents yet. <a href="#" onclick="switchTab('create');setCreateMode('agent');return false" style="color:var(--accent)">Mint one</a></div>
-        </div>
-      </div>
-
-      <!-- Analytics Dashboard -->
-      <div class="manage-action-card" style="margin-top:16px">
-        <div class="manage-action-hdr">
-          <span class="manage-action-icon">&#x1F4CA;</span> Analytics Dashboard
-        </div>
-        <div class="manage-action-body">
-          <p style="font-size:.72rem;color:var(--muted);margin:0 0 12px">Track who visits your site, wallet connections, pass conversions, and NFT holder activity — all on-chain.</p>
-
-          <div class="analytics-summary" id="analyticsSummary">
-            <div class="analytics-card">
-              <div class="analytics-card-value" id="analyticsVisitors">—</div>
-              <div class="analytics-card-label">Visitors (24h)</div>
-            </div>
-            <div class="analytics-card">
-              <div class="analytics-card-value" id="analyticsWallets">—</div>
-              <div class="analytics-card-label">Wallets Connected</div>
-            </div>
-            <div class="analytics-card">
-              <div class="analytics-card-value" id="analyticsConversion">—</div>
-              <div class="analytics-card-label">Conversion Rate</div>
-            </div>
-            <div class="analytics-card">
-              <div class="analytics-card-value" id="analyticsLiveNow">—</div>
-              <div class="analytics-card-label">Live (1h)</div>
-            </div>
-          </div>
-
-          <!-- Pass Tier Breakdown -->
-          <div class="analytics-section" style="margin-top:14px">
-            <div class="analytics-section-title">Pass Holders</div>
-            <div class="analytics-tier-bars" id="analyticsTierBars">
-              <div class="analytics-tier-row">
-                <span class="analytics-tier-name">&#x1F50D; Scout</span>
-                <div class="analytics-tier-bar-wrap"><div class="analytics-tier-bar scout" id="analyticsBarScout" style="width:0%"></div></div>
-                <span class="analytics-tier-count" id="analyticsCountScout">0</span>
-              </div>
-              <div class="analytics-tier-row">
-                <span class="analytics-tier-name">&#x1F3A8; Creator</span>
-                <div class="analytics-tier-bar-wrap"><div class="analytics-tier-bar creator" id="analyticsBarCreator" style="width:0%"></div></div>
-                <span class="analytics-tier-count" id="analyticsCountCreator">0</span>
-              </div>
-              <div class="analytics-tier-row">
-                <span class="analytics-tier-name">&#x26A1; Pro</span>
-                <div class="analytics-tier-bar-wrap"><div class="analytics-tier-bar pro" id="analyticsBarPro" style="width:0%"></div></div>
-                <span class="analytics-tier-count" id="analyticsCountPro">0</span>
-              </div>
-              <div class="analytics-tier-row">
-                <span class="analytics-tier-name">&#x1F6AB; No Pass</span>
-                <div class="analytics-tier-bar-wrap"><div class="analytics-tier-bar none" id="analyticsBarNone" style="width:0%"></div></div>
-                <span class="analytics-tier-count" id="analyticsCountNone">0</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Recent Visitors -->
-          <div class="analytics-section" style="margin-top:14px">
-            <div class="analytics-section-title">Recent Visitors</div>
-            <div class="analytics-recent" id="analyticsRecent" style="max-height:200px;overflow-y:auto;font-size:.62rem;font-family:var(--mono);color:var(--muted)">
-              Connect wallet and load analytics to see data.
-            </div>
-          </div>
-
-          <button class="demo-create-btn" style="width:100%;margin-top:14px;font-size:.75rem;padding:10px 0;background:var(--bg4) !important;border:1px solid var(--border);border-radius:8px;color:var(--text)" onclick="analyticsRefresh()">
-            &#x1F504; Refresh Analytics
-          </button>
-          <div style="font-size:.55rem;color:var(--text-muted);text-align:center;margin-top:6px">
-            Add <code style="background:rgba(255,255,255,.06);padding:1px 4px;border-radius:3px">&lt;script src="js/tracker.js"&gt;&lt;/script&gt;</code> to any page to track visitors.
-          </div>
-        </div>
+      <!-- Quick Links to moved sections -->
+      <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap">
+        <button class="sa-template-btn" onclick="switchTab('airdrop')" style="font-size:.78rem">Airdrop Tokens</button>
+        <button class="sa-template-btn" onclick="switchTab('dao')" style="font-size:.78rem">DAO Voting</button>
+        <button class="sa-template-btn" onclick="switchTab('analytics')" style="font-size:.78rem">Analytics</button>
       </div>
 
     </div><!-- end manage-wrap -->
@@ -2031,6 +1955,111 @@
 
       </div>
     </div>
+
+    <!-- ===== ANALYTICS TAB ===== -->
+    <div class="manage-wrap" id="analyticsWrap" style="display:none">
+
+      <!-- Analytics Hero -->
+      <div style="text-align:center;padding:28px 16px 20px">
+        <div style="font-size:2rem;margin-bottom:6px">&#x1F4CA;</div>
+        <h2 style="font-size:1.3rem;font-weight:700;color:var(--text);margin:0 0 8px">Analytics Dashboard</h2>
+        <p style="font-size:.82rem;color:var(--muted);max-width:480px;margin:0 auto 16px;line-height:1.5">Track visitors, wallet connections, pass conversions, and holder activity — all on-chain.</p>
+      </div>
+
+      <!-- Summary Cards -->
+      <div class="analytics-summary" id="analyticsSummary">
+        <div class="analytics-card">
+          <div class="analytics-card-value" id="analyticsVisitors">—</div>
+          <div class="analytics-card-label">Visitors (24h)</div>
+        </div>
+        <div class="analytics-card">
+          <div class="analytics-card-value" id="analyticsWallets">—</div>
+          <div class="analytics-card-label">Wallets Connected</div>
+        </div>
+        <div class="analytics-card">
+          <div class="analytics-card-value" id="analyticsConversion">—</div>
+          <div class="analytics-card-label">Conversion Rate</div>
+        </div>
+        <div class="analytics-card">
+          <div class="analytics-card-value" id="analyticsLiveNow">—</div>
+          <div class="analytics-card-label">Live (1h)</div>
+        </div>
+      </div>
+
+      <!-- Pass Tier Breakdown -->
+      <div class="analytics-section" style="margin-top:20px;padding:0 16px">
+        <div class="analytics-section-title">Pass Holders</div>
+        <div class="analytics-tier-bars" id="analyticsTierBars">
+          <div class="analytics-tier-row">
+            <span class="analytics-tier-name">&#x1F50D; Scout</span>
+            <div class="analytics-tier-bar-wrap"><div class="analytics-tier-bar scout" id="analyticsBarScout" style="width:0%"></div></div>
+            <span class="analytics-tier-count" id="analyticsCountScout">0</span>
+          </div>
+          <div class="analytics-tier-row">
+            <span class="analytics-tier-name">&#x1F3A8; Creator</span>
+            <div class="analytics-tier-bar-wrap"><div class="analytics-tier-bar creator" id="analyticsBarCreator" style="width:0%"></div></div>
+            <span class="analytics-tier-count" id="analyticsCountCreator">0</span>
+          </div>
+          <div class="analytics-tier-row">
+            <span class="analytics-tier-name">&#x26A1; Pro</span>
+            <div class="analytics-tier-bar-wrap"><div class="analytics-tier-bar pro" id="analyticsBarPro" style="width:0%"></div></div>
+            <span class="analytics-tier-count" id="analyticsCountPro">0</span>
+          </div>
+          <div class="analytics-tier-row">
+            <span class="analytics-tier-name">&#x1F6AB; No Pass</span>
+            <div class="analytics-tier-bar-wrap"><div class="analytics-tier-bar none" id="analyticsBarNone" style="width:0%"></div></div>
+            <span class="analytics-tier-count" id="analyticsCountNone">0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Airdrop Funnel (new) -->
+      <div class="analytics-section" style="margin-top:20px;padding:0 16px">
+        <div class="analytics-section-title">Airdrop Funnel</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:10px">
+          <div class="analytics-card" style="text-align:center">
+            <div class="analytics-card-value" id="analyticsFunnelMinted">—</div>
+            <div class="analytics-card-label">Tokens Minted</div>
+          </div>
+          <div class="analytics-card" style="text-align:center">
+            <div class="analytics-card-value" id="analyticsFunnelAirdropped">—</div>
+            <div class="analytics-card-label">Airdrops Sent</div>
+          </div>
+          <div class="analytics-card" style="text-align:center">
+            <div class="analytics-card-value" id="analyticsFunnelRecipients">—</div>
+            <div class="analytics-card-label">Unique Recipients</div>
+          </div>
+          <div class="analytics-card" style="text-align:center">
+            <div class="analytics-card-value" id="analyticsFunnelTrades">—</div>
+            <div class="analytics-card-label">DEX Trades</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Visitors -->
+      <div class="analytics-section" style="margin-top:20px;padding:0 16px">
+        <div class="analytics-section-title">Recent Visitors</div>
+        <div class="analytics-recent" id="analyticsRecent" style="max-height:280px;overflow-y:auto;font-size:.62rem;font-family:var(--mono);color:var(--muted)">
+          Connect wallet and load analytics to see data.
+        </div>
+      </div>
+
+      <!-- Your Agents -->
+      <div class="analytics-section" style="margin-top:20px;padding:0 16px">
+        <div class="analytics-section-title">Your Agents</div>
+        <div id="manageAgentList" style="font-size:.72rem;color:var(--muted);margin-top:8px">No agents yet. <a href="#" onclick="switchTab('create');setCreateMode('agent');return false" style="color:var(--accent)">Mint one</a></div>
+      </div>
+
+      <div style="display:flex;gap:10px;justify-content:center;margin-top:24px;padding-bottom:20px">
+        <button class="demo-create-btn" style="font-size:.75rem;padding:10px 20px;background:var(--bg4) !important;border:1px solid var(--border);border-radius:8px;color:var(--text)" onclick="analyticsRefresh()">
+          &#x1F504; Refresh Analytics
+        </button>
+      </div>
+      <div style="font-size:.55rem;color:var(--text-muted);text-align:center;padding-bottom:16px">
+        Add <code style="background:rgba(255,255,255,.06);padding:1px 4px;border-radius:3px">&lt;script src="js/tracker.js"&gt;&lt;/script&gt;</code> to any page to track visitors.
+      </div>
+
+    </div><!-- end analyticsWrap -->
 
     </div><!-- end app-main -->
 
