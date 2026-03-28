@@ -7,7 +7,7 @@ window.txaiWallet = { address: '', signer: null, chainId: '', connected: false, 
 const KEPLR_CHAINS = {
   'coreum-testnet-1': {
     chainId: 'coreum-testnet-1',
-    chainName: 'Coreum Testnet',
+    chainName: 'TX Testnet',
     rpc: 'https://full-node.testnet-1.coreum.dev:26657',
     rest: 'https://full-node.testnet-1.coreum.dev:1317',
     bip44: { coinType: 990 },
@@ -29,7 +29,7 @@ const KEPLR_CHAINS = {
   },
   'coreum-mainnet-1': {
     chainId: 'coreum-mainnet-1',
-    chainName: 'Coreum Mainnet',
+    chainName: 'TX Mainnet',
     rpc: 'https://full-node.mainnet-1.coreum.dev:26657',
     rest: 'https://full-node.mainnet-1.coreum.dev:1317',
     bip44: { coinType: 990 },

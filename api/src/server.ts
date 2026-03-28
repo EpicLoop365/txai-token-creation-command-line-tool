@@ -1194,13 +1194,14 @@ app.get("/api/holders/:denom", async (req, res) => {
 // ─── NFT AIRDROP (Issue Class + Batch Mint to Recipients) ─────────────────
 
 app.post("/api/nft-airdrop", async (req, res) => {
-  const { name, symbol, description, uri, recipients, royaltyRate } = req.body as {
+  const { name, symbol, description, uri, recipients, royaltyRate, features } = req.body as {
     name?: string;
     symbol?: string;
     description?: string;
     uri?: string;
     recipients?: string[];
     royaltyRate?: string;
+    features?: Record<string, boolean>;
   };
 
   // Validate inputs
@@ -1240,6 +1241,7 @@ app.post("/api/nft-airdrop", async (req, res) => {
       description: description || `${name} NFT Airdrop Collection`,
       uri: uri || "",
       royaltyRate: royaltyRate || "0",
+      features: features || undefined,
     });
 
     if (!classResult.success) {

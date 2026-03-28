@@ -41,7 +41,7 @@ const COREUM_REST = 'https://full-node.testnet-1.coreum.dev:1317';
 
 const COREUM_CHAIN_INFO = {
   chainId: 'coreum-testnet-1',
-  chainName: 'Coreum Testnet',
+  chainName: 'TX Testnet',
   rpc: 'https://full-node.testnet-1.coreum.dev:26657',
   rest: 'https://full-node.testnet-1.coreum.dev:1317',
   bip44: { coinType: 990 },

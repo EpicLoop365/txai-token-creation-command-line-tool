@@ -357,7 +357,7 @@ function tokenGateShowUpgrade(targetTier) {
       <div class="gate-modal-footer">
         <strong>\u{1F512} Soulbound</strong> = locked to your wallet forever &nbsp;|&nbsp;
         <strong>\u{1F6E1} Whitelist-Gated</strong> = transfer to approved addresses via Manage tab &nbsp;|&nbsp;
-        All passes enforced at the Coreum protocol level.
+        All passes enforced at the TX protocol level.
       </div>
     </div>
   `;

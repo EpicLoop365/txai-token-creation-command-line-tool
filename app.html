@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TXAI — Smart Token Utility Platform | Issue, Automate & Trade on Coreum</title>
-<meta name="description" content="The Stripe for Smart Tokens — subscriptions, access, permissions, and autonomous liquidity, all enforced on-chain. Built on Coreum.">
+<title>TXAI — Smart Token Utility Platform | Issue, Automate & Trade on TX</title>
+<meta name="description" content="The Stripe for Smart Tokens — subscriptions, access, permissions, and autonomous liquidity, all enforced on-chain. Built on TX.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -47,15 +47,15 @@
 <section class="landing-hero" id="landingHero">
   <div class="container">
     <div class="hero-content">
-      <h1 class="hero-title">Create &amp; airdrop NFTs to<br><span class="hero-accent">any community — free</span></h1>
-      <p class="hero-sub">The fastest way to mint Smart Tokens and NFTs on Coreum. One-click airdrops to validator stakers and token holders. Zero platform fees. Built-in DEX.</p>
+      <h1 class="hero-title">Mint utility assets that<br><span class="hero-accent">work for you — on TX</span></h1>
+      <p class="hero-sub">Tokens, NFTs, access passes, and AI agents — all protocol-enforced on-chain. Soulbound identity. Subscription passes. Agent scripts. Zero platform fees.</p>
       <div class="hero-stats">
         <div class="hero-stat"><span class="hero-stat-val">0%</span><span class="hero-stat-lbl">Platform Fee</span></div>
-        <div class="hero-stat"><span class="hero-stat-val">1-Click</span><span class="hero-stat-lbl">Airdrop</span></div>
-        <div class="hero-stat"><span class="hero-stat-val">Coreum</span><span class="hero-stat-lbl">L1 Blockchain</span></div>
+        <div class="hero-stat"><span class="hero-stat-val">Smart</span><span class="hero-stat-lbl">NFT Protocol</span></div>
+        <div class="hero-stat"><span class="hero-stat-val">TX</span><span class="hero-stat-lbl">L1 Blockchain</span></div>
       </div>
       <div class="hero-actions">
-        <button class="hero-cta" onclick="document.getElementById('demo').scrollIntoView({behavior:'smooth'});setTimeout(()=>{switchTab('create');setCreateMode('airdrop')},400)">Launch Airdrop Tool</button>
+        <button class="hero-cta" onclick="document.getElementById('demo').scrollIntoView({behavior:'smooth'});setTimeout(()=>{switchTab('create');setCreateMode('custom')},400)">Create Utility Asset</button>
         <button class="hero-cta-secondary" onclick="document.getElementById('demo').scrollIntoView({behavior:'smooth'})">Explore Platform</button>
         <a class="hero-link" href="https://docs.coreum.dev" target="_blank">Docs</a>
       </div>
@@ -153,7 +153,6 @@
         <button class="create-mode-btn active" id="createModeCustom" onclick="setCreateMode('custom')">Token</button>
         <button class="create-mode-btn" id="createModeNft" onclick="setCreateMode('nft')">NFT</button>
         <button class="create-mode-btn" id="createModeAgent" onclick="setCreateMode('agent')">Agent NFT</button>
-        <button class="create-mode-btn" id="createModeAirdrop" onclick="setCreateMode('airdrop')">Airdrop</button>
         <button class="create-mode-btn" id="createModeQuick" onclick="setCreateMode('quick')">AI Prompt</button>
       </div>
 
@@ -528,200 +527,7 @@
         </div>
       </div><!-- end agentNftWrap -->
 
-      <!-- NFT Airdrop Tool — 3-Step Wizard -->
-      <div id="nftAirdropWrap" style="display:none">
-        <div class="customize-panel show">
-
-          <!-- Header -->
-          <div style="text-align:center;padding:8px 0 18px">
-            <div style="font-size:1.1rem;font-weight:700;color:var(--text);font-family:var(--font)">Airdrop NFTs to your community</div>
-            <p style="color:var(--muted);font-size:.78rem;margin:6px 0 0">Each holder gets a unique numbered NFT. Free — you only pay gas.</p>
-          </div>
-
-          <!-- Step indicators -->
-          <div class="wiz-steps" id="nftAdWizSteps">
-            <div class="wiz-step active" data-step="1"><span class="wiz-step-num">1</span> Design</div>
-            <div class="wiz-step-line"></div>
-            <div class="wiz-step" data-step="2"><span class="wiz-step-num">2</span> Recipients</div>
-            <div class="wiz-step-line"></div>
-            <div class="wiz-step" data-step="3"><span class="wiz-step-num">3</span> Launch</div>
-          </div>
-
-          <!-- ═══ STEP 1: Design Your NFT ═══ -->
-          <div class="wiz-panel" id="nftAdStep1">
-
-            <!-- Image upload area -->
-            <div class="cp-section">
-              <div class="cp-section-title" style="font-size:.85rem">Your NFT Image</div>
-              <div class="nft-ad-upload" id="nftAdUploadZone" onclick="document.getElementById('nftAdFileInput').click()">
-                <div class="nft-ad-upload-preview" id="nftAdPreviewImg" style="display:none"></div>
-                <div class="nft-ad-upload-placeholder" id="nftAdUploadPlaceholder">
-                  <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
-                  <span style="margin-top:8px;font-size:.78rem;color:var(--muted)">Drop image here or <span style="color:var(--accent);text-decoration:underline">browse</span></span>
-                  <span style="font-size:.65rem;color:var(--muted);opacity:.6">PNG, JPG, GIF, SVG — auto-hosted free</span>
-                </div>
-                <input type="file" id="nftAdFileInput" accept="image/*" style="display:none" onchange="nftAdHandleImage(this)">
-              </div>
-              <input class="cp-input" id="nftAdUri" placeholder="...or paste an image URL" style="margin-top:8px;font-size:.72rem">
-            </div>
-
-            <!-- Name & symbol -->
-            <div class="cp-section">
-              <div class="cp-section-title" style="font-size:.85rem">Collection Details</div>
-              <div class="cp-field">
-                <label class="cp-label">Name</label>
-                <input class="cp-input" id="nftAdName" placeholder="e.g. SHΣA OG Pass, ChadCoin Holders, Genesis Drop">
-              </div>
-              <div class="cp-field" style="margin-top:10px">
-                <label class="cp-label">Short Code <span style="color:var(--muted);font-weight:400">(auto-generated)</span></label>
-                <input class="cp-input" id="nftAdSymbol" placeholder="AUTO" style="text-transform:uppercase" readonly>
-              </div>
-              <div class="cp-field" style="margin-top:10px">
-                <label class="cp-label">Description <span style="color:var(--muted);font-weight:400">(optional)</span></label>
-                <input class="cp-input" id="nftAdDesc" placeholder="e.g. Exclusive drop for early holders">
-              </div>
-            </div>
-
-            <!-- Resale royalty — simple presets -->
-            <div class="cp-section">
-              <div class="cp-section-title" style="font-size:.85rem">Earn on resales</div>
-              <p style="color:var(--muted);font-size:.72rem;margin:0 0 10px">When someone sells your NFT, you get a cut. Choose your royalty:</p>
-              <div class="nft-ad-royalty-presets" id="nftAdRoyaltyPresets">
-                <button class="nft-ad-royalty-btn active" onclick="nftAdSetRoyalty(this,0)">0%</button>
-                <button class="nft-ad-royalty-btn" onclick="nftAdSetRoyalty(this,0.025)">2.5%</button>
-                <button class="nft-ad-royalty-btn" onclick="nftAdSetRoyalty(this,0.05)">5%</button>
-                <button class="nft-ad-royalty-btn" onclick="nftAdSetRoyalty(this,0.10)">10%</button>
-              </div>
-              <input type="hidden" id="nftAdRoyalty" value="0">
-            </div>
-
-            <!-- NFT Preview card -->
-            <div class="cp-section">
-              <div class="cp-section-title" style="font-size:.85rem">Preview</div>
-              <div class="nft-ad-preview-card" id="nftAdPreviewCard">
-                <div class="nft-ad-preview-img" id="nftAdCardImg">
-                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--border)" stroke-width="1"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
-                </div>
-                <div class="nft-ad-preview-info">
-                  <div class="nft-ad-preview-name" id="nftAdCardName">Your Collection</div>
-                  <div class="nft-ad-preview-id">#1 of <span id="nftAdCardCount">?</span></div>
-                  <div class="nft-ad-preview-royalty" id="nftAdCardRoyalty">0% royalty</div>
-                </div>
-              </div>
-            </div>
-
-            <button class="wiz-next-btn" onclick="nftAdGoStep(2)">Next: Choose Recipients</button>
-          </div>
-
-          <!-- ═══ STEP 2: Recipients ═══ -->
-          <div class="wiz-panel" id="nftAdStep2" style="display:none">
-
-            <div class="cp-section">
-              <div class="cp-section-title" style="font-size:.85rem">Who gets the drop?</div>
-              <p style="color:var(--muted);font-size:.72rem;margin:0 0 14px">Choose how to load addresses. Each person gets one unique NFT.</p>
-
-              <!-- Source tabs -->
-              <div class="nft-ad-source-tabs">
-                <button class="nft-ad-source-tab active" onclick="nftAdSourceTab(this,'paste')">Paste / CSV</button>
-                <button class="nft-ad-source-tab" onclick="nftAdSourceTab(this,'holders')">Token Holders</button>
-                <button class="nft-ad-source-tab" onclick="nftAdSourceTab(this,'stakers')">Validator Stakers</button>
-              </div>
-
-              <!-- Paste / CSV -->
-              <div class="nft-ad-source-panel" id="nftAdSrcPaste">
-                <textarea class="cp-input" id="nftAdRecipients" rows="6" placeholder="Paste wallet addresses — one per line, or comma-separated.&#10;&#10;testcore1abc123...&#10;testcore1def456...&#10;testcore1ghi789..." style="resize:vertical;font-family:'Space Mono',monospace;font-size:.72rem"></textarea>
-                <div style="display:flex;gap:8px;margin-top:8px">
-                  <button class="nft-ad-small-btn" onclick="document.getElementById('nftAdCsvInput').click()">Import CSV / TXT</button>
-                  <input type="file" id="nftAdCsvInput" accept=".csv,.txt" style="display:none" onchange="nftAdImportCsv(this)">
-                  <span style="font-size:.68rem;color:var(--muted);align-self:center" id="nftAdCount">0 addresses</span>
-                </div>
-              </div>
-
-              <!-- Token holders -->
-              <div class="nft-ad-source-panel" id="nftAdSrcHolders" style="display:none">
-                <p style="color:var(--muted);font-size:.72rem;margin:0 0 8px">Enter your token's denom to find holders on-chain:</p>
-                <div style="display:flex;gap:8px">
-                  <input class="cp-input" id="nftAdDenom" placeholder="e.g. mytoken-testcore1abc..." style="flex:1">
-                  <button class="nft-ad-small-btn" style="white-space:nowrap" id="nftAdFetchHolders" onclick="nftAirdropFetchHolders()">Find Holders</button>
-                </div>
-                <p style="color:var(--muted);font-size:.65rem;margin:8px 0 0;opacity:.7">Tip: Most explorers let you export a holder list as CSV. Use "Import CSV" above for large lists.</p>
-              </div>
-
-              <!-- Validator stakers -->
-              <div class="nft-ad-source-panel" id="nftAdSrcStakers" style="display:none">
-                <p style="color:var(--muted);font-size:.72rem;margin:0 0 8px">Enter a validator address to fetch all their stakers:</p>
-                <div style="display:flex;gap:8px">
-                  <input class="cp-input" id="nftAdValidator" placeholder="testcorevaloper1..." style="flex:1">
-                  <button class="nft-ad-small-btn" style="white-space:nowrap" id="nftAdFetchStakers" onclick="nftAirdropFetchStakers()">Fetch Stakers</button>
-                </div>
-              </div>
-
-              <div class="nft-result" id="nftAdError" style="display:none;margin-top:8px"><div class="nft-result-icon" style="color:var(--red)">!</div><div class="nft-result-msg" id="nftAdErrorMsg"></div></div>
-            </div>
-
-            <div style="display:flex;gap:10px">
-              <button class="wiz-back-btn" onclick="nftAdGoStep(1)">Back</button>
-              <button class="wiz-next-btn" onclick="nftAdGoStep(3)" style="flex:1">Next: Review & Launch</button>
-            </div>
-          </div>
-
-          <!-- ═══ STEP 3: Review & Launch ═══ -->
-          <div class="wiz-panel" id="nftAdStep3" style="display:none">
-
-            <div class="cp-section">
-              <div class="cp-section-title" style="font-size:.85rem">Review your drop</div>
-
-              <div class="nft-ad-review">
-                <div class="nft-ad-review-row"><span class="nft-ad-review-label">Collection</span><span id="nftAdRevName">—</span></div>
-                <div class="nft-ad-review-row"><span class="nft-ad-review-label">Recipients</span><span id="nftAdRevCount">0</span></div>
-                <div class="nft-ad-review-row"><span class="nft-ad-review-label">Each gets</span><span>1 unique NFT (#1, #2, #3...)</span></div>
-                <div class="nft-ad-review-row"><span class="nft-ad-review-label">Royalty</span><span id="nftAdRevRoyalty">0%</span></div>
-                <div class="nft-ad-review-row"><span class="nft-ad-review-label">Platform fee</span><span style="color:var(--green)">Free</span></div>
-                <div class="nft-ad-review-row"><span class="nft-ad-review-label">Est. gas</span><span id="nftAdRevGas">~0 CORE</span></div>
-              </div>
-            </div>
-
-            <button class="demo-create-btn custom-deploy-btn" style="width:100%;font-size:.9rem;padding:14px 0;background:linear-gradient(135deg,var(--accent),#9b59b6) !important;border-radius:10px" id="nftAdExecuteBtn" onclick="nftAirdropExecute()">
-              <span id="nftAdExecuteBtnText">Airdrop NFTs Now</span>
-              <span id="nftAdExecuteSpinner" class="nft-spinner" style="display:none"></span>
-            </button>
-
-            <!-- Progress -->
-            <div id="nftAdProgress" style="display:none;margin-top:14px">
-              <div style="display:flex;justify-content:space-between;font-size:.72rem;color:var(--muted);margin-bottom:4px">
-                <span id="nftAdProgressText">Creating collection...</span>
-                <span id="nftAdProgressPct">0%</span>
-              </div>
-              <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden">
-                <div id="nftAdProgressBar" style="height:100%;width:0%;background:linear-gradient(90deg,var(--accent),var(--green));transition:width .3s;border-radius:3px"></div>
-              </div>
-            </div>
-
-            <!-- Result -->
-            <div class="nft-result" id="nftAdResult" style="display:none;margin-top:14px">
-              <div class="nft-result-icon" id="nftAdResultIcon">✓</div>
-              <div class="nft-result-msg" id="nftAdResultMsg"></div>
-            </div>
-
-            <!-- Log (collapsed by default) -->
-            <details style="margin-top:14px">
-              <summary style="font-size:.72rem;color:var(--muted);cursor:pointer;font-family:var(--mono)">Activity Log</summary>
-              <div id="nftAdLog" style="max-height:150px;overflow-y:auto;font-size:.65rem;font-family:'Space Mono',monospace;color:var(--muted);background:rgba(0,0,0,.15);border-radius:6px;padding:8px 10px;margin-top:6px"></div>
-            </details>
-
-            <div style="display:flex;gap:10px;margin-top:14px">
-              <button class="wiz-back-btn" onclick="nftAdGoStep(2)">Back</button>
-            </div>
-          </div>
-
-          <!-- History (always visible at bottom) -->
-          <div class="cp-section" style="margin-top:20px;border-top:1px solid var(--border);padding-top:16px">
-            <div class="cp-section-title" style="font-size:.75rem;color:var(--muted)">Past Airdrops</div>
-            <div id="nftAdHistory" style="font-size:.72rem;color:var(--muted)">No airdrops yet.</div>
-          </div>
-
-        </div>
-      </div><!-- end nftAirdropWrap -->
+      <!-- NFT Airdrop moved to Manage tab -->
 
       <div class="demo-disclaimer visible" id="demoDisclaimer">Deployed on TX testnet. No real value.</div>
     </div>
@@ -1241,7 +1047,135 @@
 
       </div><!-- end manage-info-card -->
 
-      <!-- Airdrop Tool (always visible) -->
+      <!-- NFT Airdrop Wizard -->
+      <div class="manage-action-card" id="nftAirdropWrap" style="margin-top:16px">
+        <div class="manage-action-hdr" style="cursor:pointer" onclick="this.parentElement.querySelector('.manage-action-body').style.display=this.parentElement.querySelector('.manage-action-body').style.display==='none'?'block':'none'">
+          <span class="manage-action-icon">🎨</span> NFT Airdrop Wizard
+          <span style="margin-left:auto;font-size:.65rem;color:var(--muted)">Mint + distribute NFTs to communities</span>
+        </div>
+        <div class="manage-action-body">
+
+          <!-- Step indicators -->
+          <div class="wiz-steps" id="nftAdWizSteps" style="margin-bottom:14px">
+            <div class="wiz-step active" data-step="1"><span class="wiz-step-num">1</span> Design</div>
+            <div class="wiz-step-line"></div>
+            <div class="wiz-step" data-step="2"><span class="wiz-step-num">2</span> Recipients</div>
+            <div class="wiz-step-line"></div>
+            <div class="wiz-step" data-step="3"><span class="wiz-step-num">3</span> Launch</div>
+          </div>
+
+          <!-- STEP 1: Design -->
+          <div class="wiz-panel" id="nftAdStep1">
+            <div class="cp-section">
+              <div class="cp-section-title" style="font-size:.85rem">Your NFT Image</div>
+              <div class="nft-ad-upload" id="nftAdUploadZone" onclick="document.getElementById('nftAdFileInput').click()">
+                <div class="nft-ad-upload-preview" id="nftAdPreviewImg" style="display:none"></div>
+                <div class="nft-ad-upload-placeholder" id="nftAdUploadPlaceholder">
+                  <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+                  <span style="margin-top:8px;font-size:.78rem;color:var(--muted)">Drop image here or <span style="color:var(--accent);text-decoration:underline">browse</span></span>
+                  <span style="font-size:.65rem;color:var(--muted);opacity:.6">PNG, JPG, GIF, SVG — auto-hosted free</span>
+                </div>
+                <input type="file" id="nftAdFileInput" accept="image/*" style="display:none" onchange="nftAdHandleImage(this)">
+              </div>
+              <input class="cp-input" id="nftAdUri" placeholder="...or paste an image URL" style="margin-top:8px;font-size:.72rem">
+            </div>
+            <div class="cp-section">
+              <div class="cp-section-title" style="font-size:.85rem">Collection Details</div>
+              <div class="cp-field"><label class="cp-label">Name</label><input class="cp-input" id="nftAdName" placeholder="e.g. OG Pass, Genesis Drop"></div>
+              <div class="cp-field" style="margin-top:10px"><label class="cp-label">Short Code <span style="color:var(--muted);font-weight:400">(auto)</span></label><input class="cp-input" id="nftAdSymbol" placeholder="AUTO" style="text-transform:uppercase" readonly></div>
+              <div class="cp-field" style="margin-top:10px"><label class="cp-label">Description <span style="color:var(--muted);font-weight:400">(optional)</span></label><input class="cp-input" id="nftAdDesc" placeholder="e.g. Exclusive drop for early holders"></div>
+            </div>
+            <div class="cp-section">
+              <div class="cp-section-title" style="font-size:.85rem">Earn on resales</div>
+              <p style="color:var(--muted);font-size:.72rem;margin:0 0 10px">Royalty on secondary sales:</p>
+              <div class="nft-ad-royalty-presets" id="nftAdRoyaltyPresets">
+                <button class="nft-ad-royalty-btn active" onclick="nftAdSetRoyalty(this,0)">0%</button>
+                <button class="nft-ad-royalty-btn" onclick="nftAdSetRoyalty(this,0.025)">2.5%</button>
+                <button class="nft-ad-royalty-btn" onclick="nftAdSetRoyalty(this,0.05)">5%</button>
+                <button class="nft-ad-royalty-btn" onclick="nftAdSetRoyalty(this,0.10)">10%</button>
+              </div>
+              <input type="hidden" id="nftAdRoyalty" value="0">
+            </div>
+            <div class="cp-section">
+              <div class="cp-section-title" style="font-size:.85rem">Preview</div>
+              <div class="nft-ad-preview-card" id="nftAdPreviewCard">
+                <div class="nft-ad-preview-img" id="nftAdCardImg"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--border)" stroke-width="1"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div>
+                <div class="nft-ad-preview-info">
+                  <div class="nft-ad-preview-name" id="nftAdCardName">Your Collection</div>
+                  <div class="nft-ad-preview-id">#1 of <span id="nftAdCardCount">?</span></div>
+                  <div class="nft-ad-preview-royalty" id="nftAdCardRoyalty">0% royalty</div>
+                </div>
+              </div>
+            </div>
+            <button class="wiz-next-btn" onclick="nftAdGoStep(2)">Next: Choose Recipients</button>
+          </div>
+
+          <!-- STEP 2: Recipients -->
+          <div class="wiz-panel" id="nftAdStep2" style="display:none">
+            <div class="cp-section">
+              <div class="cp-section-title" style="font-size:.85rem">Who gets the drop?</div>
+              <p style="color:var(--muted);font-size:.72rem;margin:0 0 14px">Each person gets one unique NFT.</p>
+              <div class="nft-ad-source-tabs">
+                <button class="nft-ad-source-tab active" onclick="nftAdSourceTab(this,'paste')">Paste / CSV</button>
+                <button class="nft-ad-source-tab" onclick="nftAdSourceTab(this,'holders')">Token Holders</button>
+                <button class="nft-ad-source-tab" onclick="nftAdSourceTab(this,'stakers')">Validator Stakers</button>
+              </div>
+              <div class="nft-ad-source-panel" id="nftAdSrcPaste">
+                <textarea class="cp-input" id="nftAdRecipients" rows="6" placeholder="Paste wallet addresses — one per line or comma-separated" style="resize:vertical;font-family:'Space Mono',monospace;font-size:.72rem"></textarea>
+                <div style="display:flex;gap:8px;margin-top:8px">
+                  <button class="nft-ad-small-btn" onclick="document.getElementById('nftAdCsvInput').click()">Import CSV / TXT</button>
+                  <input type="file" id="nftAdCsvInput" accept=".csv,.txt" style="display:none" onchange="nftAdImportCsv(this)">
+                  <span style="font-size:.68rem;color:var(--muted);align-self:center" id="nftAdCount">0 addresses</span>
+                </div>
+              </div>
+              <div class="nft-ad-source-panel" id="nftAdSrcHolders" style="display:none">
+                <p style="color:var(--muted);font-size:.72rem;margin:0 0 8px">Enter your token's denom to find holders on-chain:</p>
+                <div style="display:flex;gap:8px"><input class="cp-input" id="nftAdDenom" placeholder="e.g. mytoken-testcore1abc..." style="flex:1"><button class="nft-ad-small-btn" style="white-space:nowrap" id="nftAdFetchHolders" onclick="nftAirdropFetchHolders()">Find Holders</button></div>
+              </div>
+              <div class="nft-ad-source-panel" id="nftAdSrcStakers" style="display:none">
+                <p style="color:var(--muted);font-size:.72rem;margin:0 0 8px">Enter a validator address to fetch all their stakers:</p>
+                <div style="display:flex;gap:8px"><input class="cp-input" id="nftAdValidator" placeholder="testcorevaloper1..." style="flex:1"><button class="nft-ad-small-btn" style="white-space:nowrap" id="nftAdFetchStakers" onclick="nftAirdropFetchStakers()">Fetch Stakers</button></div>
+              </div>
+              <div class="nft-result" id="nftAdError" style="display:none;margin-top:8px"><div class="nft-result-icon" style="color:var(--red)">!</div><div class="nft-result-msg" id="nftAdErrorMsg"></div></div>
+            </div>
+            <div style="display:flex;gap:10px"><button class="wiz-back-btn" onclick="nftAdGoStep(1)">Back</button><button class="wiz-next-btn" onclick="nftAdGoStep(3)" style="flex:1">Next: Review & Launch</button></div>
+          </div>
+
+          <!-- STEP 3: Launch -->
+          <div class="wiz-panel" id="nftAdStep3" style="display:none">
+            <div class="cp-section">
+              <div class="cp-section-title" style="font-size:.85rem">Review your drop</div>
+              <div class="nft-ad-review">
+                <div class="nft-ad-review-row"><span class="nft-ad-review-label">Collection</span><span id="nftAdRevName">—</span></div>
+                <div class="nft-ad-review-row"><span class="nft-ad-review-label">Recipients</span><span id="nftAdRevCount">0</span></div>
+                <div class="nft-ad-review-row"><span class="nft-ad-review-label">Each gets</span><span>1 unique NFT (#1, #2, #3...)</span></div>
+                <div class="nft-ad-review-row"><span class="nft-ad-review-label">Royalty</span><span id="nftAdRevRoyalty">0%</span></div>
+                <div class="nft-ad-review-row"><span class="nft-ad-review-label">Platform fee</span><span style="color:var(--green)">Free</span></div>
+                <div class="nft-ad-review-row"><span class="nft-ad-review-label">Est. gas</span><span id="nftAdRevGas">~0 CORE</span></div>
+              </div>
+            </div>
+            <button class="demo-create-btn custom-deploy-btn" style="width:100%;font-size:.9rem;padding:14px 0;background:linear-gradient(135deg,var(--accent),#9b59b6) !important;border-radius:10px" id="nftAdExecuteBtn" onclick="nftAirdropExecute()">
+              <span id="nftAdExecuteBtnText">Airdrop NFTs Now</span>
+              <span id="nftAdExecuteSpinner" class="nft-spinner" style="display:none"></span>
+            </button>
+            <div id="nftAdProgress" style="display:none;margin-top:14px">
+              <div style="display:flex;justify-content:space-between;font-size:.72rem;color:var(--muted);margin-bottom:4px"><span id="nftAdProgressText">Creating collection...</span><span id="nftAdProgressPct">0%</span></div>
+              <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden"><div id="nftAdProgressBar" style="height:100%;width:0%;background:linear-gradient(90deg,var(--accent),var(--green));transition:width .3s;border-radius:3px"></div></div>
+            </div>
+            <div class="nft-result" id="nftAdResult" style="display:none;margin-top:14px"><div class="nft-result-icon" id="nftAdResultIcon">✓</div><div class="nft-result-msg" id="nftAdResultMsg"></div></div>
+            <details style="margin-top:14px"><summary style="font-size:.72rem;color:var(--muted);cursor:pointer;font-family:var(--mono)">Activity Log</summary><div id="nftAdLog" style="max-height:150px;overflow-y:auto;font-size:.65rem;font-family:'Space Mono',monospace;color:var(--muted);background:rgba(0,0,0,.15);border-radius:6px;padding:8px 10px;margin-top:6px"></div></details>
+            <div style="display:flex;gap:10px;margin-top:14px"><button class="wiz-back-btn" onclick="nftAdGoStep(2)">Back</button></div>
+          </div>
+
+          <!-- History -->
+          <div class="cp-section" style="margin-top:20px;border-top:1px solid var(--border);padding-top:16px">
+            <div class="cp-section-title" style="font-size:.75rem;color:var(--muted)">Past Airdrops</div>
+            <div id="nftAdHistory" style="font-size:.72rem;color:var(--muted)">No airdrops yet.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Token Airdrop Tool (always visible) -->
       <div class="manage-action-card airdrop-standalone">
         <div class="manage-action-hdr">
           <span class="manage-action-icon">📡</span> Airdrop Tool
@@ -1657,7 +1591,7 @@
           <h2 class="swarm-hero-title">AI Agent Swarms on Blockchain</h2>
           <p class="swarm-hero-subtitle">
             Deploy coordinated AI agents that execute real on-chain trades autonomously.
-            Each agent has its own wallet, funds itself, and operates independently on the Coreum DEX.
+            Each agent has its own wallet, funds itself, and operates independently on the TX DEX.
           </p>
           <div class="swarm-hero-stats">
             <div class="swarm-hero-stat">
@@ -1684,7 +1618,7 @@
               <div class="swarm-card-icon">📈</div>
               <h4>Market Maker Swarm</h4>
               <p class="swarm-card-desc">3 AI agents create a full orderbook for your token — buy walls, sell walls, overlapping fills, and taker sweeps. Real liquidity in minutes.</p>
-              <div class="swarm-card-meta"><span>🤖 3 Agents</span><span>⏱️ ~3 min</span><span>🔗 Coreum DEX</span></div>
+              <div class="swarm-card-meta"><span>🤖 3 Agents</span><span>⏱️ ~3 min</span><span>🔗 TX DEX</span></div>
               <button class="swarm-launch-btn">Launch Swarm</button>
             </div>
             <div class="swarm-template-card soon" data-template="nft-minter" onclick="swarmSelectTemplate('nft-minter')">
@@ -1693,7 +1627,7 @@
               <div class="swarm-card-icon">🎨</div>
               <h4>Smart NFT Swarm</h4>
               <p class="swarm-card-desc">AI agents mint, list, and trade NFT collections autonomously. Dynamic pricing, rarity-based strategies, and automated floor management.</p>
-              <div class="swarm-card-meta"><span>🤖 4 Agents</span><span>⏱️ ~5 min</span><span>🔗 Coreum NFT</span></div>
+              <div class="swarm-card-meta"><span>🤖 4 Agents</span><span>⏱️ ~5 min</span><span>🔗 TX NFT</span></div>
             </div>
             <div class="swarm-template-card soon" data-template="arbitrage" onclick="swarmSelectTemplate('arbitrage')">
               <div class="swarm-card-accent amber"></div>
@@ -1807,7 +1741,7 @@
 <footer>
   <div class="container">
     <div class="footer-inner">
-      <div class="footer-left">Built with <span>Claude AI</span> + Coreum Smart Tokens</div>
+      <div class="footer-left">Built with <span>Claude AI</span> + TX Smart Tokens</div>
       <div class="footer-links">
         <a href="https://github.com/EpicLoop365/txai-studio" target="_blank">GitHub</a>
         <a href="https://docs.coreum.dev" target="_blank">TX Docs</a>

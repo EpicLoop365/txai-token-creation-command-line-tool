@@ -319,9 +319,9 @@ function resetDeployBtns(){
 let createMode = 'custom';
 function setCreateMode(mode){
   createMode = mode;
-  const modes = ['custom','nft','agent','airdrop','quick'];
-  const ids = {custom:'createModeCustom',nft:'createModeNft',agent:'createModeAgent',airdrop:'createModeAirdrop',quick:'createModeQuick'};
-  const wraps = {custom:'customCreateWrap',nft:'nftCreateWrap',agent:'agentNftWrap',airdrop:'nftAirdropWrap',quick:'quickCreateWrap'};
+  const modes = ['custom','nft','agent','quick'];
+  const ids = {custom:'createModeCustom',nft:'createModeNft',agent:'createModeAgent',quick:'createModeQuick'};
+  const wraps = {custom:'customCreateWrap',nft:'nftCreateWrap',agent:'agentNftWrap',quick:'quickCreateWrap'};
   modes.forEach(m => {
     const btn = document.getElementById(ids[m]);
     if(btn) btn.classList.toggle('active', m === mode);
