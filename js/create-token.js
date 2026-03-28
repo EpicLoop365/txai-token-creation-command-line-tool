@@ -1248,26 +1248,28 @@ async function chooseWalletMode(mode){
 async function connectWalletForChoice(){
   // Show inline wallet picker in the modal
   return new Promise((resolve) => {
-    // Build a small picker overlay
     const overlay = document.getElementById('walletChoiceOverlay');
     overlay.style.display = 'flex';
     overlay.classList.add('show');
     const modal = overlay.querySelector('.wallet-choice-modal');
+    const keplrInstalled = keplrAvailable();
     modal.innerHTML = `
       <div class="wallet-choice-title">Connect Your Wallet</div>
       <div class="wallet-choice-subtitle">Choose a wallet provider to sign the token creation transaction</div>
-      <div class="wallet-choice-cards">
-        <div class="wallet-choice-card" id="wcKeplr" style="cursor:pointer">
-          <div class="wc-icon"><img src="https://raw.githubusercontent.com/nicolaracco/kepler-ui/main/packages/icons/src/icons/keplr-logo.svg" alt="Keplr" style="width:48px;height:48px" onerror="this.parentElement.textContent='K'"></div>
+      <div class="wallet-choice-cards wallet-choice-cards--nav">
+        <div class="wallet-choice-card wallet-choice-card--primary recommended" id="wcKeplr" style="cursor:pointer">
+          <div class="wc-icon"><svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="40" height="40" rx="8" fill="#7B6FE8"/><path d="M11 29V11H15.5V18.2L22.1 11H28L20.5 19.1L28.5 29H22.3L16.8 21.5L15.5 22.9V29H11Z" fill="white"/></svg></div>
           <div class="wc-label">Keplr Wallet</div>
           <div class="wc-desc">Most popular Cosmos wallet. Browser extension required.</div>
+          <span class="wc-badge own">Full control</span>
         </div>
-        <div class="wallet-choice-card" id="wcLeap" style="cursor:pointer">
-          <div class="wc-icon"><img src="https://assets.leapwallet.io/logos/leap-cosmos-logo.svg" alt="Leap" style="width:48px;height:48px" onerror="this.parentElement.textContent='L'"></div>
+        <div class="wallet-choice-card wallet-choice-card--secondary" id="wcLeap" style="cursor:pointer">
+          <div class="wc-icon"><img src="https://assets.leapwallet.io/logos/leap-cosmos-logo.svg" alt="Leap" style="width:36px;height:36px" onerror="this.parentElement.textContent='L'"></div>
           <div class="wc-label">Leap Wallet</div>
-          <div class="wc-desc">Fast Cosmos wallet with clean UI. Browser extension required.</div>
+          <div class="wc-desc">Alternative Cosmos wallet.</div>
         </div>
       </div>
+      ${!keplrInstalled ? '<div class="wallet-choice-install-hint"><span>Keplr not detected.</span><a href="https://www.keplr.app/download" target="_blank" rel="noopener">Install Keplr Extension</a></div>' : ''}
       <button class="wallet-choice-dismiss" id="wcCancel">Cancel</button>
     `;
     document.getElementById('wcCancel').onclick = () => {
@@ -1285,6 +1287,10 @@ async function connectWalletForChoice(){
       }
     };
     document.getElementById('wcKeplr').onclick = async () => {
+      if(!keplrAvailable()){
+        alert('Keplr wallet extension not found.\n\nPlease install it from:\nhttps://www.keplr.app/download');
+        return;
+      }
       overlay.classList.remove('show');
       overlay.style.display = 'none';
       await globalConnectWallet('keplr');
@@ -1302,7 +1308,7 @@ async function connectWalletForChoice(){
 }
 
 function resetWalletChoiceModal(){
-  // Restore original modal content
+  // Restore original modal content (token creation choice)
   const overlay = document.getElementById('walletChoiceOverlay');
   const modal = overlay.querySelector('.wallet-choice-modal');
   modal.innerHTML = `
@@ -1316,9 +1322,9 @@ function resetWalletChoiceModal(){
         <span class="wc-badge free">No wallet needed</span>
       </div>
       <div class="wallet-choice-card recommended" onclick="chooseWalletMode('connect')">
-        <div class="wc-icon">&#128273;</div>
-        <div class="wc-label">Your Wallet</div>
-        <div class="wc-desc">Connect Keplr or Leap &mdash; you are the issuer. You can mint, burn, freeze &amp; manage the token.</div>
+        <div class="wc-icon"><svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="40" height="40" rx="8" fill="#7B6FE8"/><path d="M11 29V11H15.5V18.2L22.1 11H28L20.5 19.1L28.5 29H22.3L16.8 21.5L15.5 22.9V29H11Z" fill="white"/></svg></div>
+        <div class="wc-label">Your Wallet (Keplr)</div>
+        <div class="wc-desc">Connect Keplr &mdash; you are the issuer. You can mint, burn, freeze &amp; manage the token.</div>
         <span class="wc-badge own">You own the token</span>
       </div>
     </div>

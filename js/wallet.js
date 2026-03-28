@@ -1,6 +1,85 @@
 /* ===== TXAI - Global Wallet Connection ===== */
 function globalShowWalletOptions(){
+  // Show the wallet choice overlay modal (Keplr vs Demo)
+  const overlay = document.getElementById('walletChoiceOverlay');
+  if(!overlay) return;
+  const modal = overlay.querySelector('.wallet-choice-modal');
+
+  // Reset modal to nav-connect layout
+  modal.innerHTML = `
+    <div class="wallet-choice-title">Connect Your Wallet</div>
+    <div class="wallet-choice-subtitle">Choose a wallet to connect to TXAI</div>
+    <div class="wallet-choice-cards wallet-choice-cards--nav">
+      <div class="wallet-choice-card wallet-choice-card--primary recommended" id="navWcKeplr" onclick="navConnectKeplr()">
+        <div class="wc-icon"><svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="40" height="40" rx="8" fill="#7B6FE8"/><path d="M11 29V11H15.5V18.2L22.1 11H28L20.5 19.1L28.5 29H22.3L16.8 21.5L15.5 22.9V29H11Z" fill="white"/></svg></div>
+        <div class="wc-label">Keplr Wallet</div>
+        <div class="wc-desc">Connect your Keplr browser extension to sign transactions and own your tokens.</div>
+        <span class="wc-badge own">Full control</span>
+      </div>
+      <div class="wallet-choice-card wallet-choice-card--secondary" id="navWcDemo" onclick="navConnectDemo()">
+        <div class="wc-icon" style="font-size:1.5rem">&#129302;</div>
+        <div class="wc-label">Demo Wallet</div>
+        <div class="wc-desc">Try TXAI without a wallet. AI agent creates tokens for you on testnet.</div>
+        <span class="wc-badge free">No extension needed</span>
+      </div>
+    </div>
+    <div class="wallet-choice-install-hint" id="wcInstallHint" style="display:none">
+      <span>Keplr not detected.</span>
+      <a href="https://www.keplr.app/download" target="_blank" rel="noopener">Install Keplr Extension</a>
+    </div>
+    <button class="wallet-choice-dismiss" onclick="closeWalletChoice()">Cancel</button>
+  `;
+
+  // Show install hint if Keplr not available
+  if(!keplrAvailable()){
+    const hint = document.getElementById('wcInstallHint');
+    if(hint) hint.style.display = '';
+  }
+
+  overlay.style.display = 'flex';
+  overlay.classList.add('show');
+}
+
+/** Called when user picks Keplr in the nav wallet modal */
+async function navConnectKeplr(){
+  if(!keplrAvailable()){
+    alert('Keplr wallet extension not found.\n\nPlease install it from:\nhttps://www.keplr.app/download');
+    return;
+  }
+  closeWalletChoice();
+  try {
+    const result = await keplrConnect();
+    _keplrUpdateNavUI(true);
+    updateGlobalWalletUI(true, 'keplr');
+  } catch(err){
+    console.error('[wallet] Keplr connect error:', err);
+    alert('Failed to connect Keplr: ' + (err.message || err));
+  }
+}
+
+/** Called when user picks Demo wallet in the nav wallet modal */
+function navConnectDemo(){
+  closeWalletChoice();
+  walletMode = 'agent';
+  connectedAddress = '';
+  connectedOfflineSigner = null;
+  // Update nav to show Demo badge
+  const btn = document.getElementById('navConnectBtn');
+  const badge = document.getElementById('navConnectedBadge');
+  const addrEl = document.getElementById('navConnectedAddr');
+  if(btn && badge && addrEl){
+    btn.style.display = 'none';
+    badge.style.display = 'inline-flex';
+    addrEl.innerHTML = '<span class="nav-wallet-provider-tag demo">Demo</span> Agent Wallet';
+    addrEl.title = 'Demo mode - AI agent wallet';
+  }
+  updateGlobalWalletUI(false);
+}
+
+function _oldGlobalShowWalletDropdown(){
+  // Legacy: toggle the global wallet bar dropdown
   const dd = document.getElementById('gwDropdown');
+  if(!dd) return;
   dd.classList.toggle('show');
   const handler = (e) => {
     if(!document.getElementById('globalWalletBar').contains(e.target)){
@@ -62,10 +141,15 @@ async function globalConnectWallet(provider){
 }
 
 function globalDisconnectWallet(){
+  // If Keplr was connected, use keplr disconnect to clear localStorage
+  if(window.txaiWallet && window.txaiWallet.connected && window.txaiWallet.provider === 'keplr'){
+    keplrDisconnect();
+  }
   walletMode = 'agent';
   connectedAddress = '';
   connectedOfflineSigner = null;
   updateGlobalWalletUI(false);
+  _keplrUpdateNavUI(false);
   window.removeEventListener('keplr_keystorechange', globalOnAccountChange);
 }
 
@@ -110,11 +194,14 @@ function updateGlobalWalletUI(connected, provider){
   document.getElementById('gwDisconnectWrap').style.display = connected ? '' : 'none';
 
   if(connected){
-    const provName = provider === 'keplr' ? 'Keplr' : 'Leap';
+    const provName = provider === 'keplr' ? 'Keplr' : (provider === 'leap' ? 'Leap' : 'Wallet');
     document.getElementById('gwProviderBadge').textContent = provName;
     document.getElementById('gwAddr').textContent = connectedAddress.slice(0, 12) + '...' + connectedAddress.slice(-4);
     document.getElementById('gwAddr').title = connectedAddress;
   }
+
+  // Also update nav bar badge
+  _keplrUpdateNavUI(connected);
 
   // Update DEX order form info
   const modeBadge = document.getElementById('dexModeBadge');

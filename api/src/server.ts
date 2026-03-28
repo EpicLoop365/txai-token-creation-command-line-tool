@@ -29,6 +29,7 @@ import {
   createWallet,
   NETWORKS,
   NetworkName,
+  NetworkConfig,
   TxClient,
   queryOrderbook,
   queryOrdersByCreator,
@@ -88,10 +89,7 @@ setInterval(() => {
 // Reads an optional `network` query param or body field to select testnet/mainnet.
 // Defaults to the TX_NETWORK env var, then to 'testnet'.
 
-import type { Request } from "express";
-import type { NetworkConfig } from "./tx-sdk";
-
-function getNetwork(req: Request): { networkName: NetworkName; network: NetworkConfig } {
+function getNetwork(req: express.Request): { networkName: NetworkName; network: NetworkConfig } {
   const raw =
     (req.query?.network as string) ||
     (req.body?.network as string) ||
@@ -102,7 +100,7 @@ function getNetwork(req: Request): { networkName: NetworkName; network: NetworkC
 }
 
 /** Guard: block agent-wallet operations on mainnet */
-function blockMainnetAgentWallet(req: Request, res: express.Response): boolean {
+function blockMainnetAgentWallet(req: express.Request, res: express.Response): boolean {
   const { networkName } = getNetwork(req);
   if (networkName === "mainnet" && process.env.AGENT_MNEMONIC) {
     res.status(403).json({
@@ -745,6 +743,7 @@ app.post("/api/token/global-freeze", async (req, res) => {
 app.post("/api/token/global-unfreeze", async (req, res) => {
   const { denom } = req.body as { denom?: string };
   if (!denom) { res.status(400).json({ error: "Missing denom." }); return; }
+  if (blockMainnetAgentWallet(req, res)) return;
   if (!process.env.AGENT_MNEMONIC) { res.status(500).json({ error: "Server not configured." }); return; }
   const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
   try {
@@ -759,6 +758,7 @@ app.post("/api/token/global-unfreeze", async (req, res) => {
 app.post("/api/token/clawback", async (req, res) => {
   const { denom, account, amount } = req.body as { denom?: string; account?: string; amount?: string };
   if (!denom || !account || !amount) { res.status(400).json({ error: "Missing denom, account, or amount." }); return; }
+  if (blockMainnetAgentWallet(req, res)) return;
   if (!process.env.AGENT_MNEMONIC) { res.status(500).json({ error: "Server not configured." }); return; }
   const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
   try {
@@ -773,6 +773,7 @@ app.post("/api/token/clawback", async (req, res) => {
 app.post("/api/token/whitelist", async (req, res) => {
   const { denom, account, amount } = req.body as { denom?: string; account?: string; amount?: string };
   if (!denom || !account || !amount) { res.status(400).json({ error: "Missing denom, account, or amount." }); return; }
+  if (blockMainnetAgentWallet(req, res)) return;
   if (!process.env.AGENT_MNEMONIC) { res.status(500).json({ error: "Server not configured." }); return; }
   const networkName = (process.env.TX_NETWORK as NetworkName) || "testnet";
   try {

@@ -1218,6 +1218,41 @@ footer{
 }
 .wallet-choice-dismiss:hover{color:var(--text)}
 
+/* Wallet choice card variants for nav connect modal */
+.wallet-choice-cards--nav{gap:16px}
+.wallet-choice-card--primary{
+  flex:1.4;padding:28px 22px;
+}
+.wallet-choice-card--secondary{
+  flex:0.8;padding:18px 14px;opacity:.85;
+}
+.wallet-choice-card--secondary .wc-label{font-size:.85rem}
+.wallet-choice-card--secondary .wc-desc{font-size:.7rem}
+.wallet-choice-card--secondary .wc-icon{margin-bottom:6px}
+
+/* Keplr install hint inside wallet modal */
+.wallet-choice-install-hint{
+  text-align:center;margin-bottom:14px;padding:10px 16px;
+  border-radius:var(--radius-sm);
+  background:rgba(255,115,134,.08);border:1px solid rgba(255,115,134,.2);
+  font-size:.78rem;color:#ff7386;
+}
+.wallet-choice-install-hint a{
+  color:var(--purple);font-weight:600;margin-left:6px;text-decoration:underline;
+}
+.wallet-choice-install-hint a:hover{color:var(--text)}
+
+/* Nav wallet provider tag (shown in connected badge) */
+.nav-wallet-provider-tag{
+  display:inline-block;padding:1px 6px;border-radius:4px;
+  font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;
+  background:rgba(124,109,250,.18);color:var(--purple);margin-right:4px;
+  vertical-align:middle;
+}
+.nav-wallet-provider-tag.demo{
+  background:rgba(6,214,160,.15);color:var(--green);
+}
+
 .gw-fund-btn{
   padding:6px 14px;border-radius:var(--radius-sm);border:1px solid rgba(6,214,160,.3);
   background:rgba(6,214,160,.1);color:var(--green);font-size:.78rem;font-weight:600;
