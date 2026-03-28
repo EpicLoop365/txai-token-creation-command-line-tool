@@ -380,9 +380,10 @@ export async function issueSmartToken(
     if (!rate || rate === "0") return undefined;
     const num = parseFloat(rate);
     if (isNaN(num) || num <= 0 || num > 1) return undefined;
-    // Multiply by 10^18 and convert to integer string
-    // Use string math to avoid floating point issues
-    const scaled = Math.round(num * 1e18);
+    // Coreum limits rate precision to 4 decimal places
+    // Round to 4 decimals first, then scale to 10^18
+    const rounded = Math.round(num * 10000) / 10000;
+    const scaled = Math.round(rounded * 1e18);
     return scaled.toString();
   };
 
