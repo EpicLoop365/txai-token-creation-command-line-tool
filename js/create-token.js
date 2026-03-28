@@ -35,13 +35,20 @@ function switchTab(tab){
   const btn = document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1));
   if(btn) btn.classList.add('active');
 
+  // Show selected tab — use .show class for CSS-hidden wraps, style.display for inline-hidden ones
+  const w = wraps[tab];
+  if(w) {
+    // If CSS sets display:none, adding .show overrides it; also clear inline hide
+    w.classList.add('show');
+    w.style.display = '';
+  }
+
+  // Tab-specific init
   if(tab === 'dex'){
-    wraps.dex.classList.add('show');
     if(!dexAgentWallet) dexFetchWallet();
     if(!document.getElementById('dexPairSelect').options.length || document.getElementById('dexPairSelect').options.length <= 1) dexFetchPairs();
     setTimeout(() => dexDrawDepthChart(), 100);
   } else if(tab === 'manage'){
-    wraps.manage.classList.add('show');
     const manageInput = document.getElementById('manageTokenDenom');
     if(manageInput && !manageInput.value.trim()){
       const tokens = typeof txdbGetTokens === 'function' ? txdbGetTokens() : [];
@@ -53,19 +60,12 @@ function switchTab(tab){
     if(manageInput) manageInput.focus();
     if(typeof authLoadGrants === 'function') authLoadGrants();
   } else if(tab === 'jobs'){
-    wraps.jobs.style.display = '';
     if(typeof agentJobsInit === 'function') agentJobsInit();
     if(typeof agentJobsPopulateSkillPicker === 'function') agentJobsPopulateSkillPicker();
   } else if(tab === 'runtime'){
-    wraps.runtime.style.display = '';
     if(typeof runtimeInit === 'function') runtimeInit();
   } else if(tab === 'subs'){
-    wraps.subs.classList.add('show');
     if(typeof subsInit === 'function') subsInit();
-  } else if(tab === 'ai'){
-    wraps.ai.style.display = '';
-  } else {
-    wraps.create.style.display = '';
   }
   const activeTab = document.querySelector('.chat-tab.active');
   if(activeTab) activeTab.scrollIntoView({behavior:'smooth',block:'nearest',inline:'nearest'});
